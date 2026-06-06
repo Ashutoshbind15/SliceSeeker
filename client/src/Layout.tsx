@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router";
 import AuthNav from "@/components/AuthNav";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const Layout = () => {
   return (
@@ -23,7 +24,10 @@ const Layout = () => {
               Todo
             </Link>
           </div>
-          <AuthNav />
+          <div className="flex items-center gap-3">
+            <ModeToggle />
+            <AuthNav />
+          </div>
         </nav>
       </header>
       <main>
