@@ -1,12 +1,21 @@
 import express from "express";
 import "dotenv/config";
+import { toNodeHandler } from "better-auth/node";
 import { createTodo, getTodos } from "./data/db/access/index.js";
 import cors from "cors";
+import { auth, trustedOrigins } from "./lib/auth.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    credentials: true,
+    origin: trustedOrigins,
+  }),
+);
 app.use(express.json());
+
+app.all("/api/auth/{*any}", toNodeHandler(auth));
 
 app.get("/health", (req, res) => {
   res.send("OK");
