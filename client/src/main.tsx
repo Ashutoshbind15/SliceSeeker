@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { BrowserRouter, Route, Routes } from "react-router";
 import Todo from "./Todo";
+import VideoUpload from "./VideoUpload";
 import Layout from "./Layout";
 import "./index.css";
 
@@ -11,6 +12,7 @@ root.render(
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<App />} />
+        <Route path="/upload" element={<VideoUpload />} />
         <Route path="/todo" element={<Todo />} />
       </Route>
     </Routes>

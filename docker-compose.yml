@@ -1,0 +1,92 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: demo_search
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d demo_search"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # RustFS: S3-compatible object storage
+  rustfs-perms:
+    image: alpine
+    user: root
+    volumes:
+      - rustfs_data:/data
+    command: chown -R 10001:10001 /data
+    restart: "no"
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    depends_on:
+      rustfs-perms:
+        condition: service_completed_successfully
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    environment:
+      RUSTFS_ACCESS_KEY: rustfsadmin
+      RUSTFS_SECRET_KEY: rustfsadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
+    volumes:
+      - rustfs_data:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Create the uploads bucket before tusd starts (RustFS native CLI)
+  create-bucket:
+    image: rustfs/rc:latest
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        rc alias set rustfs http://rustfs:9000 rustfsadmin rustfsadmin
+        rc mb rustfs/uploads || true
+    restart: "no"
+
+  # tusd: tus protocol server — streams uploads directly to S3 (RustFS)
+  tusd:
+    image: tusproject/tusd:latest
+    restart: unless-stopped
+    depends_on:
+      create-bucket:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      AWS_ACCESS_KEY_ID: rustfsadmin
+      AWS_SECRET_ACCESS_KEY: rustfsadmin
+      AWS_REGION: us-east-1
+    volumes:
+      # tusd stages multipart parts on disk before sending to S3
+      - tusd_tmp:/data
+    command:
+      - -verbose
+      - -cors-allow-origin=http://localhost:5173
+      - -cors-allow-origin=http://127.0.0.1:5173
+      - -s3-bucket=uploads
+      - -s3-endpoint=http://rustfs:9000
+      - -s3-object-prefix=tus/
+
+volumes:
+  postgres_data:
+  rustfs_data:
+  tusd_tmp:

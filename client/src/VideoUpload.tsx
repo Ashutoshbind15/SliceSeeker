@@ -1,0 +1,54 @@
+import { useEffect, useState } from "react";
+import Uppy from "@uppy/core";
+import Tus from "@uppy/tus";
+import Dashboard from "@uppy/react/dashboard";
+
+import "@uppy/core/css/style.min.css";
+import "@uppy/dashboard/css/style.min.css";
+
+import { endpoints } from "@/lib/endpoints";
+
+function createUppy() {
+  return new Uppy({
+    id: "video-upload",
+    restrictions: {
+      maxNumberOfFiles: 5,
+      allowedFileTypes: ["video/*"],
+    },
+    autoProceed: false,
+  }).use(Tus, {
+    endpoint: endpoints.tusd,
+    retryDelays: [0, 1000, 3000, 5000],
+  });
+}
+
+const VideoUpload = () => {
+  const [uppy] = useState(createUppy);
+
+  useEffect(() => {
+    return () => {
+      uppy.destroy();
+    };
+  }, [uppy]);
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+      <div className="space-y-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Upload video</h1>
+        <p className="text-sm text-muted-foreground">
+          Large files upload in chunks and resume automatically if the
+          connection drops. Finished files are stored via tusd on RustFS.
+        </p>
+      </div>
+
+      <Dashboard
+        uppy={uppy}
+        height={420}
+        proudlyDisplayPoweredByUppy={false}
+        note="Video files only. Uploads are resumable — you can pause and continue later."
+      />
+    </div>
+  );
+};
+
+export default VideoUpload;

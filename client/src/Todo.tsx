@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { endpoints } from "@/lib/endpoints";
 
 interface Todo {
   id: string;
@@ -8,14 +9,12 @@ interface Todo {
   completed: boolean;
 }
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 const Todo = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
 
   useEffect(() => {
     const fetchTodos = async () => {
-      const res = await fetch(`${API_URL}/todos`);
+      const res = await fetch(`${endpoints.api}/todos`);
       const data = await res.json();
       setTodos(data);
     };
@@ -42,7 +41,7 @@ const CreateTodo = () => {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
-    fetch(`${API_URL}/todos`, {
+    fetch(`${endpoints.api}/todos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
