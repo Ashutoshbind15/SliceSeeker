@@ -1,0 +1,12 @@
+# Optional override for full in-Docker prod stack.
+# Usage (hooks URL is passed at compose parse time):
+#   TUSD_HOOKS_URL=http://server:3000/api/tusd-hooks docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d
+#
+# Or: pnpm infra:prod
+
+services:
+  tusd:
+    depends_on:
+      server:
+        condition: service_healthy
+        required: true

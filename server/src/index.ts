@@ -4,6 +4,10 @@ import { toNodeHandler } from "better-auth/node";
 import { createTodo, getTodos } from "./data/db/access/index.js";
 import cors from "cors";
 import { auth, trustedOrigins } from "./lib/auth.js";
+import {
+  createUploadGrantHandler,
+  tusdHookHandler,
+} from "./routes/uploads.js";
 
 const app = express();
 
@@ -31,6 +35,9 @@ app.post("/todos", async (req, res) => {
   await createTodo(title, description);
   res.status(201).send("Todo created");
 });
+
+app.post("/uploads/grant", createUploadGrantHandler);
+app.post("/api/tusd-hooks", tusdHookHandler);
 
 const PORT = process.env.PORT ?? "3000";
 
