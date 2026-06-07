@@ -1,6 +1,7 @@
 packages:
   - "client"
   - "server"
+  - "worker"
 minimumReleaseAge: 7200
 saveExact: true
 # strictDepBuilds: true
