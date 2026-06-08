@@ -13,6 +13,7 @@ import {
   listUploadsHandler,
   startVideoProcessingHandler,
 } from "./routes/video-processing.js";
+import { requireSession } from "./middleware/require-session.js";
 
 const app = express();
 
@@ -41,11 +42,15 @@ app.post("/todos", async (req, res) => {
   res.status(201).send("Todo created");
 });
 
-app.get("/uploads", listUploadsHandler);
-app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
-app.get("/jobs/:jobId", getVideoJobStatusHandler);
+app.get("/uploads", requireSession, listUploadsHandler);
+app.post(
+  "/uploads/:uploadId/process",
+  requireSession,
+  startVideoProcessingHandler,
+);
+app.get("/jobs/:jobId", requireSession, getVideoJobStatusHandler);
 
-app.post("/uploads/grant", createUploadGrantHandler);
+app.post("/uploads/grant", requireSession, createUploadGrantHandler);
 app.post("/api/tusd-hooks", tusdHookHandler);
 
 const PORT = process.env.PORT ?? "3000";

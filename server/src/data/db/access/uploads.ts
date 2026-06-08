@@ -1,17 +1,6 @@
 import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import db from "../index.js";
 import { uploadGrantsTable, uploadsTable } from "../schema/uploads.js";
-import { uploadLimits } from "../../../lib/upload-limits.js";
-
-export type QuotaCheckResult =
-  | { ok: true }
-  | { ok: false; message: string };
-
-export type StorageUsage = {
-  usedBytes: number;
-  reservedBytes: number;
-  maxBytes: number;
-};
 
 const activeGrantStatuses = ["pending", "reserved"] as const;
 
@@ -46,64 +35,6 @@ export const getUserStorageReservedBytes = async (userId: string) => {
     );
 
   return Number(row?.total ?? 0);
-};
-
-export const getUserStorageUsage = async (
-  userId: string,
-): Promise<StorageUsage> => {
-  const [usedBytes, reservedBytes] = await Promise.all([
-    getUserStorageUsedBytes(userId),
-    getUserStorageReservedBytes(userId),
-  ]);
-
-  return {
-    usedBytes,
-    reservedBytes,
-    maxBytes: uploadLimits.maxStorageBytes,
-  };
-};
-
-export const checkUploadQuota = async (
-  userId: string,
-  fileSize: number,
-  options?: { excludeGrantId?: string },
-): Promise<QuotaCheckResult> => {
-  if (fileSize <= 0) {
-    return { ok: false, message: "File size must be greater than zero" };
-  }
-
-  if (fileSize > uploadLimits.maxFileBytes) {
-    return {
-      ok: false,
-      message: `File exceeds the ${uploadLimits.maxFileBytes} byte limit`,
-    };
-  }
-
-  const [usedBytes, reservedBytes] = await Promise.all([
-    getUserStorageUsedBytes(userId),
-    getUserStorageReservedBytes(userId),
-  ]);
-
-  let effectiveReserved = reservedBytes;
-  if (options?.excludeGrantId) {
-    const grant = await getUploadGrant(options.excludeGrantId);
-    if (
-      grant &&
-      grant.userId === userId &&
-      activeGrantStatuses.includes(
-        grant.status as (typeof activeGrantStatuses)[number],
-      ) &&
-      grant.expiresAt.getTime() > Date.now()
-    ) {
-      effectiveReserved -= grant.maxSizeBytes;
-    }
-  }
-
-  if (usedBytes + effectiveReserved + fileSize > uploadLimits.maxStorageBytes) {
-    return { ok: false, message: "Storage quota exceeded" };
-  }
-
-  return { ok: true };
 };
 
 export const createUploadGrant = async (input: {

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
-import { uploadLimits } from "./upload-limits.js";
+import { uploadLimits } from "../lib/upload-limits.js";
 import {
   uploadTokenClaimsSchema,
   type UploadTokenClaims,
-} from "./schemas/uploads.js";
+} from "../lib/schemas/uploads.js";
 
 const getSecret = () => {
   const secret = process.env.UPLOAD_TOKEN_SECRET ?? process.env.BETTER_AUTH_SECRET;
