@@ -16,5 +16,6 @@ export const getValkeyConnectionOptions = () => {
   return {
     host: url.hostname,
     port: Number(url.port || 6379),
+    maxRetriesPerRequest: null,
   };
 };

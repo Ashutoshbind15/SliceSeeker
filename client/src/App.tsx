@@ -11,9 +11,14 @@ const App = () => {
           object storage.
         </p>
       </div>
-      <Button asChild>
-        <Link to="/upload">Upload video</Link>
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button asChild>
+          <Link to="/upload">Upload video</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/process">Process video</Link>
+        </Button>
+      </div>
     </div>
   );
 };

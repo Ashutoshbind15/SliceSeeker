@@ -18,6 +18,12 @@ const Layout = () => {
               Upload
             </Link>
             <Link
+              to="/process"
+              className="text-foreground hover:text-foreground/80"
+            >
+              Process
+            </Link>
+            <Link
               to="/todo"
               className="text-foreground hover:text-foreground/80"
             >

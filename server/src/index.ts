@@ -4,11 +4,15 @@ import { toNodeHandler } from "better-auth/node";
 import { createTodo, getTodos } from "./data/db/access/index.js";
 import cors from "cors";
 import { auth, trustedOrigins } from "./lib/auth.js";
-import { enqueueJobHandler } from "./routes/jobs.js";
 import {
   createUploadGrantHandler,
   tusdHookHandler,
 } from "./routes/uploads.js";
+import {
+  getVideoJobStatusHandler,
+  listUploadsHandler,
+  startVideoProcessingHandler,
+} from "./routes/video-processing.js";
 
 const app = express();
 
@@ -37,7 +41,9 @@ app.post("/todos", async (req, res) => {
   res.status(201).send("Todo created");
 });
 
-app.post("/jobs", enqueueJobHandler);
+app.get("/uploads", listUploadsHandler);
+app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
+app.get("/jobs/:jobId", getVideoJobStatusHandler);
 
 app.post("/uploads/grant", createUploadGrantHandler);
 app.post("/api/tusd-hooks", tusdHookHandler);

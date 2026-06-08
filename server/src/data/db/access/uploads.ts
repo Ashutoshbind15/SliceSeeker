@@ -1,4 +1,4 @@
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import db from "../index.js";
 import { uploadGrantsTable, uploadsTable } from "../schema/uploads.js";
 import { uploadLimits } from "../../../lib/upload-limits.js";
@@ -235,4 +235,31 @@ export const getUploadByTusId = async (tusUploadId: string) => {
     .limit(1);
 
   return upload ?? null;
+};
+
+export const getUploadById = async (uploadId: string) => {
+  const [upload] = await db
+    .select()
+    .from(uploadsTable)
+    .where(eq(uploadsTable.id, uploadId))
+    .limit(1);
+
+  return upload ?? null;
+};
+
+export const getUserCompletedUploads = async (userId: string) => {
+  return db
+    .select({
+      id: uploadsTable.id,
+      filename: uploadsTable.filename,
+      filetype: uploadsTable.filetype,
+      sizeBytes: uploadsTable.sizeBytes,
+      completedAt: uploadsTable.completedAt,
+      createdAt: uploadsTable.createdAt,
+    })
+    .from(uploadsTable)
+    .where(
+      and(eq(uploadsTable.userId, userId), eq(uploadsTable.status, "completed")),
+    )
+    .orderBy(desc(uploadsTable.completedAt));
 };
