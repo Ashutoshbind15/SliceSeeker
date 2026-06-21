@@ -4,10 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "infra:dev": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db valkey rustfs tusd",
-    "dev:all": "pnpm infra:dev && pnpm -r --parallel run dev",
+    "infra": "docker compose up -d db valkey rustfs server tusd",
+    "dev:all": "pnpm infra && pnpm --filter client --filter worker --parallel run dev",
     "worker:dev": "pnpm --filter worker dev",
-    "infra:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile prod up -d",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

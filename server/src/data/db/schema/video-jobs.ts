@@ -6,7 +6,6 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth.js";
 import { uploadsTable } from "./uploads.js";
 
 export const videoJobStatusEnum = pgEnum("video_job_status", [
@@ -24,9 +23,6 @@ export const videoJobsTable = pgTable(
     uploadId: text("upload_id")
       .notNull()
       .references(() => uploadsTable.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
     status: videoJobStatusEnum("status").notNull().default("queued"),
     bullJobId: text("bull_job_id"),
     chunkCount: integer("chunk_count"),
@@ -37,7 +33,6 @@ export const videoJobsTable = pgTable(
   },
   (table) => [
     index("video_jobs_upload_id_idx").on(table.uploadId),
-    index("video_jobs_user_id_idx").on(table.userId),
     index("video_jobs_status_idx").on(table.status),
   ],
 );

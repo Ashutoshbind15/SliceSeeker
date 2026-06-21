@@ -28,33 +28,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # API container for prod
-  server:
-    profiles: ["prod"]
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "3000:3000"
-    env_file:
-      - server/.env
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
-        ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-
   # RustFS: S3-compatible object storage
   rustfs-perms:
     image: alpine
@@ -101,32 +74,57 @@ services:
         rc mb rustfs/uploads || true
     restart: "no"
 
-  # tusd: tus protocol server — streams uploads directly to S3 (RustFS)
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
+      VALKEY_URL: redis://valkey:6379
+    volumes:
+      - ./server/src:/app/server/src
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # tusd: host networking so it can reach the API and RustFS on localhost
   tusd:
     image: tusproject/tusd:latest
     restart: unless-stopped
+    network_mode: host
     depends_on:
       create-bucket:
         condition: service_completed_successfully
       server:
         condition: service_healthy
-        required: false
-    ports:
-      - "8080:8080"
     environment:
       AWS_ACCESS_KEY_ID: rustfsadmin
       AWS_SECRET_ACCESS_KEY: rustfsadmin
       AWS_REGION: us-east-1
     volumes:
-      # tusd stages multipart parts on disk before sending to S3
       - tusd_tmp:/data
     command:
       - -verbose
       - -cors-allow-origin=^http://(localhost|127\.0\.0\.1):5173$
       - -s3-bucket=uploads
-      - -s3-endpoint=http://rustfs:9000
+      - -s3-endpoint=http://127.0.0.1:9000
       - -s3-object-prefix=tus/
-      - -hooks-http=${TUSD_HOOKS_URL:-http://server:3000/api/tusd-hooks}
+      - -hooks-http=${TUSD_HOOKS_URL:-http://127.0.0.1:3000/api/tusd-hooks}
 
 volumes:
   postgres_data:

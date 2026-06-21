@@ -8,7 +8,7 @@ import {
 } from "../data/db/access/video-jobs.js";
 import {
   getUploadById,
-  getUserCompletedUploads,
+  listCompletedUploads,
 } from "../data/db/access/uploads.js";
 import {
   getValkeyConnectionOptions,
@@ -45,8 +45,8 @@ const serializeVideoJob = (
   completedAt: job.completedAt?.toISOString() ?? null,
 });
 
-export const listUploadsForUser = async (userId: string) => {
-  const uploads = await getUserCompletedUploads(userId);
+export const listUploads = async () => {
+  const uploads = await listCompletedUploads();
   return Promise.all(
     uploads.map(async (upload) => {
       const job = await getLatestVideoJobForUpload(upload.id);
@@ -74,11 +74,10 @@ export type StartVideoProcessingResult =
     };
 
 export const startVideoProcessing = async (
-  userId: string,
   uploadId: string,
 ): Promise<StartVideoProcessingResult> => {
   const upload = await getUploadById(uploadId);
-  if (!upload || upload.userId !== userId) {
+  if (!upload) {
     return { ok: false, reason: "not_found", message: "Upload not found" };
   }
 
@@ -124,16 +123,15 @@ export const startVideoProcessing = async (
   const job = await createVideoJob({
     id: videoJobId,
     uploadId: upload.id,
-    userId,
     bullJobId: bullJob.id,
   });
 
   return { ok: true, job: serializeVideoJob(job) };
 };
 
-export const getVideoJobForUser = async (userId: string, jobId: string) => {
+export const getVideoJob = async (jobId: string) => {
   const job = await getVideoJobById(jobId);
-  if (!job || job.userId !== userId) {
+  if (!job) {
     return null;
   }
 

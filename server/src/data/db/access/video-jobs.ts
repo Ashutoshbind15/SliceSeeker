@@ -12,7 +12,6 @@ export type VideoJobStatus =
 export const createVideoJob = async (input: {
   id: string;
   uploadId: string;
-  userId: string;
   bullJobId?: string;
 }) => {
   const [job] = await db
@@ -20,7 +19,6 @@ export const createVideoJob = async (input: {
     .values({
       id: input.id,
       uploadId: input.uploadId,
-      userId: input.userId,
       bullJobId: input.bullJobId,
       status: "queued",
     })

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import {
-  getVideoJobForUser,
-  listUploadsForUser,
+  getVideoJob,
+  listUploads,
   startVideoProcessing,
 } from "../services/video-processing.js";
 
@@ -13,8 +13,8 @@ const getRouteParam = (value: string | string[] | undefined) => {
   return value;
 };
 
-export const listUploadsHandler = async (req: Request, res: Response) => {
-  const uploads = await listUploadsForUser(req.session!.user.id);
+export const listUploadsHandler = async (_req: Request, res: Response) => {
+  const uploads = await listUploads();
   res.json({ uploads });
 };
 
@@ -28,7 +28,7 @@ export const startVideoProcessingHandler = async (
     return;
   }
 
-  const result = await startVideoProcessing(req.session!.user.id, uploadId);
+  const result = await startVideoProcessing(uploadId);
   if (!result.ok) {
     const status =
       result.reason === "not_found"
@@ -54,7 +54,7 @@ export const getVideoJobStatusHandler = async (req: Request, res: Response) => {
     return;
   }
 
-  const job = await getVideoJobForUser(req.session!.user.id, jobId);
+  const job = await getVideoJob(jobId);
   if (!job) {
     res.status(404).json({ message: "Job not found" });
     return;

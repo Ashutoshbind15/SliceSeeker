@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { authClient, signInWithGitHub } from "@/lib/auth-client";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 
@@ -59,7 +58,6 @@ const isActiveJob = (job: VideoJob | null) =>
   job?.status === "chunking";
 
 const VideoProcess = () => {
-  const { data: session, isPending } = authClient.useSession();
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
   const [selectedUploadId, setSelectedUploadId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,9 +69,7 @@ const VideoProcess = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${endpoints.api}/uploads`, {
-        credentials: "include",
-      });
+      const response = await fetch(`${endpoints.api}/uploads`);
 
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as {
@@ -100,18 +96,14 @@ const VideoProcess = () => {
   }, [selectedUploadId]);
 
   useEffect(() => {
-    if (!session) {
-      return;
-    }
-
     void fetchUploads();
-  }, [session, fetchUploads]);
+  }, [fetchUploads]);
 
   const selectedUpload = uploads.find((upload) => upload.id === selectedUploadId);
   const activeJob = uploads.find((upload) => isActiveJob(upload.job))?.job ?? null;
 
   useEffect(() => {
-    if (!session || !activeJob) {
+    if (!activeJob) {
       return;
     }
 
@@ -122,7 +114,7 @@ const VideoProcess = () => {
     return () => {
       window.clearInterval(interval);
     };
-  }, [session, activeJob?.id, activeJob?.status, fetchUploads]);
+  }, [activeJob?.id, activeJob?.status, fetchUploads]);
 
   const startProcessing = async () => {
     if (!selectedUploadId) {
@@ -137,7 +129,6 @@ const VideoProcess = () => {
         `${endpoints.api}/uploads/${selectedUploadId}/process`,
         {
           method: "POST",
-          credentials: "include",
         },
       );
 
@@ -161,30 +152,6 @@ const VideoProcess = () => {
       setSubmitting(false);
     }
   };
-
-  if (isPending) {
-    return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-        <p className="text-sm text-muted-foreground">Loading session…</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return (
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Process video
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in to select an uploaded video and start the chunking pipeline.
-          </p>
-        </div>
-        <Button onClick={() => void signInWithGitHub()}>Sign in with GitHub</Button>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">

@@ -17,7 +17,6 @@ export const videoJobStatusEnum = pgEnum("video_job_status", [
 export const videoJobsTable = pgTable("video_jobs", {
   id: text("id").primaryKey(),
   uploadId: text("upload_id").notNull(),
-  userId: text("user_id").notNull(),
   status: videoJobStatusEnum("status").notNull().default("queued"),
   bullJobId: text("bull_job_id"),
   chunkCount: integer("chunk_count"),

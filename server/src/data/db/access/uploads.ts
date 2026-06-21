@@ -1,111 +1,9 @@
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import db from "../index.js";
-import { uploadGrantsTable, uploadsTable } from "../schema/uploads.js";
-
-const activeGrantStatuses = ["pending", "reserved"] as const;
-
-export const getUserStorageUsedBytes = async (userId: string) => {
-  const [row] = await db
-    .select({
-      total: sql<number>`coalesce(sum(${uploadsTable.sizeBytes}), 0)`,
-    })
-    .from(uploadsTable)
-    .where(
-      and(
-        eq(uploadsTable.userId, userId),
-        eq(uploadsTable.status, "completed"),
-      ),
-    );
-
-  return Number(row?.total ?? 0);
-};
-
-export const getUserStorageReservedBytes = async (userId: string) => {
-  const [row] = await db
-    .select({
-      total: sql<number>`coalesce(sum(${uploadGrantsTable.maxSizeBytes}), 0)`,
-    })
-    .from(uploadGrantsTable)
-    .where(
-      and(
-        eq(uploadGrantsTable.userId, userId),
-        inArray(uploadGrantsTable.status, [...activeGrantStatuses]),
-        gt(uploadGrantsTable.expiresAt, new Date()),
-      ),
-    );
-
-  return Number(row?.total ?? 0);
-};
-
-export const createUploadGrant = async (input: {
-  id: string;
-  userId: string;
-  filename: string;
-  filetype: string;
-  maxSizeBytes: number;
-  expiresAt: Date;
-}) => {
-  const [grant] = await db
-    .insert(uploadGrantsTable)
-    .values({
-      id: input.id,
-      userId: input.userId,
-      filename: input.filename,
-      filetype: input.filetype,
-      maxSizeBytes: input.maxSizeBytes,
-      expiresAt: input.expiresAt,
-      status: "pending",
-    })
-    .returning();
-
-  return grant;
-};
-
-export const getUploadGrant = async (grantId: string) => {
-  const [grant] = await db
-    .select()
-    .from(uploadGrantsTable)
-    .where(eq(uploadGrantsTable.id, grantId))
-    .limit(1);
-
-  return grant ?? null;
-};
-
-export const reserveUploadGrant = async (grantId: string, userId: string) => {
-  const [grant] = await db
-    .update(uploadGrantsTable)
-    .set({ status: "reserved" })
-    .where(
-      and(
-        eq(uploadGrantsTable.id, grantId),
-        eq(uploadGrantsTable.userId, userId),
-        eq(uploadGrantsTable.status, "pending"),
-        gt(uploadGrantsTable.expiresAt, new Date()),
-      ),
-    )
-    .returning();
-
-  return grant ?? null;
-};
-
-export const markUploadGrantUsed = async (grantId: string) => {
-  await db
-    .update(uploadGrantsTable)
-    .set({ status: "used" })
-    .where(eq(uploadGrantsTable.id, grantId));
-};
-
-export const expireUploadGrant = async (grantId: string) => {
-  await db
-    .update(uploadGrantsTable)
-    .set({ status: "expired" })
-    .where(eq(uploadGrantsTable.id, grantId));
-};
+import { uploadsTable } from "../schema/uploads.js";
 
 export const createUploadRecord = async (input: {
   id: string;
-  userId: string;
-  grantId: string;
   tusUploadId: string;
   filename: string;
   filetype: string;
@@ -115,8 +13,6 @@ export const createUploadRecord = async (input: {
     .insert(uploadsTable)
     .values({
       id: input.id,
-      userId: input.userId,
-      grantId: input.grantId,
       tusUploadId: input.tusUploadId,
       filename: input.filename,
       filetype: input.filetype,
@@ -178,7 +74,7 @@ export const getUploadById = async (uploadId: string) => {
   return upload ?? null;
 };
 
-export const getUserCompletedUploads = async (userId: string) => {
+export const listCompletedUploads = async () => {
   return db
     .select({
       id: uploadsTable.id,
@@ -189,8 +85,6 @@ export const getUserCompletedUploads = async (userId: string) => {
       createdAt: uploadsTable.createdAt,
     })
     .from(uploadsTable)
-    .where(
-      and(eq(uploadsTable.userId, userId), eq(uploadsTable.status, "completed")),
-    )
+    .where(eq(uploadsTable.status, "completed"))
     .orderBy(desc(uploadsTable.completedAt));
 };
