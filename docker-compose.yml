@@ -79,6 +79,8 @@ services:
       context: .
       dockerfile: server/Dockerfile
     restart: unless-stopped
+    profiles:
+      - docker-api
     depends_on:
       db:
         condition: service_healthy
@@ -89,6 +91,11 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
       VALKEY_URL: redis://valkey:6379
+      S3_ENDPOINT: http://rustfs:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: uploads
+      S3_ACCESS_KEY_ID: rustfsadmin
+      S3_SECRET_ACCESS_KEY: rustfsadmin
     volumes:
       - ./server/src:/app/server/src
     healthcheck:
@@ -110,8 +117,6 @@ services:
     depends_on:
       create-bucket:
         condition: service_completed_successfully
-      server:
-        condition: service_healthy
     environment:
       AWS_ACCESS_KEY_ID: rustfsadmin
       AWS_SECRET_ACCESS_KEY: rustfsadmin

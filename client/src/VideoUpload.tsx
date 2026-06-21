@@ -22,7 +22,7 @@ const VideoUpload = () => {
     instance.use(Tus, {
       endpoint: endpoints.tusd,
       retryDelays: [0, 1000, 3000, 5000],
-      allowedMetaFields: ["filename", "filetype"],
+      removeFingerprintOnSuccess: true,
     });
 
     return instance;

@@ -1,9 +1,18 @@
 import "dotenv/config";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { Worker } from "bullmq";
+import { insertVideoChunks } from "./data/db/access/video-chunks.js";
 import { updateVideoJobStatus } from "./data/db/access/video-jobs.js";
-import { chunkVideo } from "./lib/chunking.js";
-import { getChunksPrefix, getObjectReadUrl, uploadObject } from "./lib/s3.js";
+import { chunkVideoFile } from "./lib/chunking.js";
+import { mapWithConcurrency } from "./lib/concurrency.js";
+import {
+  downloadObject,
+  getChunksPrefix,
+  uploadObject,
+} from "./lib/s3.js";
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
@@ -11,42 +20,78 @@ import {
   type VideoChunkJobPayload,
 } from "./lib/queue.js";
 
+const CHUNK_UPLOAD_CONCURRENCY = Number(
+  process.env.CHUNK_UPLOAD_CONCURRENCY ?? "4",
+);
+
 const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
   const chunksPrefix = `${getChunksPrefix()}/${payload.videoJobId}`;
+  const extension = path.extname(payload.filename) || ".mp4";
+  const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "video-chunk-"));
 
   try {
+    await updateVideoJobStatus(payload.videoJobId, {
+      status: "downloading",
+    });
+
+    const inputPath = path.join(workDir, `source${extension}`);
+    await downloadObject({
+      storageKey: payload.storageKey,
+      destinationPath: inputPath,
+    });
+
+    const chunksDir = path.join(workDir, "chunks");
+    await fs.mkdir(chunksDir);
+
     await updateVideoJobStatus(payload.videoJobId, {
       status: "chunking",
     });
 
-    const inputUrl = await getObjectReadUrl(payload.storageKey);
+    const segments = await chunkVideoFile({
+      inputPath,
+      extension,
+      outputDir: chunksDir,
+    });
 
-    const result = await chunkVideo({
-      inputUrl,
-      filename: payload.filename,
-      getChunkStorageKey: (chunkIndex, extension) =>
-        path.posix.join(
+    const chunkRecords = await mapWithConcurrency(
+      segments,
+      CHUNK_UPLOAD_CONCURRENCY,
+      async (segment) => {
+        const storageKey = path.posix.join(
           chunksPrefix,
-          `chunk_${String(chunkIndex).padStart(4, "0")}${extension}`,
-        ),
-      onChunk: async ({ storageKey, body }) => {
+          `chunk_${String(segment.chunkIndex).padStart(4, "0")}${extension}`,
+        );
+        const body = await fs.readFile(segment.filePath);
+
         await uploadObject({
           storageKey,
           body,
           contentType: payload.filetype,
         });
+
+        return {
+          id: randomUUID(),
+          videoJobId: payload.videoJobId,
+          chunkIndex: segment.chunkIndex,
+          storageKey,
+          startSec: segment.startSec,
+          endSec: segment.endSec,
+          durationSec: segment.durationSec,
+        };
       },
-    });
+    );
+
+    await insertVideoChunks(chunkRecords);
 
     await updateVideoJobStatus(payload.videoJobId, {
       status: "completed",
-      chunkCount: result.chunkCount,
+      chunkCount: chunkRecords.length,
       errorMessage: null,
       completedAt: new Date(),
     });
 
     console.log(
-      `Chunked upload ${payload.uploadId} into ${result.chunkCount} segments at s3://${chunksPrefix}/`,
+      `Chunked upload ${payload.uploadId} into ${chunkRecords.length} segments at s3://${chunksPrefix}/`,
     );
   } catch (error) {
     const message =
@@ -66,6 +111,8 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
     }
 
     throw error;
+  } finally {
+    await fs.rm(workDir, { recursive: true, force: true });
   }
 };
 

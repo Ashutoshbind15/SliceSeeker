@@ -14,9 +14,18 @@ export type TusdHookResponse = {
   };
 };
 
+const metadataValue = (value: string | undefined) =>
+  value && value !== "undefined" ? value : undefined;
+
 const getUploadMetadata = (metadata: Record<string, string>) => ({
-  filename: metadata.filename ?? "video",
-  filetype: metadata.filetype ?? "video/mp4",
+  filename:
+    metadataValue(metadata.filename) ??
+    metadataValue(metadata.name) ??
+    "video",
+  filetype:
+    metadataValue(metadata.filetype) ??
+    metadataValue(metadata.type) ??
+    "video/mp4",
 });
 
 const handlePreCreate = (hook: TusdHookRequest): TusdHookResponse => {

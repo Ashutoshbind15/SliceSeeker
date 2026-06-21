@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "infra": "docker compose up -d db valkey rustfs server tusd",
-    "dev:all": "pnpm infra && pnpm --filter client --filter worker --parallel run dev",
+    "infra": "docker compose up -d db valkey rustfs tusd",
+    "dev:all": "pnpm infra && pnpm --filter client --filter server --filter worker --parallel run dev",
     "worker:dev": "pnpm --filter worker dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
