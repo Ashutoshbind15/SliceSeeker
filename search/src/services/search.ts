@@ -1,6 +1,5 @@
 import { searchVideoChunks } from "../data/db/access/video-chunks.js";
 import { embedSearchQuery } from "../lib/embeddings.js";
-import { getPresignedObjectUrl } from "../lib/s3.js";
 
 export type SearchVideoChunksInput = {
   query: string;
@@ -8,8 +7,13 @@ export type SearchVideoChunksInput = {
   limit?: number;
 };
 
-export type SearchVideoChunkResult = {
-  chunkId: string;
+export type SourceObjectRef = {
+  bucket: string;
+  key: string;
+};
+
+export type SearchSegmentResult = {
+  segmentId: string;
   videoJobId: string;
   uploadId: string;
   filename: string;
@@ -18,12 +22,14 @@ export type SearchVideoChunkResult = {
   endSec: number;
   durationSec: number;
   score: number;
-  playbackUrl: string;
+  sourceObject: SourceObjectRef;
 };
+
+const getSourceBucket = () => process.env.S3_BUCKET ?? "uploads";
 
 export const searchVideos = async (
   input: SearchVideoChunksInput,
-): Promise<SearchVideoChunkResult[]> => {
+): Promise<SearchSegmentResult[]> => {
   const embedding = await embedSearchQuery(input.query.trim());
   const rows = await searchVideoChunks({
     embedding,
@@ -31,9 +37,10 @@ export const searchVideos = async (
     limit: input.limit,
   });
 
-  return Promise.all(
-    rows.map(async (row) => ({
-      chunkId: row.id,
+  return rows
+    .filter((row) => row.sourceStorageKey)
+    .map((row) => ({
+      segmentId: row.id,
       videoJobId: row.videoJobId,
       uploadId: row.uploadId,
       filename: row.filename,
@@ -42,7 +49,9 @@ export const searchVideos = async (
       endSec: row.endSec,
       durationSec: row.durationSec,
       score: row.score,
-      playbackUrl: await getPresignedObjectUrl(row.storageKey),
-    })),
-  );
+      sourceObject: {
+        bucket: getSourceBucket(),
+        key: row.sourceStorageKey!,
+      },
+    }));
 };

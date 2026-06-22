@@ -87,11 +87,21 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+      search:
+        condition: service_healthy
+      rustfs:
+        condition: service_healthy
     ports:
       - "3000:3000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
       VALKEY_URL: redis://valkey:6379
+      SEARCH_API_URL: http://search:3001
+      S3_ENDPOINT: http://rustfs:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: uploads
+      S3_ACCESS_KEY_ID: rustfsadmin
+      S3_SECRET_ACCESS_KEY: rustfsadmin
     volumes:
       - ./server/src:/app/server/src
     healthcheck:
@@ -115,18 +125,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      rustfs:
-        condition: service_healthy
     ports:
       - "3001:3001"
     environment:
       PORT: "3001"
       DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
-      S3_ENDPOINT: http://rustfs:9000
-      S3_REGION: us-east-1
       S3_BUCKET: uploads
-      S3_ACCESS_KEY_ID: rustfsadmin
-      S3_SECRET_ACCESS_KEY: rustfsadmin
       EMBEDDING_MODEL: google/gemini-embedding-2
     volumes:
       - ./search/src:/app/search/src

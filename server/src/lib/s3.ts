@@ -15,10 +15,13 @@ const s3 = new S3({
   responseChecksumValidation: "WHEN_REQUIRED",
 });
 
-export const getPresignedObjectUrl = async (storageKey: string) => {
+export const getPresignedObjectUrl = async (input: {
+  bucket?: string;
+  key: string;
+}) => {
   const command = new GetObjectCommand({
-    Bucket: getS3Bucket(),
-    Key: storageKey,
+    Bucket: input.bucket ?? getS3Bucket(),
+    Key: input.key,
   });
 
   return getSignedUrl(s3, command, { expiresIn: 3600 });

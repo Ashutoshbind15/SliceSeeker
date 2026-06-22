@@ -5,9 +5,6 @@ import type { Readable } from "node:stream";
 
 const getS3Bucket = () => process.env.S3_BUCKET ?? "uploads";
 
-export const getChunksPrefix = () =>
-  process.env.S3_CHUNKS_PREFIX ?? "chunks";
-
 const s3 = new S3({
   endpoint: process.env.S3_ENDPOINT ?? "http://127.0.0.1:9000",
   region: process.env.S3_REGION ?? "us-east-1",
@@ -37,17 +34,4 @@ export const downloadObject = async (input: {
     response.Body as Readable,
     createWriteStream(input.destinationPath),
   );
-};
-
-export const uploadObject = async (input: {
-  storageKey: string;
-  body: Buffer;
-  contentType?: string;
-}) => {
-  await s3.putObject({
-    Bucket: getS3Bucket(),
-    Key: input.storageKey,
-    Body: input.body,
-    ContentType: input.contentType ?? "video/mp4",
-  });
 };

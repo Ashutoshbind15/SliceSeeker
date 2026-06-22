@@ -8,6 +8,7 @@ import {
   listUploadsHandler,
   startVideoProcessingHandler,
 } from "./routes/video-processing.js";
+import { searchVideosHandler } from "./routes/search.js";
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.post("/todos", async (req, res) => {
 app.get("/uploads", listUploadsHandler);
 app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
 app.get("/jobs/:jobId", getVideoJobStatusHandler);
+app.post("/search", searchVideosHandler);
 
 app.post("/api/tusd-hooks", tusdHookHandler);
 

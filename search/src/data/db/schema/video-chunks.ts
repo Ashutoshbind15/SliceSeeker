@@ -20,7 +20,6 @@ export const videoChunksTable = pgTable(
       .notNull()
       .references(() => videoJobsTable.id, { onDelete: "cascade" }),
     chunkIndex: integer("chunk_index").notNull(),
-    storageKey: text("storage_key").notNull(),
     startSec: doublePrecision("start_sec").notNull(),
     endSec: doublePrecision("end_sec").notNull(),
     durationSec: doublePrecision("duration_sec").notNull(),

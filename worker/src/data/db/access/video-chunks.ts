@@ -5,7 +5,6 @@ export type VideoChunkInsert = {
   id: string;
   videoJobId: string;
   chunkIndex: number;
-  storageKey: string;
   startSec: number;
   endSec: number;
   durationSec: number;

@@ -13,11 +13,7 @@ import {
   embedVideoChunk,
   logEmbedJobSummary,
 } from "./lib/embeddings.js";
-import {
-  downloadObject,
-  getChunksPrefix,
-  uploadObject,
-} from "./lib/s3.js";
+import { downloadObject } from "./lib/s3.js";
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
@@ -25,16 +21,11 @@ import {
   type VideoChunkJobPayload,
 } from "./lib/queue.js";
 
-const CHUNK_UPLOAD_CONCURRENCY = Number(
-  process.env.CHUNK_UPLOAD_CONCURRENCY ?? "4",
-);
-
 const CHUNK_EMBED_CONCURRENCY = Number(
   process.env.CHUNK_EMBED_CONCURRENCY ?? "2",
 );
 
 const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
-  const chunksPrefix = `${getChunksPrefix()}/${payload.videoJobId}`;
   const extension = path.extname(payload.filename) || ".mp4";
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "video-chunk-"));
 
@@ -72,20 +63,8 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
 
     const chunkRecords = await mapWithConcurrency(
       segments,
-      Math.min(CHUNK_UPLOAD_CONCURRENCY, CHUNK_EMBED_CONCURRENCY),
+      CHUNK_EMBED_CONCURRENCY,
       async (segment) => {
-        const storageKey = path.posix.join(
-          chunksPrefix,
-          `chunk_${String(segment.chunkIndex).padStart(4, "0")}${extension}`,
-        );
-        const body = await fs.readFile(segment.filePath);
-
-        await uploadObject({
-          storageKey,
-          body,
-          contentType: payload.filetype,
-        });
-
         const { embedding, usage } = await embedVideoChunk({
           filePath: segment.filePath,
           mimeType: payload.filetype,
@@ -104,7 +83,6 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
           id: randomUUID(),
           videoJobId: payload.videoJobId,
           chunkIndex: segment.chunkIndex,
-          storageKey,
           startSec: segment.startSec,
           endSec: segment.endSec,
           durationSec: segment.durationSec,
@@ -131,7 +109,7 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
     });
 
     console.log(
-      `Chunked upload ${payload.uploadId} into ${chunkRecords.length} segments at s3://${chunksPrefix}/`,
+      `Indexed upload ${payload.uploadId} into ${chunkRecords.length} segments`,
     );
   } catch (error) {
     const message =

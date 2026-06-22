@@ -30,13 +30,13 @@ export const searchVideoChunks = async (input: {
       id: videoChunksTable.id,
       videoJobId: videoChunksTable.videoJobId,
       chunkIndex: videoChunksTable.chunkIndex,
-      storageKey: videoChunksTable.storageKey,
       startSec: videoChunksTable.startSec,
       endSec: videoChunksTable.endSec,
       durationSec: videoChunksTable.durationSec,
       uploadId: uploadsTable.id,
       filename: uploadsTable.filename,
       filetype: uploadsTable.filetype,
+      sourceStorageKey: uploadsTable.storageKey,
       score: sql<number>`1 - (${distanceExpr})`.as("score"),
     })
     .from(videoChunksTable)

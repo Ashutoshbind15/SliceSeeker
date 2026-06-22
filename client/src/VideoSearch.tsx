@@ -1,4 +1,6 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+// Sample end-client integration: demo UI that plays segment matches from
+// presigned source URLs. End-users' frontends should own playback, auth, and UX.
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 
@@ -15,7 +17,7 @@ type UploadSummary = {
 };
 
 type SearchResult = {
-  chunkId: string;
+  segmentId: string;
   videoJobId: string;
   uploadId: string;
   filename: string;
@@ -34,6 +36,56 @@ const formatTime = (seconds: number) => {
 };
 
 const formatScore = (score: number) => `${(score * 100).toFixed(1)}%`;
+
+type SegmentVideoProps = {
+  src: string;
+  startSec: number;
+  endSec: number;
+};
+
+const SegmentVideo = ({ src, startSec, endSec }: SegmentVideoProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) {
+      return;
+    }
+
+    const seekToStart = () => {
+      if (video.currentTime < startSec || video.currentTime >= endSec) {
+        video.currentTime = startSec;
+      }
+    };
+
+    const clampPlayback = () => {
+      if (video.currentTime >= endSec) {
+        video.pause();
+        video.currentTime = startSec;
+      }
+    };
+
+    video.addEventListener("loadedmetadata", seekToStart);
+    video.addEventListener("play", seekToStart);
+    video.addEventListener("timeupdate", clampPlayback);
+
+    return () => {
+      video.removeEventListener("loadedmetadata", seekToStart);
+      video.removeEventListener("play", seekToStart);
+      video.removeEventListener("timeupdate", clampPlayback);
+    };
+  }, [src, startSec, endSec]);
+
+  return (
+    <video
+      ref={videoRef}
+      className="aspect-video w-full rounded-md bg-black sm:w-56"
+      controls
+      preload="metadata"
+      src={`${src}#t=${startSec},${endSec}`}
+    />
+  );
+};
 
 const VideoSearch = () => {
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
@@ -87,7 +139,7 @@ const VideoSearch = () => {
     setHasSearched(true);
 
     try {
-      const response = await fetch(`${endpoints.search}/search`, {
+      const response = await fetch(`${endpoints.api}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +174,7 @@ const VideoSearch = () => {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Search video</h1>
         <p className="text-sm text-muted-foreground">
-          Search across indexed video chunks using semantic embeddings. Results
+          Search across indexed video segments using semantic embeddings. Results
           are ranked by similarity score with inline playback previews.
         </p>
       </div>
@@ -188,7 +240,7 @@ const VideoSearch = () => {
 
       {hasSearched && !searching && !error && results.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No matching chunks found for &ldquo;{query.trim()}&rdquo;.
+          No matching segments found for &ldquo;{query.trim()}&rdquo;.
         </p>
       ) : null}
 
@@ -200,16 +252,15 @@ const VideoSearch = () => {
           <ul className="space-y-4">
             {results.map((result) => (
               <li
-                key={result.chunkId}
+                key={result.segmentId}
                 className="overflow-hidden rounded-lg border bg-card"
               >
                 <div className="flex flex-col gap-3 p-4 sm:flex-row">
                   <div className="shrink-0">
-                    <video
-                      className="aspect-video w-full rounded-md bg-black sm:w-56"
-                      controls
-                      preload="metadata"
+                    <SegmentVideo
                       src={result.playbackUrl}
+                      startSec={result.startSec}
+                      endSec={result.endSec}
                     />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-2 text-sm">
@@ -218,7 +269,7 @@ const VideoSearch = () => {
                         {formatScore(result.score)} match
                       </span>
                       <span className="text-muted-foreground">
-                        Chunk {result.chunkIndex + 1}
+                        Segment {result.chunkIndex + 1}
                       </span>
                     </div>
                     <p className="truncate font-medium">{result.filename}</p>
