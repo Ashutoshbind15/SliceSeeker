@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import Todo from "./Todo";
 import VideoUpload from "./VideoUpload";
 import VideoProcess from "./VideoProcess";
+import VideoSearch from "./VideoSearch";
 import Layout from "./Layout";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./index.css";
@@ -17,6 +18,7 @@ root.render(
           <Route path="/" element={<App />} />
           <Route path="/upload" element={<VideoUpload />} />
           <Route path="/process" element={<VideoProcess />} />
+          <Route path="/search" element={<VideoSearch />} />
           <Route path="/todo" element={<Todo />} />
         </Route>
       </Routes>

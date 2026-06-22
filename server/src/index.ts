@@ -3,6 +3,7 @@ import "dotenv/config";
 import { createTodo, getTodos } from "./data/db/access/index.js";
 import cors from "cors";
 import { tusdHookHandler } from "./routes/uploads.js";
+import { searchVideosHandler } from "./routes/video-search.js";
 import {
   getVideoJobStatusHandler,
   listUploadsHandler,
@@ -36,6 +37,7 @@ app.post("/todos", async (req, res) => {
 app.get("/uploads", listUploadsHandler);
 app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
 app.get("/jobs/:jobId", getVideoJobStatusHandler);
+app.post("/search", searchVideosHandler);
 
 app.post("/api/tusd-hooks", tusdHookHandler);
 

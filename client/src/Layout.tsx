@@ -23,6 +23,12 @@ const Layout = () => {
               Process
             </Link>
             <Link
+              to="/search"
+              className="text-foreground hover:text-foreground/80"
+            >
+              Search
+            </Link>
+            <Link
               to="/todo"
               className="text-foreground hover:text-foreground/80"
             >
