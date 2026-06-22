@@ -1,5 +1,6 @@
 packages:
   - "client"
+  - "search"
   - "server"
   - "worker"
 minimumReleaseAge: 7200

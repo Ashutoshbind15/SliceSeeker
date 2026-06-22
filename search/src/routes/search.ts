@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
-import { searchVideos } from "../services/video-search.js";
+import { searchVideos } from "../services/search.js";
 
 const searchBodySchema = z.object({
   query: z.string().trim().min(1, "Query is required"),

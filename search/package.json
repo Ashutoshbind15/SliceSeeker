@@ -1,16 +1,13 @@
 {
-  "name": "server",
+  "name": "search",
   "version": "1.0.0",
-  "description": "",
+  "description": "Thin retrieval API for semantic video search",
   "main": "index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -21,17 +18,17 @@
     "@types/express": "5.0.6",
     "@types/node": "25.6.0",
     "@types/pg": "8.20.0",
-    "drizzle-kit": "0.31.10",
     "tsx": "4.21.0",
     "typescript": "6.0.3"
   },
   "dependencies": {
-    "bullmq": "5.70.1",
+    "@aws-sdk/client-s3": "3.888.0",
+    "@aws-sdk/s3-request-presigner": "3.1070.0",
+    "ai": "6.0.207",
     "cors": "2.8.6",
     "dotenv": "17.4.2",
     "drizzle-orm": "0.45.2",
     "express": "5.2.1",
-    "ioredis": "5.10.1",
     "pg": "8.20.0",
     "zod": "4.4.3"
   }

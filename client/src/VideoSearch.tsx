@@ -87,7 +87,7 @@ const VideoSearch = () => {
     setHasSearched(true);
 
     try {
-      const response = await fetch(`${endpoints.api}/search`, {
+      const response = await fetch(`${endpoints.search}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
