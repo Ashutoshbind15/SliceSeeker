@@ -6,8 +6,11 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core";
 import { videoJobsTable } from "./video-jobs.js";
+
+export const VIDEO_CHUNK_EMBEDDING_DIMENSIONS = 1536;
 
 export const videoChunksTable = pgTable(
   "video_chunks",
@@ -21,6 +24,10 @@ export const videoChunksTable = pgTable(
     startSec: doublePrecision("start_sec").notNull(),
     endSec: doublePrecision("end_sec").notNull(),
     durationSec: doublePrecision("duration_sec").notNull(),
+    embedding: vector("embedding", {
+      dimensions: VIDEO_CHUNK_EMBEDDING_DIMENSIONS,
+    }),
+    embeddingModel: text("embedding_model"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
@@ -28,6 +35,10 @@ export const videoChunksTable = pgTable(
     uniqueIndex("video_chunks_video_job_id_chunk_index_idx").on(
       table.videoJobId,
       table.chunkIndex,
+    ),
+    index("video_chunks_embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops"),
     ),
   ],
 );

@@ -12,7 +12,7 @@ services:
       retries: 5
 
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg18-trixie
     restart: unless-stopped
     ports:
       - "5432:5432"
@@ -21,7 +21,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: demo_search
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d demo_search"]
       interval: 5s

@@ -6,6 +6,7 @@ export type VideoJobStatus =
   | "queued"
   | "downloading"
   | "chunking"
+  | "embedding"
   | "completed"
   | "failed";
 
@@ -59,6 +60,7 @@ export const getActiveVideoJobForUpload = async (uploadId: string) => {
           "queued",
           "downloading",
           "chunking",
+          "embedding",
         ]),
       ),
     )

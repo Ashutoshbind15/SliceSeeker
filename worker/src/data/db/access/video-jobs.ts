@@ -6,6 +6,7 @@ export type VideoJobStatus =
   | "queued"
   | "downloading"
   | "chunking"
+  | "embedding"
   | "completed"
   | "failed";
 

@@ -9,6 +9,8 @@ export type VideoChunkInsert = {
   startSec: number;
   endSec: number;
   durationSec: number;
+  embedding: number[];
+  embeddingModel: string;
 };
 
 export const insertVideoChunks = async (chunks: VideoChunkInsert[]) => {

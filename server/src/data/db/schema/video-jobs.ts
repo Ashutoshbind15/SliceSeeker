@@ -12,6 +12,7 @@ export const videoJobStatusEnum = pgEnum("video_job_status", [
   "queued",
   "downloading",
   "chunking",
+  "embedding",
   "completed",
   "failed",
 ]);

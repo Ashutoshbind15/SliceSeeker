@@ -8,6 +8,7 @@ import { insertVideoChunks } from "./data/db/access/video-chunks.js";
 import { updateVideoJobStatus } from "./data/db/access/video-jobs.js";
 import { chunkVideoFile } from "./lib/chunking.js";
 import { mapWithConcurrency } from "./lib/concurrency.js";
+import { EMBEDDING_MODEL, embedVideoChunk } from "./lib/embeddings.js";
 import {
   downloadObject,
   getChunksPrefix,
@@ -22,6 +23,10 @@ import {
 
 const CHUNK_UPLOAD_CONCURRENCY = Number(
   process.env.CHUNK_UPLOAD_CONCURRENCY ?? "4",
+);
+
+const CHUNK_EMBED_CONCURRENCY = Number(
+  process.env.CHUNK_EMBED_CONCURRENCY ?? "2",
 );
 
 const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
@@ -53,9 +58,13 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
       outputDir: chunksDir,
     });
 
+    await updateVideoJobStatus(payload.videoJobId, {
+      status: "embedding",
+    });
+
     const chunkRecords = await mapWithConcurrency(
       segments,
-      CHUNK_UPLOAD_CONCURRENCY,
+      Math.min(CHUNK_UPLOAD_CONCURRENCY, CHUNK_EMBED_CONCURRENCY),
       async (segment) => {
         const storageKey = path.posix.join(
           chunksPrefix,
@@ -69,6 +78,11 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
           contentType: payload.filetype,
         });
 
+        const embedding = await embedVideoChunk({
+          filePath: segment.filePath,
+          mimeType: payload.filetype,
+        });
+
         return {
           id: randomUUID(),
           videoJobId: payload.videoJobId,
@@ -77,6 +91,8 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
           startSec: segment.startSec,
           endSec: segment.endSec,
           durationSec: segment.durationSec,
+          embedding,
+          embeddingModel: EMBEDDING_MODEL,
         };
       },
     );
