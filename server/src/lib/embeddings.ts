@@ -5,7 +5,7 @@ export const EMBEDDING_MODEL =
   process.env.EMBEDDING_MODEL ?? "google/gemini-embedding-2";
 
 export const embedSearchQuery = async (query: string) => {
-  const { embedding } = await embed({
+  const { embedding, usage } = await embed({
     model: EMBEDDING_MODEL,
     value: query,
     providerOptions: {
@@ -14,6 +14,11 @@ export const embedSearchQuery = async (query: string) => {
       },
     },
   });
+
+  const tokens = Number.isFinite(usage.tokens) ? usage.tokens : "n/a";
+  console.log(
+    `[embed] search requests=1 tokens=${tokens} queryChars=${query.length}`,
+  );
 
   return embedding;
 };

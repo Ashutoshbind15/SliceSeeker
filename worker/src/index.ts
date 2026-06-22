@@ -8,7 +8,11 @@ import { insertVideoChunks } from "./data/db/access/video-chunks.js";
 import { updateVideoJobStatus } from "./data/db/access/video-jobs.js";
 import { chunkVideoFile } from "./lib/chunking.js";
 import { mapWithConcurrency } from "./lib/concurrency.js";
-import { EMBEDDING_MODEL, embedVideoChunk } from "./lib/embeddings.js";
+import {
+  EMBEDDING_MODEL,
+  embedVideoChunk,
+  logEmbedJobSummary,
+} from "./lib/embeddings.js";
 import {
   downloadObject,
   getChunksPrefix,
@@ -62,6 +66,10 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
       status: "embedding",
     });
 
+    let embedRequestCount = 0;
+    let embedTotalTokens = 0;
+    let embedTokensAvailable = true;
+
     const chunkRecords = await mapWithConcurrency(
       segments,
       Math.min(CHUNK_UPLOAD_CONCURRENCY, CHUNK_EMBED_CONCURRENCY),
@@ -78,10 +86,19 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
           contentType: payload.filetype,
         });
 
-        const embedding = await embedVideoChunk({
+        const { embedding, usage } = await embedVideoChunk({
           filePath: segment.filePath,
           mimeType: payload.filetype,
+          chunkIndex: segment.chunkIndex,
+          durationSec: segment.durationSec,
         });
+
+        embedRequestCount += 1;
+        if (usage.tokens === null) {
+          embedTokensAvailable = false;
+        } else {
+          embedTotalTokens += usage.tokens;
+        }
 
         return {
           id: randomUUID(),
@@ -96,6 +113,13 @@ const processVideoChunkJob = async (payload: VideoChunkJobPayload) => {
         };
       },
     );
+
+    logEmbedJobSummary({
+      videoJobId: payload.videoJobId,
+      uploadId: payload.uploadId,
+      requestCount: embedRequestCount,
+      totalTokens: embedTokensAvailable ? embedTotalTokens : null,
+    });
 
     await insertVideoChunks(chunkRecords);
 
