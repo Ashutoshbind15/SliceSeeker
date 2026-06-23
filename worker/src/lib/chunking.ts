@@ -19,11 +19,11 @@ const parseSegmentList = async (
   const content = await fs.readFile(segmentListPath, "utf8");
   const lines = content.trim().split("\n").filter(Boolean);
 
-  if (lines.length <= 1) {
+  if (lines.length === 0) {
     return [];
   }
 
-  return lines.slice(1).map((line) => {
+  return lines.map((line) => {
     const [filename, start, end] = line.split(",");
     if (!filename || start === undefined || end === undefined) {
       throw new Error(`Invalid segment list row: ${line}`);
