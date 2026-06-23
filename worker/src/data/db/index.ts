@@ -1,10 +1,12 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { tasksTable } from "./schema/tasks.js";
+import { chunkingTasksTable } from "./schema/chunking-tasks.js";
+import { embeddingTasksTable } from "./schema/embedding-tasks.js";
 import { videoChunksTable } from "./schema/video-chunks.js";
 
 const db = drizzle(process.env.DATABASE_URL!, {
   schema: {
-    tasks: tasksTable,
+    chunkingTasks: chunkingTasksTable,
+    embeddingTasks: embeddingTasksTable,
     videoChunks: videoChunksTable,
   },
 });

@@ -33,18 +33,21 @@ export const startVideoProcessingHandler = async (
     const status =
       result.reason === "not_found"
         ? 404
-        : result.reason === "already_processing"
+        : result.reason === "already_chunking"
           ? 409
           : 400;
 
     res.status(status).json({
       message: result.message,
-      ...(result.job ? { job: result.job } : {}),
+      ...(result.chunkingTask ? { chunkingTask: result.chunkingTask } : {}),
     });
     return;
   }
 
-  res.status(202).json({ job: result.job });
+  res.status(202).json({
+    chunkingTask: result.chunkingTask,
+    embedding: result.embedding,
+  });
 };
 
 export const getVideoJobStatusHandler = async (req: Request, res: Response) => {
@@ -60,5 +63,5 @@ export const getVideoJobStatusHandler = async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ job });
+  res.json({ chunkingTask: job });
 };

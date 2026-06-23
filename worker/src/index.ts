@@ -1,32 +1,27 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
-import { updateTaskStatus } from "./data/db/access/tasks.js";
+import { updateChunkingTaskStatus } from "./data/db/access/chunking-tasks.js";
+import { markEmbeddingTaskFailed } from "./data/db/access/embedding-tasks.js";
+import { processChunkingJob } from "./lib/chunking-job.js";
 import { processEmbedChunkJob } from "./lib/embed-chunk.js";
-import { processPrepIndexJob } from "./lib/prep-index.js";
 import {
+  CHUNKING_JOB_NAME,
   EMBED_CHUNK_JOB_NAME,
-  FINISH_TASK_JOB_NAME,
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
-  PREP_INDEX_JOB_NAME,
+  type ChunkingJobPayload,
   type EmbedChunkJobPayload,
-  type FinishTaskJobPayload,
-  type PrepIndexJobPayload,
 } from "./lib/queue.js";
-import { processFinishTaskJob } from "./lib/task-progress.js";
 
 const worker = new Worker(
   JOB_QUEUE_NAME,
   async (job) => {
     switch (job.name) {
-      case PREP_INDEX_JOB_NAME:
-        await processPrepIndexJob(job.data as PrepIndexJobPayload);
+      case CHUNKING_JOB_NAME:
+        await processChunkingJob(job.data as ChunkingJobPayload);
         return;
       case EMBED_CHUNK_JOB_NAME:
         await processEmbedChunkJob(job.data as EmbedChunkJobPayload);
-        return;
-      case FINISH_TASK_JOB_NAME:
-        await processFinishTaskJob(job.data as FinishTaskJobPayload);
         return;
       default:
         console.log(`Skipping unsupported job type: ${job.name}`);
@@ -54,15 +49,20 @@ worker.on("failed", (job, err) => {
     return;
   }
 
-  const data = job.data as
-    | PrepIndexJobPayload
-    | EmbedChunkJobPayload
-    | FinishTaskJobPayload;
-  void updateTaskStatus(data.taskId, {
-    status: "failed",
-    errorMessage: err.message,
-    completedAt: new Date(),
-  });
+  if (job.name === CHUNKING_JOB_NAME) {
+    const data = job.data as ChunkingJobPayload;
+    void updateChunkingTaskStatus(data.chunkingTaskId, {
+      status: "failed",
+      errorMessage: err.message,
+      completedAt: new Date(),
+    });
+    return;
+  }
+
+  if (job.name === EMBED_CHUNK_JOB_NAME) {
+    const data = job.data as EmbedChunkJobPayload;
+    void markEmbeddingTaskFailed(data.embeddingTaskId, err.message);
+  }
 });
 
 console.log(`Worker listening on "${JOB_QUEUE_NAME}" queue`);

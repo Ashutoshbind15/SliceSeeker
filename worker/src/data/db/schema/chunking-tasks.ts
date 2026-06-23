@@ -6,20 +6,18 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
-export const taskStatusEnum = pgEnum("video_job_status", [
+export const chunkingTaskStatusEnum = pgEnum("chunking_task_status", [
   "queued",
   "downloading",
   "chunking",
-  "chunked",
-  "embedding",
   "completed",
   "failed",
 ]);
 
-export const tasksTable = pgTable("tasks", {
+export const chunkingTasksTable = pgTable("chunking_tasks", {
   id: text("id").primaryKey(),
   fileId: text("file_id").notNull(),
-  status: taskStatusEnum("status").notNull().default("queued"),
+  status: chunkingTaskStatusEnum("status").notNull().default("queued"),
   bullJobId: text("bull_job_id"),
   chunkCount: integer("chunk_count"),
   errorMessage: text("error_message"),

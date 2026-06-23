@@ -2,15 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 
-type VideoJob = {
+type ChunkingTask = {
   id: string;
   uploadId: string;
   status:
     | "queued"
     | "downloading"
     | "chunking"
-    | "chunked"
-    | "embedding"
     | "completed"
     | "failed";
   chunkCount: number | null;
@@ -20,6 +18,13 @@ type VideoJob = {
   completedAt: string | null;
 };
 
+type EmbeddingProgress = {
+  total: number;
+  embedded: number;
+  failed: number;
+  pending: number;
+};
+
 type UploadSummary = {
   id: string;
   filename: string;
@@ -27,7 +32,9 @@ type UploadSummary = {
   sizeBytes: number | null;
   completedAt: string | null;
   createdAt: string;
-  job: VideoJob | null;
+  isChunked: boolean;
+  chunkingTask: ChunkingTask | null;
+  embedding: EmbeddingProgress;
 };
 
 const formatBytes = (bytes: number | null) => {
@@ -44,7 +51,7 @@ const formatBytes = (bytes: number | null) => {
   return `${mib.toFixed(1)} MiB`;
 };
 
-const formatStatus = (status: VideoJob["status"]) => {
+const formatChunkingStatus = (status: ChunkingTask["status"]) => {
   switch (status) {
     case "queued":
       return "Queued";
@@ -52,10 +59,6 @@ const formatStatus = (status: VideoJob["status"]) => {
       return "Downloading";
     case "chunking":
       return "Chunking";
-    case "chunked":
-      return "Chunked";
-    case "embedding":
-      return "Embedding";
     case "completed":
       return "Completed";
     case "failed":
@@ -63,12 +66,13 @@ const formatStatus = (status: VideoJob["status"]) => {
   }
 };
 
-const isActiveJob = (job: VideoJob | null) =>
-  job?.status === "queued" ||
-  job?.status === "downloading" ||
-  job?.status === "chunking" ||
-  job?.status === "chunked" ||
-  job?.status === "embedding";
+const isChunkingActive = (task: ChunkingTask | null) =>
+  task?.status === "queued" ||
+  task?.status === "downloading" ||
+  task?.status === "chunking";
+
+const isEmbeddingActive = (embedding: EmbeddingProgress) =>
+  embedding.pending > 0;
 
 const VideoProcess = () => {
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
@@ -113,10 +117,17 @@ const VideoProcess = () => {
   }, [fetchUploads]);
 
   const selectedUpload = uploads.find((upload) => upload.id === selectedUploadId);
-  const activeJob = uploads.find((upload) => isActiveJob(upload.job))?.job ?? null;
+  const isActive =
+    isChunkingActive(selectedUpload?.chunkingTask ?? null) ||
+    isEmbeddingActive(selectedUpload?.embedding ?? {
+      total: 0,
+      embedded: 0,
+      failed: 0,
+      pending: 0,
+    });
 
   useEffect(() => {
-    if (!activeJob) {
+    if (!isActive) {
       return;
     }
 
@@ -127,7 +138,7 @@ const VideoProcess = () => {
     return () => {
       window.clearInterval(interval);
     };
-  }, [activeJob?.id, activeJob?.status, fetchUploads]);
+  }, [isActive, fetchUploads]);
 
   const startProcessing = async () => {
     if (!selectedUploadId) {
@@ -147,7 +158,6 @@ const VideoProcess = () => {
 
       const body = (await response.json().catch(() => null)) as {
         message?: string;
-        job?: VideoJob;
       } | null;
 
       if (!response.ok) {
@@ -171,9 +181,8 @@ const VideoProcess = () => {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">Process video</h1>
         <p className="text-sm text-muted-foreground">
-          Select a completed upload to send into the worker pipeline. The worker
-          downloads the source video and splits it into 15-second segments
-          (re-encoded for clean playback boundaries).
+          Chunking splits the source into segments. Embedding runs independently
+          per segment and can be retried without re-chunking.
         </p>
       </div>
 
@@ -217,22 +226,38 @@ const VideoProcess = () => {
             </select>
           </div>
 
-          {selectedUpload?.job ? (
-            <div className="rounded-md border px-4 py-3 text-sm">
+          {selectedUpload ? (
+            <div className="space-y-3 rounded-md border px-4 py-3 text-sm">
               <p>
-                <span className="font-medium">Status:</span>{" "}
-                {formatStatus(selectedUpload.job.status)}
+                <span className="font-medium">Chunking:</span>{" "}
+                {selectedUpload.isChunked
+                  ? "Completed"
+                  : selectedUpload.chunkingTask
+                    ? formatChunkingStatus(selectedUpload.chunkingTask.status)
+                    : "Not started"}
+                {selectedUpload.chunkingTask?.chunkCount !== null &&
+                selectedUpload.chunkingTask?.chunkCount !== undefined
+                  ? ` · ${selectedUpload.chunkingTask.chunkCount} segments`
+                  : selectedUpload.embedding.total > 0
+                    ? ` · ${selectedUpload.embedding.total} segments`
+                    : ""}
               </p>
-              {selectedUpload.job.chunkCount !== null ? (
-                <p>
-                  <span className="font-medium">Chunks:</span>{" "}
-                  {selectedUpload.job.chunkCount}
-                </p>
-              ) : null}
-              {selectedUpload.job.errorMessage ? (
+              <p>
+                <span className="font-medium">Embedding:</span>{" "}
+                {selectedUpload.embedding.total > 0
+                  ? `${selectedUpload.embedding.embedded}/${selectedUpload.embedding.total}`
+                  : "—"}
+                {selectedUpload.embedding.failed > 0
+                  ? ` · ${selectedUpload.embedding.failed} failed`
+                  : ""}
+                {selectedUpload.embedding.pending > 0
+                  ? ` · ${selectedUpload.embedding.pending} in progress`
+                  : ""}
+              </p>
+              {selectedUpload.chunkingTask?.errorMessage ? (
                 <p className="text-destructive">
-                  <span className="font-medium">Error:</span>{" "}
-                  {selectedUpload.job.errorMessage}
+                  <span className="font-medium">Chunking error:</span>{" "}
+                  {selectedUpload.chunkingTask.errorMessage}
                 </p>
               ) : null}
             </div>
@@ -240,40 +265,14 @@ const VideoProcess = () => {
 
           <Button
             onClick={() => void startProcessing()}
-            disabled={
-              submitting ||
-              !selectedUploadId ||
-              isActiveJob(selectedUpload?.job ?? null)
-            }
+            disabled={submitting || !selectedUploadId || isActive}
           >
             {submitting
               ? "Starting…"
-              : isActiveJob(selectedUpload?.job ?? null)
+              : isActive
                 ? "Processing…"
                 : "Start processing"}
           </Button>
-        </div>
-      ) : null}
-
-      {uploads.some((upload) => upload.job) ? (
-        <div className="space-y-3">
-          <h2 className="text-sm font-medium">Processing history</h2>
-          <ul className="space-y-2 text-sm">
-            {uploads
-              .filter((upload) => upload.job)
-              .map((upload) => (
-                <li
-                  key={upload.id}
-                  className="rounded-md border px-3 py-2 text-muted-foreground"
-                >
-                  <span className="text-foreground">{upload.filename}</span> —{" "}
-                  {formatStatus(upload.job!.status)}
-                  {upload.job!.chunkCount !== null
-                    ? ` · ${upload.job!.chunkCount} chunks`
-                    : ""}
-                </li>
-              ))}
-          </ul>
         </div>
       ) : null}
     </div>

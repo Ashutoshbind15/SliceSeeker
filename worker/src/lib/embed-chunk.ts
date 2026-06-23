@@ -6,26 +6,41 @@ import {
   getChunkById,
   updateChunkEmbedding,
 } from "../data/db/access/chunks.js";
+import {
+  getEmbeddingTaskById,
+  markEmbeddingTaskCompleted,
+  markEmbeddingTaskRunning,
+} from "../data/db/access/embedding-tasks.js";
 import { EMBEDDING_MODEL, embedVideoChunk } from "./embeddings.js";
 import { downloadObject } from "./s3.js";
 import type { EmbedChunkJobPayload } from "./queue.js";
 
 export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
-  const chunk = await getChunkById(payload.chunkId);
+  const [embeddingTask, chunk] = await Promise.all([
+    getEmbeddingTaskById(payload.embeddingTaskId),
+    getChunkById(payload.chunkId),
+  ]);
+
+  if (!embeddingTask) {
+    throw new Error(`Embedding task ${payload.embeddingTaskId} not found`);
+  }
 
   if (!chunk) {
     throw new Error(`Chunk ${payload.chunkId} not found`);
   }
 
-  if (chunkHasCurrentEmbedding(chunk)) {
+  if (embeddingTask.status === "completed" || chunkHasCurrentEmbedding(chunk)) {
+    await markEmbeddingTaskCompleted(payload.embeddingTaskId);
     return;
   }
 
   if (!chunk.storeKey) {
     throw new Error(
-      `Chunk ${payload.chunkId} is missing store_key; run prep again for file ${chunk.fileId}`,
+      `Chunk ${payload.chunkId} is missing store_key for file ${chunk.fileId}`,
     );
   }
+
+  await markEmbeddingTaskRunning(payload.embeddingTaskId);
 
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "embed-chunk-"));
 
@@ -50,6 +65,8 @@ export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
       embedding,
       embeddingModel: EMBEDDING_MODEL,
     });
+
+    await markEmbeddingTaskCompleted(payload.embeddingTaskId);
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
   }

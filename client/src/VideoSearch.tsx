@@ -4,23 +4,13 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 
-type VideoJob = {
-  id: string;
-  status:
-    | "queued"
-    | "downloading"
-    | "chunking"
-    | "chunked"
-    | "embedding"
-    | "completed"
-    | "failed";
-  chunkCount: number | null;
-};
-
 type UploadSummary = {
   id: string;
   filename: string;
-  job: VideoJob | null;
+  embedding: {
+    total: number;
+    embedded: number;
+  };
 };
 
 type SearchResult = {
@@ -115,7 +105,7 @@ const VideoSearch = () => {
 
       const data = (await response.json()) as { uploads: UploadSummary[] };
       const searchable = data.uploads.filter(
-        (upload) => upload.job?.status === "completed",
+        (upload) => upload.embedding.embedded > 0,
       );
       setUploads(searchable);
     } catch (fetchError) {
@@ -215,8 +205,8 @@ const VideoSearch = () => {
             {uploads.map((upload) => (
               <option key={upload.id} value={upload.id}>
                 {upload.filename}
-                {upload.job?.chunkCount !== null
-                  ? ` (${upload.job?.chunkCount} chunks)`
+                {upload.embedding.total > 0
+                  ? ` (${upload.embedding.embedded}/${upload.embedding.total} embedded)`
                   : ""}
               </option>
             ))}

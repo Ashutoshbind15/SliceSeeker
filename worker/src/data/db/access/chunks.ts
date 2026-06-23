@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import db from "../index.js";
-import { tasksTable } from "../schema/tasks.js";
+import { chunkingTasksTable } from "../schema/chunking-tasks.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
 import { EMBEDDING_MODEL } from "../../../lib/embeddings.js";
 
@@ -14,8 +14,17 @@ export type ChunkMetadataInsert = {
   storeKey: string;
 };
 
-export const commitPrepResult = async (
-  taskId: string,
+export const fileIsChunked = async (fileId: string) => {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(videoChunksTable)
+    .where(eq(videoChunksTable.fileId, fileId));
+
+  return (result?.count ?? 0) > 0;
+};
+
+export const commitChunkingResult = async (
+  chunkingTaskId: string,
   chunks: ChunkMetadataInsert[],
 ) => {
   await db.transaction(async (tx) => {
@@ -34,20 +43,16 @@ export const commitPrepResult = async (
     }
 
     await tx
-      .update(tasksTable)
+      .update(chunkingTasksTable)
       .set({
-        status: "chunked",
+        status: "completed",
         chunkCount: chunks.length,
+        errorMessage: null,
+        completedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(tasksTable.id, taskId));
+      .where(eq(chunkingTasksTable.id, chunkingTaskId));
   });
-};
-
-export const deleteChunksForFile = async (fileId: string) => {
-  await db
-    .delete(videoChunksTable)
-    .where(eq(videoChunksTable.fileId, fileId));
 };
 
 export const getChunksForFile = async (fileId: string) => {
@@ -80,15 +85,6 @@ export const updateChunkEmbedding = async (input: {
       embeddingModel: input.embeddingModel,
     })
     .where(eq(videoChunksTable.id, input.chunkId));
-};
-
-export const countChunksForFile = async (fileId: string) => {
-  const [result] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(videoChunksTable)
-    .where(eq(videoChunksTable.fileId, fileId));
-
-  return result?.count ?? 0;
 };
 
 export const chunkHasCurrentEmbedding = (chunk: {

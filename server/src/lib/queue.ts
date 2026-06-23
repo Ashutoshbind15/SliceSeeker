@@ -1,12 +1,12 @@
 export const JOB_QUEUE_NAME = "demo-jobs";
 
-export const PREP_INDEX_JOB_NAME = "prep-index";
+export const CHUNKING_JOB_NAME = "chunk-video";
 export const EMBED_CHUNK_JOB_NAME = "embed-chunk";
 
 export const EMBED_JOB_ATTEMPTS = 3;
 
-export type PrepIndexJobPayload = {
-  taskId: string;
+export type ChunkingJobPayload = {
+  chunkingTaskId: string;
   fileId: string;
   storageKey: string;
   filename: string;
@@ -14,7 +14,7 @@ export type PrepIndexJobPayload = {
 };
 
 export type EmbedChunkJobPayload = {
-  taskId: string;
+  embeddingTaskId: string;
   chunkId: string;
   filetype: string;
 };

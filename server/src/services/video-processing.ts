@@ -1,11 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { Queue } from "bullmq";
 import {
-  createTask,
-  getActiveTaskForFile,
-  getLatestTaskForFile,
-  getTaskById,
-} from "../data/db/access/tasks.js";
+  ACTIVE_CHUNKING_STATUSES,
+  createChunkingTask,
+  getChunkingTaskById,
+  getLatestChunkingTaskForFile,
+  getLatestChunkingTasksForFiles,
+  setChunkingTaskBullJobId,
+} from "../data/db/access/chunking-tasks.js";
+import { fileIsChunked } from "../data/db/access/chunks.js";
+import {
+  fileEmbeddingIsComplete,
+  getEmbeddingStatsForFile,
+  getEmbeddingStatsForFiles,
+} from "../data/db/access/embedding-tasks.js";
 import {
   getUploadById,
   listCompletedUploads,
@@ -13,15 +21,16 @@ import {
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
-  PREP_INDEX_JOB_NAME,
-  type PrepIndexJobPayload,
+  CHUNKING_JOB_NAME,
+  type ChunkingJobPayload,
 } from "../lib/queue.js";
+import { enqueueEmbeddingJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
-export type SerializedTask = {
+export type SerializedChunkingTask = {
   id: string;
   fileId: string;
   uploadId: string;
@@ -33,9 +42,16 @@ export type SerializedTask = {
   completedAt: string | null;
 };
 
-const serializeTask = (
-  task: NonNullable<Awaited<ReturnType<typeof getTaskById>>>,
-): SerializedTask => ({
+export type SerializedEmbeddingProgress = {
+  total: number;
+  embedded: number;
+  failed: number;
+  pending: number;
+};
+
+const serializeChunkingTask = (
+  task: NonNullable<Awaited<ReturnType<typeof getChunkingTaskById>>>,
+): SerializedChunkingTask => ({
   id: task.id,
   fileId: task.fileId,
   uploadId: task.fileId,
@@ -49,30 +65,51 @@ const serializeTask = (
 
 export const listUploads = async () => {
   const uploads = await listCompletedUploads();
-  return Promise.all(
-    uploads.map(async (upload) => {
-      const task = await getLatestTaskForFile(upload.id);
-      return {
-        ...upload,
-        completedAt: upload.completedAt?.toISOString() ?? null,
-        createdAt: upload.createdAt.toISOString(),
-        job: task ? serializeTask(task) : null,
-      };
-    }),
-  );
+  const fileIds = uploads.map((upload) => upload.id);
+
+  const [chunkingTasks, embeddingStats] = await Promise.all([
+    getLatestChunkingTasksForFiles(fileIds),
+    getEmbeddingStatsForFiles(fileIds),
+  ]);
+
+  return uploads.map((upload) => {
+    const chunkingTask = chunkingTasks.get(upload.id);
+    const embedding = embeddingStats.get(upload.id) ?? {
+      total: 0,
+      embedded: 0,
+      failed: 0,
+      pending: 0,
+    };
+
+    return {
+      ...upload,
+      completedAt: upload.completedAt?.toISOString() ?? null,
+      createdAt: upload.createdAt.toISOString(),
+      chunkingTask: chunkingTask
+        ? serializeChunkingTask(chunkingTask)
+        : null,
+      embedding,
+      isChunked: embedding.total > 0,
+    };
+  });
 };
 
 export type StartVideoProcessingResult =
-  | { ok: true; job: SerializedTask }
+  | {
+      ok: true;
+      chunkingTask: SerializedChunkingTask | null;
+      embedding: SerializedEmbeddingProgress;
+    }
   | {
       ok: false;
       reason:
         | "not_found"
         | "not_ready"
         | "missing_storage"
-        | "already_processing";
+        | "already_chunking"
+        | "already_complete";
       message: string;
-      job?: SerializedTask;
+      chunkingTask?: SerializedChunkingTask;
     };
 
 export const startVideoProcessing = async (
@@ -99,43 +136,89 @@ export const startVideoProcessing = async (
     };
   }
 
-  const activeTask = await getActiveTaskForFile(upload.id);
-  if (activeTask) {
+  const [latestChunkingTask, isChunked, embedding] = await Promise.all([
+    getLatestChunkingTaskForFile(upload.id),
+    fileIsChunked(upload.id),
+    getEmbeddingStatsForFile(upload.id),
+  ]);
+
+  if (
+    latestChunkingTask &&
+    ACTIVE_CHUNKING_STATUSES.includes(
+      latestChunkingTask.status as typeof ACTIVE_CHUNKING_STATUSES[number],
+    )
+  ) {
     return {
       ok: false,
-      reason: "already_processing",
-      message: "Processing is already in progress for this upload",
-      job: serializeTask(activeTask),
+      reason: "already_chunking",
+      message: "Chunking is already in progress for this upload",
+      chunkingTask: serializeChunkingTask(latestChunkingTask),
     };
   }
 
-  const taskId = randomUUID();
-  const payload: PrepIndexJobPayload = {
-    taskId,
+  if (isChunked) {
+    if (fileEmbeddingIsComplete(embedding)) {
+      return {
+        ok: false,
+        reason: "already_complete",
+        message: "All segments are already embedded for this upload",
+        chunkingTask: latestChunkingTask
+          ? serializeChunkingTask(latestChunkingTask)
+          : undefined,
+      };
+    }
+
+    await enqueueEmbeddingJobsForFile({
+      fileId: upload.id,
+      filetype: upload.filetype,
+    });
+
+    return {
+      ok: true,
+      chunkingTask: latestChunkingTask
+        ? serializeChunkingTask(latestChunkingTask)
+        : null,
+      embedding,
+    };
+  }
+
+  const chunkingTaskId = randomUUID();
+  await createChunkingTask({
+    id: chunkingTaskId,
+    fileId: upload.id,
+  });
+
+  const payload: ChunkingJobPayload = {
+    chunkingTaskId,
     fileId: upload.id,
     storageKey: upload.storageKey,
     filename: upload.filename,
     filetype: upload.filetype,
   };
 
-  const bullJob = await jobQueue.add(PREP_INDEX_JOB_NAME, payload, {
-    jobId: taskId,
+  const bullJob = await jobQueue.add(CHUNKING_JOB_NAME, payload, {
+    jobId: chunkingTaskId,
   });
 
-  const task = await createTask({
-    id: taskId,
-    fileId: upload.id,
-    bullJobId: bullJob.id,
-  });
+  const chunkingTask = await setChunkingTaskBullJobId(
+    chunkingTaskId,
+    bullJob.id!,
+  );
 
-  return { ok: true, job: serializeTask(task) };
+  return {
+    ok: true,
+    chunkingTask: chunkingTask
+      ? serializeChunkingTask(chunkingTask)
+      : null,
+    embedding,
+  };
 };
 
 export const getVideoJob = async (jobId: string) => {
-  const task = await getTaskById(jobId);
+  const task = await getChunkingTaskById(jobId);
   if (!task) {
     return null;
   }
 
-  return serializeTask(task);
+  return serializeChunkingTask(task);
 };
