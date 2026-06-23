@@ -11,7 +11,7 @@ export type SearchVideosInput = {
 
 export type SearchApiSegmentResult = {
   segmentId: string;
-  videoJobId: string;
+  fileId: string;
   uploadId: string;
   filename: string;
   chunkIndex: number;
@@ -27,7 +27,7 @@ export type SearchApiSegmentResult = {
 
 export type SearchVideoResult = {
   segmentId: string;
-  videoJobId: string;
+  fileId: string;
   uploadId: string;
   filename: string;
   chunkIndex: number;
@@ -80,7 +80,7 @@ export const searchVideos = async (
   return Promise.all(
     segments.map(async (segment) => ({
       segmentId: segment.segmentId,
-      videoJobId: segment.videoJobId,
+      fileId: segment.fileId,
       uploadId: segment.uploadId,
       filename: segment.filename,
       chunkIndex: segment.chunkIndex,

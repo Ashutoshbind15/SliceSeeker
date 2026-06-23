@@ -14,7 +14,7 @@ export type SourceObjectRef = {
 
 export type SearchSegmentResult = {
   segmentId: string;
-  videoJobId: string;
+  fileId: string;
   uploadId: string;
   filename: string;
   chunkIndex: number;
@@ -41,8 +41,8 @@ export const searchVideos = async (
     .filter((row) => row.sourceStorageKey)
     .map((row) => ({
       segmentId: row.id,
-      videoJobId: row.videoJobId,
-      uploadId: row.uploadId,
+      fileId: row.fileId,
+      uploadId: row.fileId,
       filename: row.filename,
       chunkIndex: row.chunkIndex,
       startSec: row.startSec,

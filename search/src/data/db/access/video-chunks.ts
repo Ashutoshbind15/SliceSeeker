@@ -2,7 +2,6 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 import db from "../index.js";
 import { uploadsTable } from "../schema/uploads.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
-import { videoJobsTable } from "../schema/video-jobs.js";
 
 const toVectorLiteral = (embedding: number[]) =>
   sql.raw(`'[${embedding.join(",")}]'::vector`);
@@ -16,35 +15,27 @@ export const searchVideoChunks = async (input: {
   const queryVector = toVectorLiteral(input.embedding);
   const distanceExpr = sql`${videoChunksTable.embedding} <=> ${queryVector}`;
 
-  const conditions = [
-    isNotNull(videoChunksTable.embedding),
-    eq(videoJobsTable.status, "completed"),
-  ];
+  const conditions = [isNotNull(videoChunksTable.embedding)];
 
   if (input.uploadId) {
-    conditions.push(eq(uploadsTable.id, input.uploadId));
+    conditions.push(eq(videoChunksTable.fileId, input.uploadId));
   }
 
   return db
     .select({
       id: videoChunksTable.id,
-      videoJobId: videoChunksTable.videoJobId,
+      fileId: videoChunksTable.fileId,
       chunkIndex: videoChunksTable.chunkIndex,
       startSec: videoChunksTable.startSec,
       endSec: videoChunksTable.endSec,
       durationSec: videoChunksTable.durationSec,
-      uploadId: uploadsTable.id,
       filename: uploadsTable.filename,
       filetype: uploadsTable.filetype,
       sourceStorageKey: uploadsTable.storageKey,
       score: sql<number>`1 - (${distanceExpr})`.as("score"),
     })
     .from(videoChunksTable)
-    .innerJoin(
-      videoJobsTable,
-      eq(videoChunksTable.videoJobId, videoJobsTable.id),
-    )
-    .innerJoin(uploadsTable, eq(videoJobsTable.uploadId, uploadsTable.id))
+    .innerJoin(uploadsTable, eq(videoChunksTable.fileId, uploadsTable.id))
     .where(and(...conditions))
     .orderBy(distanceExpr)
     .limit(limit);

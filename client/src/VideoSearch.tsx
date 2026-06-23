@@ -6,7 +6,14 @@ import { Button } from "@/components/ui/button";
 
 type VideoJob = {
   id: string;
-  status: "queued" | "downloading" | "chunking" | "embedding" | "completed" | "failed";
+  status:
+    | "queued"
+    | "downloading"
+    | "chunking"
+    | "chunked"
+    | "embedding"
+    | "completed"
+    | "failed";
   chunkCount: number | null;
 };
 

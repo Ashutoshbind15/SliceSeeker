@@ -1,12 +1,21 @@
 export const JOB_QUEUE_NAME = "demo-jobs";
 
-export const VIDEO_CHUNK_JOB_NAME = "chunk-video";
+export const PREP_INDEX_JOB_NAME = "prep-index";
+export const EMBED_CHUNK_JOB_NAME = "embed-chunk";
 
-export type VideoChunkJobPayload = {
-  videoJobId: string;
-  uploadId: string;
+export const EMBED_JOB_ATTEMPTS = 3;
+
+export type PrepIndexJobPayload = {
+  taskId: string;
+  fileId: string;
   storageKey: string;
   filename: string;
+  filetype: string;
+};
+
+export type EmbedChunkJobPayload = {
+  taskId: string;
+  chunkId: string;
   filetype: string;
 };
 
@@ -16,5 +25,6 @@ export const getValkeyConnectionOptions = () => {
   return {
     host: url.hostname,
     port: Number(url.port || 6379),
+    maxRetriesPerRequest: null,
   };
 };

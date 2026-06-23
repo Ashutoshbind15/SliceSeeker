@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 type VideoJob = {
   id: string;
   uploadId: string;
-  status: "queued" | "downloading" | "chunking" | "embedding" | "completed" | "failed";
+  status:
+    | "queued"
+    | "downloading"
+    | "chunking"
+    | "chunked"
+    | "embedding"
+    | "completed"
+    | "failed";
   chunkCount: number | null;
   errorMessage: string | null;
   createdAt: string;
@@ -45,6 +52,8 @@ const formatStatus = (status: VideoJob["status"]) => {
       return "Downloading";
     case "chunking":
       return "Chunking";
+    case "chunked":
+      return "Chunked";
     case "embedding":
       return "Embedding";
     case "completed":
@@ -58,6 +67,7 @@ const isActiveJob = (job: VideoJob | null) =>
   job?.status === "queued" ||
   job?.status === "downloading" ||
   job?.status === "chunking" ||
+  job?.status === "chunked" ||
   job?.status === "embedding";
 
 const VideoProcess = () => {

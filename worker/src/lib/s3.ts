@@ -1,4 +1,4 @@
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 import { S3 } from "@aws-sdk/client-s3";
 import type { Readable } from "node:stream";
@@ -34,4 +34,57 @@ export const downloadObject = async (input: {
     response.Body as Readable,
     createWriteStream(input.destinationPath),
   );
+};
+
+export const uploadObject = async (input: {
+  storageKey: string;
+  sourcePath: string;
+  contentType: string;
+}) => {
+  await s3.putObject({
+    Bucket: getS3Bucket(),
+    Key: input.storageKey,
+    Body: createReadStream(input.sourcePath),
+    ContentType: input.contentType,
+  });
+};
+
+export const buildChunkStorageKey = (input: {
+  fileId: string;
+  chunkIndex: number;
+  extension: string;
+}) =>
+  `chunks/${input.fileId}/${String(input.chunkIndex).padStart(4, "0")}${input.extension}`;
+
+export const buildChunkPrefix = (fileId: string) => `chunks/${fileId}/`;
+
+export const deleteChunkObjectsForFile = async (fileId: string) => {
+  const prefix = buildChunkPrefix(fileId);
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3.listObjectsV2({
+      Bucket: getS3Bucket(),
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+
+    const keys =
+      response.Contents?.map((object) => object.Key).filter(
+        (key): key is string => key != null,
+      ) ?? [];
+
+    if (keys.length > 0) {
+      await s3.deleteObjects({
+        Bucket: getS3Bucket(),
+        Delete: {
+          Objects: keys.map((Key) => ({ Key })),
+        },
+      });
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
 };

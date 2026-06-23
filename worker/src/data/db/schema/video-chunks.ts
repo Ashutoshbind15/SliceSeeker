@@ -11,11 +11,12 @@ export const VIDEO_CHUNK_EMBEDDING_DIMENSIONS = 1536;
 
 export const videoChunksTable = pgTable("video_chunks", {
   id: text("id").primaryKey(),
-  videoJobId: text("video_job_id").notNull(),
+  fileId: text("file_id").notNull(),
   chunkIndex: integer("chunk_index").notNull(),
   startSec: doublePrecision("start_sec").notNull(),
   endSec: doublePrecision("end_sec").notNull(),
   durationSec: doublePrecision("duration_sec").notNull(),
+  storeKey: text("store_key"),
   embedding: vector("embedding", {
     dimensions: VIDEO_CHUNK_EMBEDDING_DIMENSIONS,
   }),

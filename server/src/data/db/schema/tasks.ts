@@ -8,23 +8,24 @@ import {
 } from "drizzle-orm/pg-core";
 import { uploadsTable } from "./uploads.js";
 
-export const videoJobStatusEnum = pgEnum("video_job_status", [
+export const taskStatusEnum = pgEnum("video_job_status", [
   "queued",
   "downloading",
   "chunking",
+  "chunked",
   "embedding",
   "completed",
   "failed",
 ]);
 
-export const videoJobsTable = pgTable(
-  "video_jobs",
+export const tasksTable = pgTable(
+  "tasks",
   {
     id: text("id").primaryKey(),
-    uploadId: text("upload_id")
+    fileId: text("file_id")
       .notNull()
       .references(() => uploadsTable.id, { onDelete: "cascade" }),
-    status: videoJobStatusEnum("status").notNull().default("queued"),
+    status: taskStatusEnum("status").notNull().default("queued"),
     bullJobId: text("bull_job_id"),
     chunkCount: integer("chunk_count"),
     errorMessage: text("error_message"),
@@ -33,7 +34,7 @@ export const videoJobsTable = pgTable(
     completedAt: timestamp("completed_at"),
   },
   (table) => [
-    index("video_jobs_upload_id_idx").on(table.uploadId),
-    index("video_jobs_status_idx").on(table.status),
+    index("tasks_file_id_idx").on(table.fileId),
+    index("tasks_status_idx").on(table.status),
   ],
 );

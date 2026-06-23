@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Queue } from "bullmq";
 import {
-  createVideoJob,
-  getActiveVideoJobForUpload,
-  getLatestVideoJobForUpload,
-  getVideoJobById,
-} from "../data/db/access/video-jobs.js";
+  createTask,
+  getActiveTaskForFile,
+  getLatestTaskForFile,
+  getTaskById,
+} from "../data/db/access/tasks.js";
 import {
   getUploadById,
   listCompletedUploads,
@@ -13,16 +13,17 @@ import {
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
-  VIDEO_CHUNK_JOB_NAME,
-  type VideoChunkJobPayload,
+  PREP_INDEX_JOB_NAME,
+  type PrepIndexJobPayload,
 } from "../lib/queue.js";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
-export type SerializedVideoJob = {
+export type SerializedTask = {
   id: string;
+  fileId: string;
   uploadId: string;
   status: string;
   chunkCount: number | null;
@@ -32,36 +33,37 @@ export type SerializedVideoJob = {
   completedAt: string | null;
 };
 
-const serializeVideoJob = (
-  job: NonNullable<Awaited<ReturnType<typeof getVideoJobById>>>,
-): SerializedVideoJob => ({
-  id: job.id,
-  uploadId: job.uploadId,
-  status: job.status,
-  chunkCount: job.chunkCount,
-  errorMessage: job.errorMessage,
-  createdAt: job.createdAt.toISOString(),
-  updatedAt: job.updatedAt.toISOString(),
-  completedAt: job.completedAt?.toISOString() ?? null,
+const serializeTask = (
+  task: NonNullable<Awaited<ReturnType<typeof getTaskById>>>,
+): SerializedTask => ({
+  id: task.id,
+  fileId: task.fileId,
+  uploadId: task.fileId,
+  status: task.status,
+  chunkCount: task.chunkCount,
+  errorMessage: task.errorMessage,
+  createdAt: task.createdAt.toISOString(),
+  updatedAt: task.updatedAt.toISOString(),
+  completedAt: task.completedAt?.toISOString() ?? null,
 });
 
 export const listUploads = async () => {
   const uploads = await listCompletedUploads();
   return Promise.all(
     uploads.map(async (upload) => {
-      const job = await getLatestVideoJobForUpload(upload.id);
+      const task = await getLatestTaskForFile(upload.id);
       return {
         ...upload,
         completedAt: upload.completedAt?.toISOString() ?? null,
         createdAt: upload.createdAt.toISOString(),
-        job: job ? serializeVideoJob(job) : null,
+        job: task ? serializeTask(task) : null,
       };
     }),
   );
 };
 
 export type StartVideoProcessingResult =
-  | { ok: true; job: SerializedVideoJob }
+  | { ok: true; job: SerializedTask }
   | {
       ok: false;
       reason:
@@ -70,7 +72,7 @@ export type StartVideoProcessingResult =
         | "missing_storage"
         | "already_processing";
       message: string;
-      job?: SerializedVideoJob;
+      job?: SerializedTask;
     };
 
 export const startVideoProcessing = async (
@@ -97,43 +99,43 @@ export const startVideoProcessing = async (
     };
   }
 
-  const activeJob = await getActiveVideoJobForUpload(upload.id);
-  if (activeJob) {
+  const activeTask = await getActiveTaskForFile(upload.id);
+  if (activeTask) {
     return {
       ok: false,
       reason: "already_processing",
       message: "Processing is already in progress for this upload",
-      job: serializeVideoJob(activeJob),
+      job: serializeTask(activeTask),
     };
   }
 
-  const videoJobId = randomUUID();
-  const payload: VideoChunkJobPayload = {
-    videoJobId,
-    uploadId: upload.id,
+  const taskId = randomUUID();
+  const payload: PrepIndexJobPayload = {
+    taskId,
+    fileId: upload.id,
     storageKey: upload.storageKey,
     filename: upload.filename,
     filetype: upload.filetype,
   };
 
-  const bullJob = await jobQueue.add(VIDEO_CHUNK_JOB_NAME, payload, {
-    jobId: videoJobId,
+  const bullJob = await jobQueue.add(PREP_INDEX_JOB_NAME, payload, {
+    jobId: taskId,
   });
 
-  const job = await createVideoJob({
-    id: videoJobId,
-    uploadId: upload.id,
+  const task = await createTask({
+    id: taskId,
+    fileId: upload.id,
     bullJobId: bullJob.id,
   });
 
-  return { ok: true, job: serializeVideoJob(job) };
+  return { ok: true, job: serializeTask(task) };
 };
 
 export const getVideoJob = async (jobId: string) => {
-  const job = await getVideoJobById(jobId);
-  if (!job) {
+  const task = await getTaskById(jobId);
+  if (!task) {
     return null;
   }
 
-  return serializeVideoJob(job);
+  return serializeTask(task);
 };

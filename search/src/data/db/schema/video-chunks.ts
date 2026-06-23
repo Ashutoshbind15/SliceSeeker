@@ -8,7 +8,7 @@ import {
   uniqueIndex,
   vector,
 } from "drizzle-orm/pg-core";
-import { videoJobsTable } from "./video-jobs.js";
+import { uploadsTable } from "./uploads.js";
 
 export const VIDEO_CHUNK_EMBEDDING_DIMENSIONS = 1536;
 
@@ -16,13 +16,14 @@ export const videoChunksTable = pgTable(
   "video_chunks",
   {
     id: text("id").primaryKey(),
-    videoJobId: text("video_job_id")
+    fileId: text("file_id")
       .notNull()
-      .references(() => videoJobsTable.id, { onDelete: "cascade" }),
+      .references(() => uploadsTable.id, { onDelete: "cascade" }),
     chunkIndex: integer("chunk_index").notNull(),
     startSec: doublePrecision("start_sec").notNull(),
     endSec: doublePrecision("end_sec").notNull(),
     durationSec: doublePrecision("duration_sec").notNull(),
+    storeKey: text("store_key"),
     embedding: vector("embedding", {
       dimensions: VIDEO_CHUNK_EMBEDDING_DIMENSIONS,
     }),
@@ -30,9 +31,9 @@ export const videoChunksTable = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("video_chunks_video_job_id_idx").on(table.videoJobId),
-    uniqueIndex("video_chunks_video_job_id_chunk_index_idx").on(
-      table.videoJobId,
+    index("video_chunks_file_id_idx").on(table.fileId),
+    uniqueIndex("video_chunks_file_id_chunk_index_idx").on(
+      table.fileId,
       table.chunkIndex,
     ),
     index("video_chunks_embedding_idx").using(
