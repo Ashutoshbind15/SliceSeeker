@@ -1,28 +1,11 @@
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { endpoints } from "@/lib/endpoints";
-import { Button } from "@/components/ui/button";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { CollectionPicker } from "@/components/CollectionPicker";
-
-type UploadSummary = {
-  id: string;
-  filename: string;
-  collectionId: string;
-  embedding: {
-    total: number;
-    embedded: number;
-  };
-};
-
-type SearchResult = {
-  segmentId: string;
-  filename: string;
-  chunkIndex: number;
-  startSec: number;
-  endSec: number;
-  durationSec: number;
-  score: number;
-  playbackUrl: string;
-};
+import { Button } from "@/components/ui/button";
+import {
+  type SearchVideosInput,
+  useSearchResultsQuery,
+  useUploadsQuery,
+} from "@/query";
 
 const DEFAULT_LIMIT = 10;
 
@@ -85,54 +68,36 @@ const SegmentVideo = ({ src, startSec, endSec }: SegmentVideoProps) => {
 };
 
 const VideoSearch = () => {
-  const [uploads, setUploads] = useState<UploadSummary[]>([]);
   const [selectedCollectionId, setSelectedCollectionId] = useState("");
-  const [selectedUploadId, setSelectedUploadId] = useState<string>("");
+  const [selectedUploadId, setSelectedUploadId] = useState("");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [loadingUploads, setLoadingUploads] = useState(false);
-  const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [submittedSearch, setSubmittedSearch] = useState<SearchVideosInput | null>(
+    null,
+  );
 
-  const fetchUploads = useCallback(async (collectionId?: string) => {
-    setLoadingUploads(true);
+  const uploadsQuery = useUploadsQuery(
+    selectedCollectionId ? { collectionId: selectedCollectionId } : {},
+  );
 
-    try {
-      const query = collectionId
-        ? `?collectionId=${encodeURIComponent(collectionId)}`
-        : "";
-      const response = await fetch(`${endpoints.api}/uploads${query}`);
-      if (!response.ok) {
-        throw new Error("Failed to load uploads");
-      }
-
-      const data = (await response.json()) as { uploads: UploadSummary[] };
-      const searchable = data.uploads.filter(
+  const searchableUploads = useMemo(
+    () =>
+      (uploadsQuery.data ?? []).filter(
         (upload) => upload.embedding.embedded > 0,
-      );
-      setUploads(searchable);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load uploads",
-      );
-    } finally {
-      setLoadingUploads(false);
-    }
-  }, []);
+      ),
+    [uploadsQuery.data],
+  );
 
-  useEffect(() => {
-    void fetchUploads(selectedCollectionId || undefined);
-  }, [fetchUploads, selectedCollectionId]);
+  const searchQuery = useSearchResultsQuery(
+    submittedSearch,
+    submittedSearch !== null,
+  );
 
   useEffect(() => {
     setSelectedUploadId("");
   }, [selectedCollectionId]);
 
-  const runSearch = async (event: FormEvent) => {
+  const runSearch = (event: FormEvent) => {
     event.preventDefault();
 
     const trimmedQuery = query.trim();
@@ -140,41 +105,19 @@ const VideoSearch = () => {
       return;
     }
 
-    setSearching(true);
-    setError(null);
-    setHasSearched(true);
-
-    try {
-      const response = await fetch(`${endpoints.api}/search`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: trimmedQuery,
-          ...(selectedUploadId ? { uploadId: selectedUploadId } : {}),
-          ...(selectedCollectionId ? { collectionId: selectedCollectionId } : {}),
-          limit,
-        }),
-      });
-
-      const body = (await response.json().catch(() => null)) as {
-        message?: string;
-        results?: SearchResult[];
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(body?.message ?? "Search failed");
-      }
-
-      setResults(body?.results ?? []);
-    } catch (searchError) {
-      setResults([]);
-      setError(
-        searchError instanceof Error ? searchError.message : "Search failed",
-      );
-    } finally {
-      setSearching(false);
-    }
+    setSubmittedSearch({
+      query: trimmedQuery,
+      ...(selectedUploadId ? { uploadId: selectedUploadId } : {}),
+      ...(selectedCollectionId ? { collectionId: selectedCollectionId } : {}),
+      limit,
+    });
   };
+
+  const results = searchQuery.data ?? [];
+  const hasSearched = submittedSearch !== null;
+  const searching = searchQuery.isFetching && hasSearched;
+  const error =
+    uploadsQuery.error?.message ?? searchQuery.error?.message ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
@@ -186,7 +129,7 @@ const VideoSearch = () => {
         </p>
       </div>
 
-      <form onSubmit={(event) => void runSearch(event)} className="space-y-4">
+      <form onSubmit={runSearch} className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="search-query" className="text-sm font-medium">
             Search query
@@ -219,7 +162,7 @@ const VideoSearch = () => {
             onChange={(event) => setSelectedUploadId(event.target.value)}
           >
             <option value="">All indexed videos</option>
-            {uploads.map((upload) => (
+            {searchableUploads.map((upload) => (
               <option key={upload.id} value={upload.id}>
                 {upload.filename}
                 {upload.embedding.total > 0
@@ -253,11 +196,11 @@ const VideoSearch = () => {
         </Button>
       </form>
 
-      {loadingUploads && uploads.length === 0 ? (
+      {uploadsQuery.isPending && searchableUploads.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading indexed videos…</p>
       ) : null}
 
-      {!loadingUploads && uploads.length === 0 ? (
+      {!uploadsQuery.isPending && searchableUploads.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No indexed videos yet. Upload and process a video first, then return
           here to search.
@@ -270,10 +213,14 @@ const VideoSearch = () => {
         </p>
       ) : null}
 
-      {hasSearched && !searching && !error && results.length === 0 ? (
+      {hasSearched && !searching && !searchQuery.isError && results.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No matching segments found for &ldquo;{query.trim()}&rdquo;.
+          No matching segments found for &ldquo;{submittedSearch?.query}&rdquo;.
         </p>
+      ) : null}
+
+      {searchQuery.isFetching && hasSearched && results.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Searching…</p>
       ) : null}
 
       {results.length > 0 ? (

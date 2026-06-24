@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { endpoints } from "@/lib/endpoints";
-
-export type CollectionSummary = {
-  id: string;
-  name: string;
-  isDefault: boolean;
-  createdAt: string;
-};
+import { useEffect } from "react";
+import {
+  type CollectionSummary,
+  useCollectionsQuery,
+  useDefaultCollection,
+} from "@/query";
 
 type CollectionPickerProps = {
   selectedCollectionId: string;
@@ -15,8 +12,9 @@ type CollectionPickerProps = {
   includeAllOption?: boolean;
   allOptionLabel?: string;
   disabled?: boolean;
-  refreshKey?: number;
 };
+
+export type { CollectionSummary };
 
 export const CollectionPicker = ({
   selectedCollectionId,
@@ -25,49 +23,27 @@ export const CollectionPicker = ({
   includeAllOption = false,
   allOptionLabel = "All collections",
   disabled = false,
-  refreshKey = 0,
 }: CollectionPickerProps) => {
-  const [collections, setCollections] = useState<CollectionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCollections = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${endpoints.api}/collections`);
-      if (!response.ok) {
-        throw new Error("Failed to load collections");
-      }
-
-      const data = (await response.json()) as {
-        collections: CollectionSummary[];
-      };
-      setCollections(data.collections);
-
-      if (!selectedCollectionId && !includeAllOption) {
-        const defaultCollection =
-          data.collections.find((collection) => collection.isDefault) ??
-          data.collections[0];
-        if (defaultCollection) {
-          onSelectedCollectionIdChange(defaultCollection.id);
-        }
-      }
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load collections",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [includeAllOption, onSelectedCollectionIdChange, selectedCollectionId]);
+  const collectionsQuery = useCollectionsQuery();
+  const collections = collectionsQuery.data ?? [];
+  const defaultCollection = useDefaultCollection(collections);
 
   useEffect(() => {
-    void fetchCollections();
-  }, [fetchCollections, refreshKey]);
+    if (
+      !selectedCollectionId &&
+      !includeAllOption &&
+      defaultCollection &&
+      !collectionsQuery.isPending
+    ) {
+      onSelectedCollectionIdChange(defaultCollection.id);
+    }
+  }, [
+    collectionsQuery.isPending,
+    defaultCollection,
+    includeAllOption,
+    onSelectedCollectionIdChange,
+    selectedCollectionId,
+  ]);
 
   return (
     <div className="space-y-2">
@@ -83,14 +59,18 @@ export const CollectionPicker = ({
         onChange={(event) =>
           onSelectedCollectionIdChange(event.target.value)
         }
-        disabled={disabled || loading || collections.length === 0}
+        disabled={
+          disabled || collectionsQuery.isPending || collections.length === 0
+        }
       >
         {includeAllOption ? (
           <option value="">{allOptionLabel}</option>
         ) : null}
         {collections.length === 0 ? (
           <option value="">
-            {loading ? "Loading collections…" : "No collections available"}
+            {collectionsQuery.isPending
+              ? "Loading collections…"
+              : "No collections available"}
           </option>
         ) : null}
         {collections.map((collection) => (
@@ -101,46 +81,22 @@ export const CollectionPicker = ({
         ))}
       </select>
 
-      {error ? (
-        <p className="text-sm text-destructive">{error}</p>
+      {collectionsQuery.isError ? (
+        <p className="text-sm text-destructive">
+          {collectionsQuery.error.message}
+        </p>
       ) : null}
     </div>
   );
 };
 
 export const useCollections = () => {
-  const [collections, setCollections] = useState<CollectionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useCollectionsQuery();
 
-  const fetchCollections = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${endpoints.api}/collections`);
-      if (!response.ok) {
-        throw new Error("Failed to load collections");
-      }
-
-      const data = (await response.json()) as {
-        collections: CollectionSummary[];
-      };
-      setCollections(data.collections);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load collections",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchCollections();
-  }, [fetchCollections]);
-
-  return { collections, loading, error, refreshCollections: fetchCollections };
+  return {
+    collections: query.data ?? [],
+    loading: query.isPending,
+    error: query.error?.message ?? null,
+    refreshCollections: () => void query.refetch(),
+  };
 };

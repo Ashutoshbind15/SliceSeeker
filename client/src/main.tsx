@@ -9,12 +9,14 @@ import Files from "./Files";
 import FileCosts from "./FileCosts";
 import Layout from "./Layout";
 import { ThemeProvider } from "@/components/theme-provider";
+import { QueryProvider } from "@/query";
 import "./index.css";
 
 const root = createRoot(document.getElementById("root")!);
 root.render(
-  <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-    <BrowserRouter>
+  <QueryProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<App />} />
@@ -26,6 +28,7 @@ root.render(
           <Route path="/todo" element={<Todo />} />
         </Route>
       </Routes>
-    </BrowserRouter>
-  </ThemeProvider>,
+      </BrowserRouter>
+    </ThemeProvider>
+  </QueryProvider>,
 );

@@ -1,23 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCollections } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
 import { Button } from "@/components/ui/button";
-import { endpoints } from "@/lib/endpoints";
-
-type FileSummary = {
-  id: string;
-  filename: string;
-  filetype: string;
-  sizeBytes: number | null;
-  collectionId: string;
-  collectionName: string;
-  completedAt: string | null;
-  createdAt: string;
-};
-
-type FilesResponse = {
-  uploads: FileSummary[];
-};
+import { toast } from "@/lib/toast";
+import {
+  type UploadSummary,
+  useAssignUploadCollectionMutation,
+  useUploadsQuery,
+} from "@/query";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -42,67 +32,39 @@ const formatDate = (value: string | null) => {
 };
 
 const Files = () => {
-  const { collections, refreshCollections } = useCollections();
-  const [files, setFiles] = useState<FileSummary[]>([]);
+  const { collections } = useCollections();
+  const uploadsQuery = useUploadsQuery();
+  const assignCollectionMutation = useAssignUploadCollectionMutation();
+
+  const serverFiles = uploadsQuery.data ?? [];
+  const [draftFiles, setDraftFiles] = useState<UploadSummary[]>([]);
   const [savedCollectionIds, setSavedCollectionIds] = useState<
     Record<string, string>
   >({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false);
-
-  const fetchFiles = useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const response = await fetch(`${endpoints.api}/uploads`);
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(body?.message ?? "Failed to load files");
-      }
-
-      const data = (await response.json()) as FilesResponse;
-      setFiles(data.uploads);
-      setSavedCollectionIds(
-        Object.fromEntries(
-          data.uploads.map((upload) => [upload.id, upload.collectionId]),
-        ),
-      );
-      hasLoadedRef.current = true;
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load files",
-      );
-    } finally {
-      if (!options?.silent) {
-        setLoading(false);
-      }
-    }
-  }, []);
 
   useEffect(() => {
-    void fetchFiles();
-  }, [fetchFiles]);
+    if (!uploadsQuery.data) {
+      return;
+    }
+
+    setDraftFiles(uploadsQuery.data);
+    setSavedCollectionIds(
+      Object.fromEntries(
+        uploadsQuery.data.map((upload) => [upload.id, upload.collectionId]),
+      ),
+    );
+  }, [uploadsQuery.data]);
 
   const isFileDirty = useCallback(
-    (file: FileSummary) =>
+    (file: UploadSummary) =>
       savedCollectionIds[file.id] !== undefined &&
       file.collectionId !== savedCollectionIds[file.id],
     [savedCollectionIds],
   );
 
   const dirtyFiles = useMemo(
-    () => files.filter(isFileDirty),
-    [files, isFileDirty],
+    () => draftFiles.filter(isFileDirty),
+    [draftFiles, isFileDirty],
   );
 
   const updateFileCollection = (fileId: string, collectionId: string) => {
@@ -110,7 +72,7 @@ const Files = () => {
       collections.find((collection) => collection.id === collectionId)?.name ??
       collectionId;
 
-    setFiles((current) =>
+    setDraftFiles((current) =>
       current.map((file) =>
         file.id === fileId ? { ...file, collectionId, collectionName } : file,
       ),
@@ -122,30 +84,12 @@ const Files = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
-
     try {
       for (const file of dirtyFiles) {
-        const response = await fetch(
-          `${endpoints.api}/uploads/${file.id}/collection`,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ collectionId: file.collectionId }),
-          },
-        );
-
-        const body = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-
-        if (!response.ok) {
-          throw new Error(
-            body?.message ??
-              `Failed to assign collection for ${file.filename}`,
-          );
-        }
+        await assignCollectionMutation.mutateAsync({
+          uploadId: file.id,
+          collectionId: file.collectionId,
+        });
       }
 
       setSavedCollectionIds((current) => ({
@@ -154,16 +98,15 @@ const Files = () => {
           dirtyFiles.map((file) => [file.id, file.collectionId]),
         ),
       }));
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Failed to save collection changes",
-      );
-    } finally {
-      setSaving(false);
+      toast("Collection assignments saved");
+    } catch {
+      // Mutation error is surfaced via assignCollectionMutation.error
     }
   };
+
+  const saving = assignCollectionMutation.isPending;
+  const error =
+    uploadsQuery.error?.message ?? assignCollectionMutation.error?.message ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
@@ -173,9 +116,9 @@ const Files = () => {
           <p className="text-sm text-muted-foreground">
             Browse uploaded files and assign them to collections.
           </p>
-          {files.length > 0 ? (
+          {draftFiles.length > 0 ? (
             <p className="text-sm text-muted-foreground">
-              {files.length} file{files.length === 1 ? "" : "s"}
+              {draftFiles.length} file{draftFiles.length === 1 ? "" : "s"}
             </p>
           ) : null}
         </div>
@@ -193,11 +136,7 @@ const Files = () => {
           >
             {saving ? "Saving…" : "Save changes"}
           </Button>
-          <CreateCollection
-            onCreated={() => {
-              void refreshCollections();
-            }}
-          />
+          <CreateCollection />
         </div>
       </div>
 
@@ -207,18 +146,18 @@ const Files = () => {
         </p>
       ) : null}
 
-      {loading && !hasLoadedRef.current ? (
+      {uploadsQuery.isPending && serverFiles.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading files…</p>
       ) : null}
 
-      {!loading && files.length === 0 ? (
+      {!uploadsQuery.isPending && draftFiles.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No files yet. Upload a video first, then assign it to a collection
           here.
         </p>
       ) : null}
 
-      {files.length > 0 ? (
+      {draftFiles.length > 0 ? (
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
@@ -229,7 +168,7 @@ const Files = () => {
               </tr>
             </thead>
             <tbody>
-              {files.map((file) => {
+              {draftFiles.map((file) => {
                 const dirty = isFileDirty(file);
 
                 return (

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { endpoints } from "@/lib/endpoints";
 import {
   Card,
   CardContent,
@@ -16,16 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-
-type FileCostSummary = {
-  fileId: string;
-  filename: string;
-  durationSec: number;
-  totalTokens: number;
-  totalCostUsd: number;
-  embedRequestCount: number;
-  updatedAt: string;
-};
+import { useFileCostsQuery } from "@/query";
 
 const formatDuration = (durationSec: number) => {
   const minutes = Math.floor(durationSec / 60);
@@ -67,40 +57,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 const FileCosts = () => {
-  const [files, setFiles] = useState<FileCostSummary[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchCosts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${endpoints.api}/costs`);
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(body?.message ?? "Failed to load file costs");
-      }
-
-      const data = (await response.json()) as { files: FileCostSummary[] };
-      setFiles(data.files);
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load file costs",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchCosts();
-  }, [fetchCosts]);
+  const costsQuery = useFileCostsQuery();
+  const files = costsQuery.data ?? [];
 
   const chartData = useMemo(
     () =>
@@ -138,17 +96,17 @@ const FileCosts = () => {
         </p>
       </div>
 
-      {error ? (
+      {costsQuery.isError ? (
         <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
+          {costsQuery.error.message}
         </p>
       ) : null}
 
-      {loading && files.length === 0 ? (
+      {costsQuery.isPending && files.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading costs…</p>
       ) : null}
 
-      {!loading && files.length === 0 ? (
+      {!costsQuery.isPending && files.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No cost data yet. Process a video to record embedding usage.
         </p>

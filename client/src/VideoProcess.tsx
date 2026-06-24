@@ -1,69 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { endpoints } from "@/lib/endpoints";
+import { useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-
-type PipelineStatus =
-  | "not_started"
-  | "chunking"
-  | "embedding"
-  | "complete"
-  | "failed";
-
-type ChunkingTask = {
-  status:
-    | "queued"
-    | "downloading"
-    | "chunking"
-    | "completed"
-    | "failed";
-  chunkCount: number | null;
-};
-
-type EmbeddingProgress = {
-  total: number;
-  embedded: number;
-  failed: number;
-  pending: number;
-};
-
-type UploadSummary = {
-  id: string;
-  filename: string;
-  filetype: string;
-  sizeBytes: number | null;
-  collectionId: string;
-  collectionName: string;
-  completedAt: string | null;
-  createdAt: string;
-  chunkingTask: ChunkingTask | null;
-  embedding: EmbeddingProgress;
-  pipelineStatus: PipelineStatus;
-  primaryError: string | null;
-};
-
-type UploadsSummary = {
-  total: number;
-  active: number;
-  failed: number;
-  complete: number;
-};
-
-type UploadsResponse = {
-  uploads: UploadSummary[];
-};
-
-const deriveUploadsSummary = (uploads: UploadSummary[]): UploadsSummary => ({
-  total: uploads.length,
-  active: uploads.filter(
-    (upload) =>
-      upload.pipelineStatus === "chunking" ||
-      upload.pipelineStatus === "embedding",
-  ).length,
-  failed: uploads.filter((upload) => upload.pipelineStatus === "failed")
-    .length,
-  complete: uploads.filter((upload) => upload.pipelineStatus === "complete")
-    .length,
-});
+import {
+  deriveUploadsSummary,
+  type ChunkingTask,
+  type PipelineStatus,
+  type UploadSummary,
+  useStartProcessingMutation,
+  useUploadsQuery,
+} from "@/query";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -166,55 +110,15 @@ const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
   );
 };
 
+const PROCESS_POLL_INTERVAL_MS = 2_000;
+
 const VideoProcess = () => {
-  const [uploads, setUploads] = useState<UploadSummary[]>([]);
-  const [summary, setSummary] = useState<UploadsSummary>({
-    total: 0,
-    active: 0,
-    failed: 0,
-    complete: 0,
-  });
-  const [loading, setLoading] = useState(true);
-  const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
-  const hasLoadedRef = useRef(false);
+  const uploadsQuery = useUploadsQuery();
+  const startProcessingMutation = useStartProcessingMutation();
+  const { refetch } = uploadsQuery;
 
-  const fetchUploads = useCallback(async (options?: { silent?: boolean }) => {
-    if (!options?.silent) {
-      setLoading(true);
-    }
-    setError(null);
-
-    try {
-      const response = await fetch(`${endpoints.api}/uploads`);
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
-        throw new Error(body?.message ?? "Failed to load uploads");
-      }
-
-      const data = (await response.json()) as UploadsResponse;
-      setUploads(data.uploads);
-      setSummary(deriveUploadsSummary(data.uploads));
-      hasLoadedRef.current = true;
-    } catch (fetchError) {
-      setError(
-        fetchError instanceof Error
-          ? fetchError.message
-          : "Failed to load uploads",
-      );
-    } finally {
-      if (!options?.silent) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchUploads();
-  }, [fetchUploads]);
+  const uploads = uploadsQuery.data ?? [];
+  const summary = useMemo(() => deriveUploadsSummary(uploads), [uploads]);
 
   useEffect(() => {
     if (summary.active === 0) {
@@ -222,52 +126,22 @@ const VideoProcess = () => {
     }
 
     const interval = window.setInterval(() => {
-      void fetchUploads({ silent: true });
-    }, 2000);
+      void refetch();
+    }, PROCESS_POLL_INTERVAL_MS);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [summary.active, fetchUploads]);
+  }, [summary.active, refetch]);
 
-  const startProcessing = async (uploadId: string) => {
-    setSubmittingIds((current) => new Set(current).add(uploadId));
-    setError(null);
-
-    try {
-      const response = await fetch(
-        `${endpoints.api}/uploads/${uploadId}/process`,
-        {
-          method: "POST",
-        },
-      );
-
-      const body = (await response.json().catch(() => null)) as {
-        message?: string;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(body?.message ?? "Failed to start processing");
-      }
-
-      await fetchUploads({ silent: true });
-    } catch (startError) {
-      setError(
-        startError instanceof Error
-          ? startError.message
-          : "Failed to start processing",
-      );
-    } finally {
-      setSubmittingIds((current) => {
-        const next = new Set(current);
-        next.delete(uploadId);
-        return next;
-      });
-    }
+  const startProcessing = (uploadId: string) => {
+    startProcessingMutation.mutate(uploadId);
   };
 
   const renderAction = (upload: UploadSummary) => {
-    const isSubmitting = submittingIds.has(upload.id);
+    const isSubmitting =
+      startProcessingMutation.isPending &&
+      startProcessingMutation.variables === upload.id;
 
     if (upload.pipelineStatus === "complete") {
       return <span className="text-xs text-muted-foreground">Done</span>;
@@ -290,7 +164,7 @@ const VideoProcess = () => {
           size="sm"
           variant="outline"
           disabled={isSubmitting}
-          onClick={() => void startProcessing(upload.id)}
+          onClick={() => startProcessing(upload.id)}
         >
           {isSubmitting ? "Retrying…" : "Retry all failed"}
         </Button>
@@ -301,12 +175,15 @@ const VideoProcess = () => {
       <Button
         size="sm"
         disabled={isSubmitting}
-        onClick={() => void startProcessing(upload.id)}
+        onClick={() => startProcessing(upload.id)}
       >
         {isSubmitting ? "Starting…" : "Start"}
       </Button>
     );
   };
+
+  const error =
+    uploadsQuery.error?.message ?? startProcessingMutation.error?.message ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
@@ -335,11 +212,11 @@ const VideoProcess = () => {
         </p>
       ) : null}
 
-      {loading && !hasLoadedRef.current ? (
+      {uploadsQuery.isPending && uploads.length === 0 ? (
         <p className="text-sm text-muted-foreground">Loading uploads…</p>
       ) : null}
 
-      {!loading && uploads.length === 0 ? (
+      {!uploadsQuery.isPending && uploads.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           No completed uploads yet. Upload a video first, then return here to
           process it.

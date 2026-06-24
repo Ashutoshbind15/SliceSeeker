@@ -9,10 +9,10 @@ import "@uppy/dashboard/css/style.min.css";
 import { endpoints } from "@/lib/endpoints";
 import { CollectionPicker } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
+import { invalidateUploads } from "@/query";
 
 const VideoUpload = () => {
   const [selectedCollectionId, setSelectedCollectionId] = useState("");
-  const [collectionsRefreshKey, setCollectionsRefreshKey] = useState(0);
   const selectedCollectionIdRef = useRef(selectedCollectionId);
 
   useEffect(() => {
@@ -40,6 +40,10 @@ const VideoUpload = () => {
       if (collectionId) {
         instance.setFileMeta(file.id, { collectionId });
       }
+    });
+
+    instance.on("complete", () => {
+      void invalidateUploads();
     });
 
     return instance;
@@ -78,13 +82,11 @@ const VideoUpload = () => {
             selectedCollectionId={selectedCollectionId}
             onSelectedCollectionIdChange={setSelectedCollectionId}
             label="Upload to collection"
-            refreshKey={collectionsRefreshKey}
           />
         </div>
         <CreateCollection
           onCreated={(collection) => {
             setSelectedCollectionId(collection.id);
-            setCollectionsRefreshKey((current) => current + 1);
           }}
         />
       </div>
