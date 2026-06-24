@@ -1,9 +1,19 @@
 import { useEffect } from "react";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   type CollectionSummary,
   useCollectionsQuery,
   useDefaultCollection,
 } from "@/query";
+
+const ALL_COLLECTIONS_VALUE = "__all__";
 
 type CollectionPickerProps = {
   selectedCollectionId: string;
@@ -45,41 +55,49 @@ export const CollectionPicker = ({
     selectedCollectionId,
   ]);
 
+  const isDisabled =
+    disabled || collectionsQuery.isPending || collections.length === 0;
+
+  const selectValue =
+    includeAllOption && !selectedCollectionId
+      ? ALL_COLLECTIONS_VALUE
+      : selectedCollectionId || undefined;
+
   return (
     <div className="space-y-2">
-      {label ? (
-        <label htmlFor="collection-picker" className="text-sm font-medium">
-          {label}
-        </label>
-      ) : null}
-      <select
-        id="collection-picker"
-        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        value={selectedCollectionId}
-        onChange={(event) =>
-          onSelectedCollectionIdChange(event.target.value)
+      {label ? <Label htmlFor="collection-picker">{label}</Label> : null}
+      <Select
+        value={selectValue}
+        onValueChange={(value) =>
+          onSelectedCollectionIdChange(
+            value === ALL_COLLECTIONS_VALUE ? "" : value,
+          )
         }
-        disabled={
-          disabled || collectionsQuery.isPending || collections.length === 0
-        }
+        disabled={isDisabled}
       >
-        {includeAllOption ? (
-          <option value="">{allOptionLabel}</option>
-        ) : null}
-        {collections.length === 0 ? (
-          <option value="">
-            {collectionsQuery.isPending
-              ? "Loading collections…"
-              : "No collections available"}
-          </option>
-        ) : null}
-        {collections.map((collection) => (
-          <option key={collection.id} value={collection.id}>
-            {collection.name}
-            {collection.isDefault ? " (default)" : ""}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger id="collection-picker" className="w-full">
+          <SelectValue
+            placeholder={
+              collectionsQuery.isPending
+                ? "Loading collections…"
+                : "No collections available"
+            }
+          />
+        </SelectTrigger>
+        <SelectContent>
+          {includeAllOption ? (
+            <SelectItem value={ALL_COLLECTIONS_VALUE}>
+              {allOptionLabel}
+            </SelectItem>
+          ) : null}
+          {collections.map((collection) => (
+            <SelectItem key={collection.id} value={collection.id}>
+              {collection.name}
+              {collection.isDefault ? " (default)" : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       {collectionsQuery.isError ? (
         <p className="text-sm text-destructive">

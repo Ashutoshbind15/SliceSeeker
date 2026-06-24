@@ -1,5 +1,9 @@
-import { FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { PlusIcon } from "lucide-react";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import * as z from "zod/v3";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,12 +14,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Field,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   type CollectionSummary,
   useCreateCollectionMutation,
 } from "@/query";
+
+const createCollectionSchema = z.object({
+  name: z.string().trim().min(1, "Name is required."),
+});
+
+type CreateCollectionValues = z.infer<typeof createCollectionSchema>;
 
 type CreateCollectionProps = {
   onCreated?: (collection: CollectionSummary) => void;
@@ -27,26 +41,20 @@ export const CreateCollection = ({
   disabled = false,
 }: CreateCollectionProps) => {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
   const createCollectionMutation = useCreateCollectionMutation();
+  const form = useForm<CreateCollectionValues>({
+    resolver: zodResolver(createCollectionSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
 
-  const resetForm = () => {
-    setName("");
-  };
-
-  const createCollection = (event: FormEvent) => {
-    event.preventDefault();
-
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      return;
-    }
-
-    createCollectionMutation.mutate(trimmedName, {
+  const onSubmit = (data: CreateCollectionValues) => {
+    createCollectionMutation.mutate(data.name, {
       onSuccess: (collection) => {
         onCreated?.(collection);
         setOpen(false);
-        resetForm();
+        form.reset();
       },
     });
   };
@@ -57,7 +65,7 @@ export const CreateCollection = ({
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         if (!nextOpen) {
-          resetForm();
+          form.reset();
           createCollectionMutation.reset();
         }
       }}
@@ -82,24 +90,35 @@ export const CreateCollection = ({
         </DialogHeader>
         <form
           id="create-collection-form"
-          onSubmit={createCollection}
+          onSubmit={form.handleSubmit(onSubmit)}
           className="space-y-4"
         >
-          <div className="space-y-2">
-            <Label htmlFor="collection-name">Name</Label>
-            <Input
-              id="collection-name"
-              placeholder="e.g. Product demos"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              disabled={createCollectionMutation.isPending}
-              autoFocus
-            />
-          </div>
+          <Controller
+            name="name"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="collection-name">Name</FieldLabel>
+                <Input
+                  {...field}
+                  id="collection-name"
+                  placeholder="e.g. Product demos"
+                  disabled={createCollectionMutation.isPending}
+                  autoFocus
+                  aria-invalid={fieldState.invalid}
+                />
+                {fieldState.invalid ? (
+                  <FieldError errors={[fieldState.error]} />
+                ) : null}
+              </Field>
+            )}
+          />
           {createCollectionMutation.isError ? (
-            <p className="text-sm text-destructive">
-              {createCollectionMutation.error.message}
-            </p>
+            <Alert variant="destructive">
+              <AlertDescription>
+                {createCollectionMutation.error.message}
+              </AlertDescription>
+            </Alert>
           ) : null}
         </form>
         <DialogFooter>
@@ -114,7 +133,7 @@ export const CreateCollection = ({
           <Button
             type="submit"
             form="create-collection-form"
-            disabled={createCollectionMutation.isPending || !name.trim()}
+            disabled={createCollectionMutation.isPending}
           >
             {createCollectionMutation.isPending ? "Creating…" : "Create"}
           </Button>

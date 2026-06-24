@@ -1,5 +1,16 @@
 import { useEffect, useMemo } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   deriveUploadsSummary,
   type ChunkingTask,
@@ -46,20 +57,32 @@ const pipelineStatusLabel: Record<PipelineStatus, string> = {
   failed: "Failed",
 };
 
+const pipelineStatusVariant: Record<
+  PipelineStatus,
+  "secondary" | "destructive" | "outline" | "default"
+> = {
+  not_started: "outline",
+  chunking: "secondary",
+  embedding: "secondary",
+  complete: "default",
+  failed: "destructive",
+};
+
 const pipelineStatusClass: Record<PipelineStatus, string> = {
-  not_started: "bg-muted text-muted-foreground",
+  not_started: "",
   chunking: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
   embedding: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   complete: "bg-green-500/15 text-green-700 dark:text-green-300",
-  failed: "bg-destructive/15 text-destructive",
+  failed: "",
 };
 
 const StatusBadge = ({ status }: { status: PipelineStatus }) => (
-  <span
-    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${pipelineStatusClass[status]}`}
+  <Badge
+    variant={pipelineStatusVariant[status]}
+    className={pipelineStatusClass[status]}
   >
     {pipelineStatusLabel[status]}
-  </span>
+  </Badge>
 );
 
 const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
@@ -90,12 +113,7 @@ const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
         </span>
         <span>{pct}%</span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      <Progress value={pct} />
       {upload.embedding.pending > 0 ? (
         <span className="text-xs text-muted-foreground">
           {upload.embedding.pending} in progress
@@ -207,9 +225,9 @@ const VideoProcess = () => {
       </div>
 
       {error ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {uploadsQuery.isPending && uploads.length === 0 ? (
@@ -224,48 +242,48 @@ const VideoProcess = () => {
       ) : null}
 
       {uploads.length > 0 ? (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40 text-left">
-                <th className="px-4 py-3 font-medium">File</th>
-                <th className="px-4 py-3 font-medium">Collection</th>
-                <th className="px-4 py-3 font-medium">Stage</th>
-                <th className="px-4 py-3 font-medium">Progress</th>
-                <th className="px-4 py-3 font-medium">Error</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div className="rounded-md border">
+          <Table className="min-w-[640px]">
+            <TableHeader>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="px-4">File</TableHead>
+                <TableHead className="px-4">Collection</TableHead>
+                <TableHead className="px-4">Stage</TableHead>
+                <TableHead className="px-4">Progress</TableHead>
+                <TableHead className="px-4">Error</TableHead>
+                <TableHead className="px-4">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {uploads.map((upload) => (
-                <tr key={upload.id} className="border-b last:border-b-0">
-                  <td className="px-4 py-3 align-top">
+                <TableRow key={upload.id}>
+                  <TableCell className="px-4 align-top whitespace-normal">
                     <div className="font-medium">{upload.filename}</div>
                     <div className="text-xs text-muted-foreground">
                       {formatBytes(upload.sizeBytes)}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 align-top text-muted-foreground">
+                  </TableCell>
+                  <TableCell className="px-4 align-top text-muted-foreground whitespace-normal">
                     {upload.collectionName}
-                  </td>
-                  <td className="px-4 py-3 align-top">
+                  </TableCell>
+                  <TableCell className="px-4 align-top whitespace-normal">
                     <StatusBadge status={upload.pipelineStatus} />
-                  </td>
-                  <td className="px-4 py-3 align-top">
+                  </TableCell>
+                  <TableCell className="px-4 align-top whitespace-normal">
                     <ProgressCell upload={upload} />
-                  </td>
-                  <td className="max-w-xs px-4 py-3 align-top text-destructive">
+                  </TableCell>
+                  <TableCell className="max-w-xs px-4 align-top text-destructive whitespace-normal">
                     {upload.primaryError ?? (
                       <span className="text-muted-foreground">—</span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
+                  </TableCell>
+                  <TableCell className="px-4 align-top whitespace-normal">
                     {renderAction(upload)}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       ) : null}
     </div>

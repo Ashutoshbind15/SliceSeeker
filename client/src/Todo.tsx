@@ -1,6 +1,23 @@
-import { FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
+import * as z from "zod/v3";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldError,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { useCreateTodoMutation, useTodosQuery } from "@/query";
+
+const createTodoSchema = z.object({
+  title: z.string().trim().min(1, "Title is required."),
+  description: z.string(),
+  completed: z.boolean(),
+});
+
+type CreateTodoValues = z.infer<typeof createTodoSchema>;
 
 const Todo = () => {
   const todosQuery = useTodosQuery();
@@ -38,49 +55,88 @@ const Todo = () => {
 };
 
 const CreateTodo = () => {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [completed, setCompleted] = useState(false);
   const createTodoMutation = useCreateTodoMutation();
+  const form = useForm<CreateTodoValues>({
+    resolver: zodResolver(createTodoSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      completed: false,
+    },
+  });
 
-  const handleSubmit = (event: FormEvent) => {
-    event.preventDefault();
-    createTodoMutation.mutate(
-      { title, description, completed },
-      {
-        onSuccess: () => {
-          setTitle("");
-          setDescription("");
-          setCompleted(false);
-        },
+  const onSubmit = (data: CreateTodoValues) => {
+    createTodoMutation.mutate(data, {
+      onSuccess: () => {
+        form.reset();
       },
-    );
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-      <input
-        type="text"
-        placeholder="Title"
-        className="rounded-md border bg-background px-3 py-2 text-sm"
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
+    <form
+      onSubmit={form.handleSubmit(onSubmit)}
+      className="flex flex-col gap-3"
+    >
+      <Controller
+        name="title"
+        control={form.control}
+        render={({ field, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor="todo-title">Title</FieldLabel>
+            <Input
+              {...field}
+              id="todo-title"
+              type="text"
+              placeholder="Title"
+              aria-invalid={fieldState.invalid}
+            />
+            {fieldState.invalid ? (
+              <FieldError errors={[fieldState.error]} />
+            ) : null}
+          </Field>
+        )}
       />
-      <input
-        type="text"
-        placeholder="Description"
-        className="rounded-md border bg-background px-3 py-2 text-sm"
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
+      <Controller
+        name="description"
+        control={form.control}
+        render={({ field, fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor="todo-description">Description</FieldLabel>
+            <Input
+              {...field}
+              id="todo-description"
+              type="text"
+              placeholder="Description"
+              aria-invalid={fieldState.invalid}
+            />
+            {fieldState.invalid ? (
+              <FieldError errors={[fieldState.error]} />
+            ) : null}
+          </Field>
+        )}
       />
-      <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          checked={completed}
-          onChange={(event) => setCompleted(event.target.checked)}
-        />
-        Completed
-      </label>
+      <Controller
+        name="completed"
+        control={form.control}
+        render={({ field, fieldState }) => (
+          <Field orientation="horizontal" data-invalid={fieldState.invalid}>
+            <Checkbox
+              id="todo-completed"
+              name={field.name}
+              checked={field.value}
+              onCheckedChange={(checked) => field.onChange(checked === true)}
+              aria-invalid={fieldState.invalid}
+            />
+            <FieldLabel htmlFor="todo-completed" className="font-normal">
+              Completed
+            </FieldLabel>
+            {fieldState.invalid ? (
+              <FieldError errors={[fieldState.error]} />
+            ) : null}
+          </Field>
+        )}
+      />
       {createTodoMutation.isError ? (
         <p className="text-sm text-destructive">
           {createTodoMutation.error.message}

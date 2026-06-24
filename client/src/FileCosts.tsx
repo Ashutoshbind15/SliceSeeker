@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -7,6 +8,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   ChartContainer,
   ChartLegend,
@@ -97,9 +106,9 @@ const FileCosts = () => {
       </div>
 
       {costsQuery.isError ? (
-        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {costsQuery.error.message}
-        </p>
+        <Alert variant="destructive">
+          <AlertDescription>{costsQuery.error.message}</AlertDescription>
+        </Alert>
       ) : null}
 
       {costsQuery.isPending && files.length === 0 ? (
@@ -244,38 +253,38 @@ const FileCosts = () => {
               <CardTitle>Per-file breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead className="text-muted-foreground">
-                    <tr className="border-b">
-                      <th className="py-2 pr-4 font-medium">File</th>
-                      <th className="py-2 pr-4 font-medium">Length</th>
-                      <th className="py-2 pr-4 font-medium">Cost</th>
-                      <th className="py-2 pr-4 font-medium">Tokens</th>
-                      <th className="py-2 font-medium">Requests</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {files.map((file) => (
-                      <tr key={file.fileId} className="border-b last:border-b-0">
-                        <td className="py-2 pr-4">{file.filename}</td>
-                        <td className="py-2 pr-4 font-mono">
-                          {formatDuration(file.durationSec)}
-                        </td>
-                        <td className="py-2 pr-4 font-mono">
-                          {formatUsd(file.totalCostUsd)}
-                        </td>
-                        <td className="py-2 pr-4 font-mono">
-                          {file.totalTokens.toLocaleString()}
-                        </td>
-                        <td className="py-2 font-mono">
-                          {file.embedRequestCount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table className="min-w-[640px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pr-4">File</TableHead>
+                    <TableHead className="pr-4">Length</TableHead>
+                    <TableHead className="pr-4">Cost</TableHead>
+                    <TableHead className="pr-4">Tokens</TableHead>
+                    <TableHead>Requests</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {files.map((file) => (
+                    <TableRow key={file.fileId}>
+                      <TableCell className="pr-4 whitespace-normal">
+                        {file.filename}
+                      </TableCell>
+                      <TableCell className="pr-4 font-mono">
+                        {formatDuration(file.durationSec)}
+                      </TableCell>
+                      <TableCell className="pr-4 font-mono">
+                        {formatUsd(file.totalCostUsd)}
+                      </TableCell>
+                      <TableCell className="pr-4 font-mono">
+                        {file.totalTokens.toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {file.embedRequestCount.toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </>
