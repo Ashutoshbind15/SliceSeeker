@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
 
+type PipelineStatus =
+  | "not_started"
+  | "chunking"
+  | "embedding"
+  | "complete"
+  | "failed";
+
 type ChunkingTask = {
-  id: string;
-  uploadId: string;
   status:
     | "queued"
     | "downloading"
@@ -12,10 +17,6 @@ type ChunkingTask = {
     | "completed"
     | "failed";
   chunkCount: number | null;
-  errorMessage: string | null;
-  createdAt: string;
-  updatedAt: string;
-  completedAt: string | null;
 };
 
 type EmbeddingProgress = {
@@ -32,10 +33,35 @@ type UploadSummary = {
   sizeBytes: number | null;
   completedAt: string | null;
   createdAt: string;
-  isChunked: boolean;
   chunkingTask: ChunkingTask | null;
   embedding: EmbeddingProgress;
+  pipelineStatus: PipelineStatus;
+  primaryError: string | null;
 };
+
+type UploadsSummary = {
+  total: number;
+  active: number;
+  failed: number;
+  complete: number;
+};
+
+type UploadsResponse = {
+  uploads: UploadSummary[];
+};
+
+const deriveUploadsSummary = (uploads: UploadSummary[]): UploadsSummary => ({
+  total: uploads.length,
+  active: uploads.filter(
+    (upload) =>
+      upload.pipelineStatus === "chunking" ||
+      upload.pipelineStatus === "embedding",
+  ).length,
+  failed: uploads.filter((upload) => upload.pipelineStatus === "failed")
+    .length,
+  complete: uploads.filter((upload) => upload.pipelineStatus === "complete")
+    .length,
+});
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -66,23 +92,95 @@ const formatChunkingStatus = (status: ChunkingTask["status"]) => {
   }
 };
 
-const isChunkingActive = (task: ChunkingTask | null) =>
-  task?.status === "queued" ||
-  task?.status === "downloading" ||
-  task?.status === "chunking";
+const pipelineStatusLabel: Record<PipelineStatus, string> = {
+  not_started: "Not started",
+  chunking: "Chunking",
+  embedding: "Embedding",
+  complete: "Complete",
+  failed: "Failed",
+};
 
-const isEmbeddingActive = (embedding: EmbeddingProgress) =>
-  embedding.pending > 0;
+const pipelineStatusClass: Record<PipelineStatus, string> = {
+  not_started: "bg-muted text-muted-foreground",
+  chunking: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
+  embedding: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  complete: "bg-green-500/15 text-green-700 dark:text-green-300",
+  failed: "bg-destructive/15 text-destructive",
+};
+
+const StatusBadge = ({ status }: { status: PipelineStatus }) => (
+  <span
+    className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${pipelineStatusClass[status]}`}
+  >
+    {pipelineStatusLabel[status]}
+  </span>
+);
+
+const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
+  if (upload.pipelineStatus === "chunking" && upload.chunkingTask) {
+    return (
+      <span className="text-muted-foreground">
+        {formatChunkingStatus(upload.chunkingTask.status)}
+        {upload.chunkingTask.chunkCount !== null
+          ? ` · ${upload.chunkingTask.chunkCount} segments`
+          : ""}
+      </span>
+    );
+  }
+
+  if (upload.embedding.total === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+
+  const pct = Math.round(
+    (upload.embedding.embedded / upload.embedding.total) * 100,
+  );
+
+  return (
+    <div className="flex min-w-[8rem] flex-col gap-1">
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          {upload.embedding.embedded}/{upload.embedding.total}
+        </span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary transition-all"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {upload.embedding.pending > 0 ? (
+        <span className="text-xs text-muted-foreground">
+          {upload.embedding.pending} in progress
+        </span>
+      ) : null}
+      {upload.embedding.failed > 0 ? (
+        <span className="text-xs text-destructive">
+          {upload.embedding.failed} failed
+        </span>
+      ) : null}
+    </div>
+  );
+};
 
 const VideoProcess = () => {
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
-  const [selectedUploadId, setSelectedUploadId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [summary, setSummary] = useState<UploadsSummary>({
+    total: 0,
+    active: 0,
+    failed: 0,
+    complete: 0,
+  });
+  const [loading, setLoading] = useState(true);
+  const [submittingIds, setSubmittingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
-  const fetchUploads = useCallback(async () => {
-    setLoading(true);
+  const fetchUploads = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -95,12 +193,10 @@ const VideoProcess = () => {
         throw new Error(body?.message ?? "Failed to load uploads");
       }
 
-      const data = (await response.json()) as { uploads: UploadSummary[] };
+      const data = (await response.json()) as UploadsResponse;
       setUploads(data.uploads);
-
-      if (data.uploads.length > 0 && !selectedUploadId) {
-        setSelectedUploadId(data.uploads[0].id);
-      }
+      setSummary(deriveUploadsSummary(data.uploads));
+      hasLoadedRef.current = true;
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -108,49 +204,37 @@ const VideoProcess = () => {
           : "Failed to load uploads",
       );
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
     }
-  }, [selectedUploadId]);
+  }, []);
 
   useEffect(() => {
     void fetchUploads();
   }, [fetchUploads]);
 
-  const selectedUpload = uploads.find((upload) => upload.id === selectedUploadId);
-  const isActive =
-    isChunkingActive(selectedUpload?.chunkingTask ?? null) ||
-    isEmbeddingActive(selectedUpload?.embedding ?? {
-      total: 0,
-      embedded: 0,
-      failed: 0,
-      pending: 0,
-    });
-
   useEffect(() => {
-    if (!isActive) {
+    if (summary.active === 0) {
       return;
     }
 
     const interval = window.setInterval(() => {
-      void fetchUploads();
+      void fetchUploads({ silent: true });
     }, 2000);
 
     return () => {
       window.clearInterval(interval);
     };
-  }, [isActive, fetchUploads]);
+  }, [summary.active, fetchUploads]);
 
-  const startProcessing = async () => {
-    if (!selectedUploadId) {
-      return;
-    }
-
-    setSubmitting(true);
+  const startProcessing = async (uploadId: string) => {
+    setSubmittingIds((current) => new Set(current).add(uploadId));
     setError(null);
 
     try {
       const response = await fetch(
-        `${endpoints.api}/uploads/${selectedUploadId}/process`,
+        `${endpoints.api}/uploads/${uploadId}/process`,
         {
           method: "POST",
         },
@@ -164,7 +248,7 @@ const VideoProcess = () => {
         throw new Error(body?.message ?? "Failed to start processing");
       }
 
-      await fetchUploads();
+      await fetchUploads({ silent: true });
     } catch (startError) {
       setError(
         startError instanceof Error
@@ -172,18 +256,75 @@ const VideoProcess = () => {
           : "Failed to start processing",
       );
     } finally {
-      setSubmitting(false);
+      setSubmittingIds((current) => {
+        const next = new Set(current);
+        next.delete(uploadId);
+        return next;
+      });
     }
   };
 
+  const renderAction = (upload: UploadSummary) => {
+    const isSubmitting = submittingIds.has(upload.id);
+
+    if (upload.pipelineStatus === "complete") {
+      return <span className="text-xs text-muted-foreground">Done</span>;
+    }
+
+    if (
+      upload.pipelineStatus === "chunking" ||
+      upload.pipelineStatus === "embedding"
+    ) {
+      return (
+        <Button size="sm" variant="outline" disabled>
+          Processing…
+        </Button>
+      );
+    }
+
+    if (upload.pipelineStatus === "failed") {
+      return (
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={() => void startProcessing(upload.id)}
+        >
+          {isSubmitting ? "Retrying…" : "Retry all failed"}
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        size="sm"
+        disabled={isSubmitting}
+        onClick={() => void startProcessing(upload.id)}
+      >
+        {isSubmitting ? "Starting…" : "Start"}
+      </Button>
+    );
+  };
+
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Process video</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Process videos
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Chunking splits the source into segments. Embedding runs independently
-          per segment and can be retried without re-chunking.
+          Chunking splits each source into segments. Embedding runs per segment
+          and can be retried without re-chunking.
         </p>
+        {summary.total > 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {summary.active > 0
+              ? `${summary.active} processing`
+              : "No jobs running"}
+            {summary.failed > 0 ? ` · ${summary.failed} failed` : ""}
+            {summary.complete > 0 ? ` · ${summary.complete} complete` : ""}
+          </p>
+        ) : null}
       </div>
 
       {error ? (
@@ -192,7 +333,7 @@ const VideoProcess = () => {
         </p>
       ) : null}
 
-      {loading && uploads.length === 0 ? (
+      {loading && !hasLoadedRef.current ? (
         <p className="text-sm text-muted-foreground">Loading uploads…</p>
       ) : null}
 
@@ -204,75 +345,44 @@ const VideoProcess = () => {
       ) : null}
 
       {uploads.length > 0 ? (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label
-              htmlFor="upload-select"
-              className="text-sm font-medium text-foreground"
-            >
-              Select video
-            </label>
-            <select
-              id="upload-select"
-              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-              value={selectedUploadId ?? ""}
-              onChange={(event) => setSelectedUploadId(event.target.value)}
-            >
+        <div className="overflow-x-auto rounded-md border">
+          <table className="w-full min-w-[640px] text-sm">
+            <thead>
+              <tr className="border-b bg-muted/40 text-left">
+                <th className="px-4 py-3 font-medium">File</th>
+                <th className="px-4 py-3 font-medium">Stage</th>
+                <th className="px-4 py-3 font-medium">Progress</th>
+                <th className="px-4 py-3 font-medium">Error</th>
+                <th className="px-4 py-3 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
               {uploads.map((upload) => (
-                <option key={upload.id} value={upload.id}>
-                  {upload.filename} ({formatBytes(upload.sizeBytes)})
-                </option>
+                <tr key={upload.id} className="border-b last:border-b-0">
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-medium">{upload.filename}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatBytes(upload.sizeBytes)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <StatusBadge status={upload.pipelineStatus} />
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <ProgressCell upload={upload} />
+                  </td>
+                  <td className="max-w-xs px-4 py-3 align-top text-destructive">
+                    {upload.primaryError ?? (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    {renderAction(upload)}
+                  </td>
+                </tr>
               ))}
-            </select>
-          </div>
-
-          {selectedUpload ? (
-            <div className="space-y-3 rounded-md border px-4 py-3 text-sm">
-              <p>
-                <span className="font-medium">Chunking:</span>{" "}
-                {selectedUpload.isChunked
-                  ? "Completed"
-                  : selectedUpload.chunkingTask
-                    ? formatChunkingStatus(selectedUpload.chunkingTask.status)
-                    : "Not started"}
-                {selectedUpload.chunkingTask?.chunkCount !== null &&
-                selectedUpload.chunkingTask?.chunkCount !== undefined
-                  ? ` · ${selectedUpload.chunkingTask.chunkCount} segments`
-                  : selectedUpload.embedding.total > 0
-                    ? ` · ${selectedUpload.embedding.total} segments`
-                    : ""}
-              </p>
-              <p>
-                <span className="font-medium">Embedding:</span>{" "}
-                {selectedUpload.embedding.total > 0
-                  ? `${selectedUpload.embedding.embedded}/${selectedUpload.embedding.total}`
-                  : "—"}
-                {selectedUpload.embedding.failed > 0
-                  ? ` · ${selectedUpload.embedding.failed} failed`
-                  : ""}
-                {selectedUpload.embedding.pending > 0
-                  ? ` · ${selectedUpload.embedding.pending} in progress`
-                  : ""}
-              </p>
-              {selectedUpload.chunkingTask?.errorMessage ? (
-                <p className="text-destructive">
-                  <span className="font-medium">Chunking error:</span>{" "}
-                  {selectedUpload.chunkingTask.errorMessage}
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          <Button
-            onClick={() => void startProcessing()}
-            disabled={submitting || !selectedUploadId || isActive}
-          >
-            {submitting
-              ? "Starting…"
-              : isActive
-                ? "Processing…"
-                : "Start processing"}
-          </Button>
+            </tbody>
+          </table>
         </div>
       ) : null}
     </div>

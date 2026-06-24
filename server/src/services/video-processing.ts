@@ -49,6 +49,31 @@ export type SerializedEmbeddingProgress = {
   pending: number;
 };
 
+export type PipelineStatus =
+  | "not_started"
+  | "chunking"
+  | "embedding"
+  | "complete"
+  | "failed";
+
+export type UploadListChunkingTask = {
+  status: string;
+  chunkCount: number | null;
+};
+
+export type UploadListItem = {
+  id: string;
+  filename: string;
+  filetype: string;
+  sizeBytes: number | null;
+  completedAt: string | null;
+  createdAt: string;
+  pipelineStatus: PipelineStatus;
+  primaryError: string | null;
+  chunkingTask: UploadListChunkingTask | null;
+  embedding: SerializedEmbeddingProgress;
+};
+
 const serializeChunkingTask = (
   task: NonNullable<Awaited<ReturnType<typeof getChunkingTaskById>>>,
 ): SerializedChunkingTask => ({
@@ -63,7 +88,81 @@ const serializeChunkingTask = (
   completedAt: task.completedAt?.toISOString() ?? null,
 });
 
-export const listUploads = async () => {
+const emptyEmbeddingProgress = (): SerializedEmbeddingProgress => ({
+  total: 0,
+  embedded: 0,
+  failed: 0,
+  pending: 0,
+});
+
+export const derivePipelineStatus = (input: {
+  chunkingTask: SerializedChunkingTask | null;
+  embedding: SerializedEmbeddingProgress;
+  isChunked: boolean;
+}): PipelineStatus => {
+  const { chunkingTask, embedding, isChunked } = input;
+
+  if (
+    chunkingTask &&
+    ACTIVE_CHUNKING_STATUSES.includes(
+      chunkingTask.status as (typeof ACTIVE_CHUNKING_STATUSES)[number],
+    )
+  ) {
+    return "chunking";
+  }
+
+  if (fileEmbeddingIsComplete(embedding)) {
+    return "complete";
+  }
+
+  if (chunkingTask?.status === "failed") {
+    return "failed";
+  }
+
+  if (isChunked && embedding.pending > 0) {
+    return "embedding";
+  }
+
+  if (
+    isChunked &&
+    embedding.failed > 0 &&
+    embedding.pending === 0
+  ) {
+    return "failed";
+  }
+
+  return "not_started";
+};
+
+export const derivePrimaryError = (input: {
+  chunkingTask: SerializedChunkingTask | null;
+  embedding: SerializedEmbeddingProgress;
+  pipelineStatus: PipelineStatus;
+}): string | null => {
+  if (input.pipelineStatus !== "failed") {
+    return null;
+  }
+
+  if (input.chunkingTask?.errorMessage) {
+    return input.chunkingTask.errorMessage;
+  }
+
+  if (input.embedding.failed > 0) {
+    const label = input.embedding.failed === 1 ? "segment" : "segments";
+    return `${input.embedding.failed} ${label} failed to embed`;
+  }
+
+  return null;
+};
+
+const toUploadListChunkingTask = (
+  task: NonNullable<Awaited<ReturnType<typeof getChunkingTaskById>>>,
+): UploadListChunkingTask => ({
+  status: task.status,
+  chunkCount: task.chunkCount,
+});
+
+export const listUploads = async (): Promise<UploadListItem[]> => {
   const uploads = await listCompletedUploads();
   const fileIds = uploads.map((upload) => upload.id);
 
@@ -74,22 +173,37 @@ export const listUploads = async () => {
 
   return uploads.map((upload) => {
     const chunkingTask = chunkingTasks.get(upload.id);
-    const embedding = embeddingStats.get(upload.id) ?? {
-      total: 0,
-      embedded: 0,
-      failed: 0,
-      pending: 0,
-    };
+    const serializedChunkingTask = chunkingTask
+      ? serializeChunkingTask(chunkingTask)
+      : null;
+    const listChunkingTask = chunkingTask
+      ? toUploadListChunkingTask(chunkingTask)
+      : null;
+    const embedding =
+      embeddingStats.get(upload.id) ?? emptyEmbeddingProgress();
+    const isChunked = embedding.total > 0;
+    const pipelineStatus = derivePipelineStatus({
+      chunkingTask: serializedChunkingTask,
+      embedding,
+      isChunked,
+    });
+    const primaryError = derivePrimaryError({
+      chunkingTask: serializedChunkingTask,
+      embedding,
+      pipelineStatus,
+    });
 
     return {
-      ...upload,
+      id: upload.id,
+      filename: upload.filename,
+      filetype: upload.filetype,
+      sizeBytes: upload.sizeBytes,
       completedAt: upload.completedAt?.toISOString() ?? null,
       createdAt: upload.createdAt.toISOString(),
-      chunkingTask: chunkingTask
-        ? serializeChunkingTask(chunkingTask)
-        : null,
+      chunkingTask: listChunkingTask,
       embedding,
-      isChunked: embedding.total > 0,
+      pipelineStatus,
+      primaryError,
     };
   });
 };
