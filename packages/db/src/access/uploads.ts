@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import db from "../index.js";
+import db from "../client.js";
 import { uploadsTable } from "../schema/uploads.js";
 
 export const createUploadRecord = async (input: {

@@ -1,13 +1,12 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
-import db from "../index.js";
-import { chunkingTasksTable } from "../schema/chunking-tasks.js";
+import db from "../client.js";
+import {
+  chunkingTasksTable,
+  chunkingTaskStatusEnum,
+} from "../schema/chunking-tasks.js";
 
 export type ChunkingTaskStatus =
-  | "queued"
-  | "downloading"
-  | "chunking"
-  | "completed"
-  | "failed";
+  (typeof chunkingTaskStatusEnum.enumValues)[number];
 
 export const ACTIVE_CHUNKING_STATUSES: ChunkingTaskStatus[] = [
   "queued",
@@ -103,4 +102,25 @@ export const getActiveChunkingTaskForFile = async (fileId: string) => {
     .limit(1);
 
   return task ?? null;
+};
+
+export const updateChunkingTaskStatus = async (
+  taskId: string,
+  update: {
+    status: ChunkingTaskStatus;
+    chunkCount?: number;
+    errorMessage?: string | null;
+    completedAt?: Date | null;
+  },
+) => {
+  await db
+    .update(chunkingTasksTable)
+    .set({
+      status: update.status,
+      chunkCount: update.chunkCount,
+      errorMessage: update.errorMessage,
+      completedAt: update.completedAt,
+      updatedAt: new Date(),
+    })
+    .where(eq(chunkingTasksTable.id, taskId));
 };

@@ -1,6 +1,6 @@
 import express from "express";
 import "dotenv/config";
-import { createTodo, getTodos } from "./data/db/access/index.js";
+import { createTodo, getTodos } from "db/access/index.js";
 import cors from "cors";
 import { tusdHookHandler } from "./routes/uploads.js";
 import {

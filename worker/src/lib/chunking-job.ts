@@ -6,11 +6,11 @@ import {
   commitChunkingResult,
   fileIsChunked,
   getChunksForFile,
-} from "../data/db/access/chunks.js";
+} from "db/access/chunks.js";
 import {
   getChunkingTaskById,
   updateChunkingTaskStatus,
-} from "../data/db/access/chunking-tasks.js";
+} from "db/access/chunking-tasks.js";
 import { chunkVideoFile } from "./chunking.js";
 import { mapWithConcurrency } from "./concurrency.js";
 import { enqueueEmbeddingJobsForFile } from "./enqueue-embedding.js";
@@ -19,8 +19,8 @@ import {
   downloadObject,
   uploadObject,
 } from "./s3.js";
-import type { ChunkingJobPayload } from "./queue.js";
-import { PREP_UPLOAD_CONCURRENCY } from "./queue.js";
+import type { ChunkingJobPayload } from "queue";
+import { PREP_UPLOAD_CONCURRENCY } from "queue";
 
 const completeChunkingTask = async (
   chunkingTaskId: string,

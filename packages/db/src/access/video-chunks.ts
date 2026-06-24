@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, sql } from "drizzle-orm";
-import db from "../index.js";
+import db from "../client.js";
 import { uploadsTable } from "../schema/uploads.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
 

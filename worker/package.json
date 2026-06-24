@@ -22,8 +22,8 @@
     "@aws-sdk/client-s3": "3.888.0",
     "ai": "6.0.207",
     "bullmq": "5.70.1",
+    "db": "workspace:*",
     "dotenv": "17.4.2",
-    "drizzle-orm": "0.45.2",
-    "pg": "8.20.0"
+    "queue": "workspace:*"
   }
 }

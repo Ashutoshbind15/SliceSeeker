@@ -1,5 +1,6 @@
 packages:
   - "client"
+  - "packages/*"
   - "search"
   - "server"
   - "worker"

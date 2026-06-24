@@ -7,6 +7,9 @@
     "infra": "docker compose up -d db valkey rustfs tusd",
     "dev:all": "pnpm infra && pnpm --filter client --filter search --filter server --filter worker --parallel run dev",
     "worker:dev": "pnpm --filter worker dev",
+    "db:generate": "pnpm --filter db db:generate",
+    "db:push": "pnpm --filter db db:push",
+    "db:studio": "pnpm --filter db db:studio",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

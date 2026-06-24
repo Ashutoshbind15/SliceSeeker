@@ -5,7 +5,7 @@ import {
   createUploadRecord,
   failUploadRecord,
   getUploadByTusId,
-} from "../data/db/access/uploads.js";
+} from "db/access/uploads.js";
 
 export type TusdHookResponse = {
   ChangeFileInfo?: {

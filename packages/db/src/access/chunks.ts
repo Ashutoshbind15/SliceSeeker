@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
-import db from "../index.js";
+import db from "../client.js";
+import { getEmbeddingModel } from "../constants.js";
 import { chunkingTasksTable } from "../schema/chunking-tasks.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
-import { EMBEDDING_MODEL } from "../../../lib/embeddings.js";
 
 export type ChunkMetadataInsert = {
   id: string;
@@ -91,4 +91,4 @@ export const chunkHasCurrentEmbedding = (chunk: {
   embedding: number[] | null;
   embeddingModel: string | null;
 }) =>
-  chunk.embedding !== null && chunk.embeddingModel === EMBEDDING_MODEL;
+  chunk.embedding !== null && chunk.embeddingModel === getEmbeddingModel();

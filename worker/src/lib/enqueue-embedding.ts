@@ -2,7 +2,7 @@ import { Queue } from "bullmq";
 import {
   chunkHasCurrentEmbedding,
   getChunksForFile,
-} from "../data/db/access/chunks.js";
+} from "db/access/chunks.js";
 import {
   createEmbeddingTaskForEnqueue,
   getEmbeddingTasksForFile,
@@ -10,14 +10,14 @@ import {
   markEmbeddingTaskCompleted,
   resetEmbeddingTaskForRetry,
   setEmbeddingTaskBullJobId,
-} from "../data/db/access/embedding-tasks.js";
+} from "db/access/embedding-tasks.js";
 import {
   EMBED_CHUNK_JOB_NAME,
   EMBED_JOB_ATTEMPTS,
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
   type EmbedChunkJobPayload,
-} from "./queue.js";
+} from "queue";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),

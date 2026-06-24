@@ -39,13 +39,15 @@ export const startVideoProcessingHandler = async (
 
     res.status(status).json({
       message: result.message,
-      ...(result.chunkingTask ? { chunkingTask: result.chunkingTask } : {}),
+      ...(result.reason === "already_chunking"
+        ? { chunkingTask: result.chunkingTask }
+        : {}),
     });
     return;
   }
 
   res.status(202).json({
-    chunkingTask: result.chunkingTask,
+    ...(result.chunkingTask ? { chunkingTask: result.chunkingTask } : {}),
     embedding: result.embedding,
   });
 };

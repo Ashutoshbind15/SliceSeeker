@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import { embed, type EmbeddingModelUsage } from "ai";
-import { VIDEO_CHUNK_EMBEDDING_DIMENSIONS } from "../data/db/schema/video-chunks.js";
+import { VIDEO_CHUNK_EMBEDDING_DIMENSIONS } from "db/schema/video-chunks.js";
 
 export const EMBEDDING_MODEL =
   process.env.EMBEDDING_MODEL ?? "google/gemini-embedding-2";

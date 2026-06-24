@@ -1,4 +1,4 @@
-import { searchVideoChunks } from "../data/db/access/video-chunks.js";
+import { searchVideoChunks } from "db/access/video-chunks.js";
 import { embedSearchQuery } from "../lib/embeddings.js";
 
 export type SearchVideoChunksInput = {

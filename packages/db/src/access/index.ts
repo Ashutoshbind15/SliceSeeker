@@ -1,4 +1,4 @@
-import db from "../index.js";
+import db from "../client.js";
 import { todosTable } from "../schema/index.js";
 
 export const getTodos = async () => {
@@ -6,7 +6,7 @@ export const getTodos = async () => {
   return todos;
 };
 
-export const createTodo = async ( title: string, description: string ) => {
+export const createTodo = async (title: string, description: string) => {
   await db.insert(todosTable).values({
     title,
     description,

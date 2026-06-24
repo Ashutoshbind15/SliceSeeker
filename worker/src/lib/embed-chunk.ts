@@ -5,15 +5,15 @@ import {
   chunkHasCurrentEmbedding,
   getChunkById,
   updateChunkEmbedding,
-} from "../data/db/access/chunks.js";
+} from "db/access/chunks.js";
 import {
   getEmbeddingTaskById,
   markEmbeddingTaskCompleted,
   markEmbeddingTaskRunning,
-} from "../data/db/access/embedding-tasks.js";
+} from "db/access/embedding-tasks.js";
 import { EMBEDDING_MODEL, embedVideoChunk } from "./embeddings.js";
 import { downloadObject } from "./s3.js";
-import type { EmbedChunkJobPayload } from "./queue.js";
+import type { EmbedChunkJobPayload } from "queue";
 
 export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
   const [embeddingTask, chunk] = await Promise.all([

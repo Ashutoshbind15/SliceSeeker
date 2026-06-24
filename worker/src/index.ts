@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
-import { updateChunkingTaskStatus } from "./data/db/access/chunking-tasks.js";
-import { markEmbeddingTaskFailed } from "./data/db/access/embedding-tasks.js";
+import { updateChunkingTaskStatus } from "db/access/chunking-tasks.js";
+import { markEmbeddingTaskFailed } from "db/access/embedding-tasks.js";
 import { processChunkingJob } from "./lib/chunking-job.js";
 import { processEmbedChunkJob } from "./lib/embed-chunk.js";
 import {
@@ -11,7 +11,7 @@ import {
   JOB_QUEUE_NAME,
   type ChunkingJobPayload,
   type EmbedChunkJobPayload,
-} from "./lib/queue.js";
+} from "queue";
 
 const worker = new Worker(
   JOB_QUEUE_NAME,

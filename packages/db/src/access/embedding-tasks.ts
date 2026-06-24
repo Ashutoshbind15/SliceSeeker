@@ -1,8 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { eq, inArray, sql } from "drizzle-orm";
-import db from "../index.js";
-import { embeddingTasksTable } from "../schema/embedding-tasks.js";
+import db from "../client.js";
+import {
+  embeddingTasksTable,
+  embeddingTaskStatusEnum,
+} from "../schema/embedding-tasks.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
+
+export type EmbeddingTaskStatus =
+  (typeof embeddingTaskStatusEnum.enumValues)[number];
 
 export type EmbeddingProgress = {
   total: number;
@@ -10,6 +16,8 @@ export type EmbeddingProgress = {
   failed: number;
   pending: number;
 };
+
+export type EmbeddingTask = typeof embeddingTasksTable.$inferSelect;
 
 const emptyEmbeddingProgress = (): EmbeddingProgress => ({
   total: 0,
@@ -78,7 +86,15 @@ export const getEmbeddingStatsForFiles = async (fileIds: string[]) => {
   return stats;
 };
 
-export type EmbeddingTask = typeof embeddingTasksTable.$inferSelect;
+export const getEmbeddingTaskById = async (taskId: string) => {
+  const [task] = await db
+    .select()
+    .from(embeddingTasksTable)
+    .where(eq(embeddingTasksTable.id, taskId))
+    .limit(1);
+
+  return task ?? null;
+};
 
 export const getEmbeddingTasksForFile = async (fileId: string) => {
   return db
@@ -109,16 +125,50 @@ export const resetEmbeddingTaskForRetry = async (taskId: string) => {
     .where(eq(embeddingTasksTable.id, taskId));
 };
 
-export const markEmbeddingTaskCompleted = async (taskId: string) => {
+export const updateEmbeddingTaskStatus = async (
+  taskId: string,
+  update: {
+    status: EmbeddingTaskStatus;
+    errorMessage?: string | null;
+    completedAt?: Date | null;
+  },
+) => {
   await db
     .update(embeddingTasksTable)
     .set({
-      status: "completed",
-      errorMessage: null,
-      completedAt: new Date(),
+      status: update.status,
+      errorMessage: update.errorMessage,
+      completedAt: update.completedAt,
       updatedAt: new Date(),
     })
     .where(eq(embeddingTasksTable.id, taskId));
+};
+
+export const markEmbeddingTaskRunning = async (taskId: string) => {
+  await updateEmbeddingTaskStatus(taskId, {
+    status: "running",
+    errorMessage: null,
+    completedAt: null,
+  });
+};
+
+export const markEmbeddingTaskCompleted = async (taskId: string) => {
+  await updateEmbeddingTaskStatus(taskId, {
+    status: "completed",
+    errorMessage: null,
+    completedAt: new Date(),
+  });
+};
+
+export const markEmbeddingTaskFailed = async (
+  taskId: string,
+  errorMessage: string,
+) => {
+  await updateEmbeddingTaskStatus(taskId, {
+    status: "failed",
+    errorMessage,
+    completedAt: new Date(),
+  });
 };
 
 export const insertCompletedEmbeddingTask = async (input: {

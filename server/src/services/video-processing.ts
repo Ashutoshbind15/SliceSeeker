@@ -7,23 +7,23 @@ import {
   getLatestChunkingTaskForFile,
   getLatestChunkingTasksForFiles,
   setChunkingTaskBullJobId,
-} from "../data/db/access/chunking-tasks.js";
-import { fileIsChunked } from "../data/db/access/chunks.js";
+} from "db/access/chunking-tasks.js";
+import { fileIsChunked } from "db/access/chunks.js";
 import {
   fileEmbeddingIsComplete,
   getEmbeddingStatsForFile,
   getEmbeddingStatsForFiles,
-} from "../data/db/access/embedding-tasks.js";
+} from "db/access/embedding-tasks.js";
 import {
   getUploadById,
   listCompletedUploads,
-} from "../data/db/access/uploads.js";
+} from "db/access/uploads.js";
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
   CHUNKING_JOB_NAME,
   type ChunkingJobPayload,
-} from "../lib/queue.js";
+} from "queue";
 import { enqueueEmbeddingJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
@@ -97,7 +97,7 @@ export const listUploads = async () => {
 export type StartVideoProcessingResult =
   | {
       ok: true;
-      chunkingTask: SerializedChunkingTask | null;
+      chunkingTask?: SerializedChunkingTask;
       embedding: SerializedEmbeddingProgress;
     }
   | {
@@ -106,10 +106,14 @@ export type StartVideoProcessingResult =
         | "not_found"
         | "not_ready"
         | "missing_storage"
-        | "already_chunking"
         | "already_complete";
       message: string;
-      chunkingTask?: SerializedChunkingTask;
+    }
+  | {
+      ok: false;
+      reason: "already_chunking";
+      message: string;
+      chunkingTask: SerializedChunkingTask;
     };
 
 export const startVideoProcessing = async (
@@ -162,9 +166,6 @@ export const startVideoProcessing = async (
         ok: false,
         reason: "already_complete",
         message: "All segments are already embedded for this upload",
-        chunkingTask: latestChunkingTask
-          ? serializeChunkingTask(latestChunkingTask)
-          : undefined,
       };
     }
 
@@ -175,9 +176,6 @@ export const startVideoProcessing = async (
 
     return {
       ok: true,
-      chunkingTask: latestChunkingTask
-        ? serializeChunkingTask(latestChunkingTask)
-        : null,
       embedding,
     };
   }
@@ -207,9 +205,9 @@ export const startVideoProcessing = async (
 
   return {
     ok: true,
-    chunkingTask: chunkingTask
-      ? serializeChunkingTask(chunkingTask)
-      : null,
+    ...(chunkingTask
+      ? { chunkingTask: serializeChunkingTask(chunkingTask) }
+      : {}),
     embedding,
   };
 };
