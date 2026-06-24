@@ -6,6 +6,7 @@ import {
   embeddingTaskStatusEnum,
 } from "../schema/embedding-tasks.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
+import { recordEmbedUsage } from "./file-costs.js";
 
 export type EmbeddingTaskStatus =
   (typeof embeddingTaskStatusEnum.enumValues)[number];
@@ -157,6 +158,45 @@ export const markEmbeddingTaskCompleted = async (taskId: string) => {
     status: "completed",
     errorMessage: null,
     completedAt: new Date(),
+  });
+};
+
+export const commitEmbeddingResult = async (input: {
+  embeddingTaskId: string;
+  chunkId: string;
+  fileId: string;
+  embedding: number[];
+  embeddingModel: string;
+  tokens: number | null;
+  costUsd: number;
+}) => {
+  await db.transaction(async (tx) => {
+    await tx
+      .update(videoChunksTable)
+      .set({
+        embedding: input.embedding,
+        embeddingModel: input.embeddingModel,
+      })
+      .where(eq(videoChunksTable.id, input.chunkId));
+
+    await tx
+      .update(embeddingTasksTable)
+      .set({
+        status: "completed",
+        errorMessage: null,
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(embeddingTasksTable.id, input.embeddingTaskId));
+
+    await recordEmbedUsage(
+      {
+        fileId: input.fileId,
+        tokens: input.tokens,
+        costUsd: input.costUsd,
+      },
+      tx,
+    );
   });
 };
 

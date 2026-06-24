@@ -3,6 +3,7 @@ import db from "../client.js";
 import { getEmbeddingModel } from "../constants.js";
 import { chunkingTasksTable } from "../schema/chunking-tasks.js";
 import { videoChunksTable } from "../schema/video-chunks.js";
+import { setFileDurationSec } from "./file-costs.js";
 
 export type ChunkMetadataInsert = {
   id: string;
@@ -52,6 +53,14 @@ export const commitChunkingResult = async (
         updatedAt: new Date(),
       })
       .where(eq(chunkingTasksTable.id, chunkingTaskId));
+
+    if (chunks.length > 0) {
+      const durationSec = chunks.reduce(
+        (total, chunk) => total + chunk.durationSec,
+        0,
+      );
+      await setFileDurationSec(chunks[0].fileId, durationSec, tx);
+    }
   });
 };
 

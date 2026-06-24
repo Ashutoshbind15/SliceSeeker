@@ -29,6 +29,12 @@ const Layout = () => {
               Search
             </Link>
             <Link
+              to="/costs"
+              className="text-foreground hover:text-foreground/80"
+            >
+              Costs
+            </Link>
+            <Link
               to="/todo"
               className="text-foreground hover:text-foreground/80"
             >

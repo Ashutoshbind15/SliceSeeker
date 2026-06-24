@@ -4,6 +4,7 @@ import { chunkingTasksTable } from "./schema/chunking-tasks.js";
 import { embeddingTasksTable } from "./schema/embedding-tasks.js";
 import { todosTable } from "./schema/index.js";
 import { uploadsTable } from "./schema/uploads.js";
+import { fileCostsTable } from "./schema/file-costs.js";
 import { videoChunksTable } from "./schema/video-chunks.js";
 
 const db = drizzle(process.env.DATABASE_URL!, {
@@ -13,6 +14,7 @@ const db = drizzle(process.env.DATABASE_URL!, {
     chunkingTasks: chunkingTasksTable,
     embeddingTasks: embeddingTasksTable,
     videoChunks: videoChunksTable,
+    fileCosts: fileCostsTable,
   },
 });
 

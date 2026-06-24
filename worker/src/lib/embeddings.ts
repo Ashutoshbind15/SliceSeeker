@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
-import { embed, type EmbeddingModelUsage } from "ai";
+import { embed, type EmbeddingModelUsage, type ProviderMetadata } from "ai";
+import { parseEmbedUsage } from "./embed-usage.js";
 import { VIDEO_CHUNK_EMBEDDING_DIMENSIONS } from "db/schema/video-chunks.js";
 
 export const EMBEDDING_MODEL =
@@ -7,6 +8,9 @@ export const EMBEDDING_MODEL =
 
 export type EmbedVideoChunkUsage = {
   tokens: number | null;
+  audioTokens: number | null;
+  videoTokens: number | null;
+  costUsd: number;
 };
 
 export type EmbedVideoChunkResult = {
@@ -22,13 +26,14 @@ const logChunkEmbedUsage = (input: {
   durationSec: number;
   fileSizeBytes: number;
   usage: EmbedVideoChunkUsage;
-  providerMetadata?: Record<string, Record<string, unknown>>;
+  providerMetadata?: ProviderMetadata;
 }) => {
   const sizeKb = (input.fileSizeBytes / 1024).toFixed(0);
   const tokens = input.usage.tokens ?? "n/a";
+  const cost = `$${input.usage.costUsd.toFixed(6)}`;
 
   console.log(
-    `[embed] chunk=${input.chunkIndex} duration=${input.durationSec.toFixed(1)}s size=${sizeKb}KB tokens=${tokens}`,
+    `[embed] chunk=${input.chunkIndex} duration=${input.durationSec.toFixed(1)}s size=${sizeKb}KB tokens=${tokens} cost=${cost}`,
   );
 
   if (input.providerMetadata) {
@@ -73,16 +78,17 @@ export const embedVideoChunk = async (input: {
     },
   });
 
-  const usageSummary = { tokens: getTokenCount(usage) };
+  const usageSummary = parseEmbedUsage({
+    tokens: getTokenCount(usage),
+    providerMetadata,
+  });
 
   logChunkEmbedUsage({
     chunkIndex: input.chunkIndex,
     durationSec: input.durationSec,
     fileSizeBytes: fileStat.size,
     usage: usageSummary,
-    providerMetadata: providerMetadata as
-      | Record<string, Record<string, unknown>>
-      | undefined,
+    providerMetadata,
   });
 
   return { embedding, usage: usageSummary };

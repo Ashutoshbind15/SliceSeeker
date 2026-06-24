@@ -1,14 +1,10 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { getChunkById } from "db/access/chunks.js";
 import {
-  chunkHasCurrentEmbedding,
-  getChunkById,
-  updateChunkEmbedding,
-} from "db/access/chunks.js";
-import {
+  commitEmbeddingResult,
   getEmbeddingTaskById,
-  markEmbeddingTaskCompleted,
   markEmbeddingTaskRunning,
 } from "db/access/embedding-tasks.js";
 import { EMBEDDING_MODEL, embedVideoChunk } from "./embeddings.js";
@@ -16,22 +12,18 @@ import { downloadObject } from "./s3.js";
 import type { EmbedChunkJobPayload } from "queue";
 
 export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
-  const [embeddingTask, chunk] = await Promise.all([
-    getEmbeddingTaskById(payload.embeddingTaskId),
-    getChunkById(payload.chunkId),
-  ]);
-
+  const embeddingTask = await getEmbeddingTaskById(payload.embeddingTaskId);
   if (!embeddingTask) {
     throw new Error(`Embedding task ${payload.embeddingTaskId} not found`);
   }
 
-  if (!chunk) {
-    throw new Error(`Chunk ${payload.chunkId} not found`);
+  if (embeddingTask.status === "completed") {
+    return;
   }
 
-  if (embeddingTask.status === "completed" || chunkHasCurrentEmbedding(chunk)) {
-    await markEmbeddingTaskCompleted(payload.embeddingTaskId);
-    return;
+  const chunk = await getChunkById(payload.chunkId);
+  if (!chunk) {
+    throw new Error(`Chunk ${payload.chunkId} not found`);
   }
 
   if (!chunk.storeKey) {
@@ -53,20 +45,22 @@ export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
       destinationPath: chunkPath,
     });
 
-    const { embedding } = await embedVideoChunk({
+    const { embedding, usage } = await embedVideoChunk({
       filePath: chunkPath,
       mimeType: payload.filetype,
       chunkIndex: chunk.chunkIndex,
       durationSec: chunk.durationSec,
     });
 
-    await updateChunkEmbedding({
+    await commitEmbeddingResult({
+      embeddingTaskId: payload.embeddingTaskId,
       chunkId: chunk.id,
+      fileId: chunk.fileId,
       embedding,
       embeddingModel: EMBEDDING_MODEL,
+      tokens: usage.tokens,
+      costUsd: usage.costUsd,
     });
-
-    await markEmbeddingTaskCompleted(payload.embeddingTaskId);
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });
   }

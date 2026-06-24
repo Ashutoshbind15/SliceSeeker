@@ -4,8 +4,6 @@ import os from "node:os";
 import path from "node:path";
 import {
   commitChunkingResult,
-  fileIsChunked,
-  getChunksForFile,
 } from "db/access/chunks.js";
 import {
   getChunkingTaskById,
@@ -22,30 +20,13 @@ import {
 import type { ChunkingJobPayload } from "queue";
 import { PREP_UPLOAD_CONCURRENCY } from "queue";
 
-const completeChunkingTask = async (
-  chunkingTaskId: string,
-  fileId: string,
-) => {
-  const chunks = await getChunksForFile(fileId);
-  await updateChunkingTaskStatus(chunkingTaskId, {
-    status: "completed",
-    chunkCount: chunks.length,
-    errorMessage: null,
-    completedAt: new Date(),
-  });
-};
-
 export const processChunkingJob = async (payload: ChunkingJobPayload) => {
   const task = await getChunkingTaskById(payload.chunkingTaskId);
   if (!task) {
     throw new Error(`Chunking task ${payload.chunkingTaskId} not found`);
   }
 
-  if (task.status === "completed" || (await fileIsChunked(payload.fileId))) {
-    if (task.status !== "completed") {
-      await completeChunkingTask(payload.chunkingTaskId, payload.fileId);
-    }
-
+  if (task.status === "completed") {
     await enqueueEmbeddingJobsForFile({
       fileId: payload.fileId,
       filetype: payload.filetype,

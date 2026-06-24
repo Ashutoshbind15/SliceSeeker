@@ -21,6 +21,9 @@ const App = () => {
         <Button asChild variant="outline">
           <Link to="/search">Search video</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link to="/costs">View costs</Link>
+        </Button>
       </div>
     </div>
   );
