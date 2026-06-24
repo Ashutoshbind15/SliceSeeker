@@ -17,6 +17,8 @@ import {
 import {
   getUploadById,
   listCompletedUploads,
+  listCompletedUploadsByCollectionId,
+  type CompletedUploadRow,
 } from "db/access/uploads.js";
 import {
   getValkeyConnectionOptions,
@@ -66,6 +68,8 @@ export type UploadListItem = {
   filename: string;
   filetype: string;
   sizeBytes: number | null;
+  collectionId: string;
+  collectionName: string;
   completedAt: string | null;
   createdAt: string;
   pipelineStatus: PipelineStatus;
@@ -162,8 +166,9 @@ const toUploadListChunkingTask = (
   chunkCount: task.chunkCount,
 });
 
-export const listUploads = async (): Promise<UploadListItem[]> => {
-  const uploads = await listCompletedUploads();
+const buildUploadListItems = async (
+  uploads: CompletedUploadRow[],
+): Promise<UploadListItem[]> => {
   const fileIds = uploads.map((upload) => upload.id);
 
   const [chunkingTasks, embeddingStats] = await Promise.all([
@@ -198,6 +203,8 @@ export const listUploads = async (): Promise<UploadListItem[]> => {
       filename: upload.filename,
       filetype: upload.filetype,
       sizeBytes: upload.sizeBytes,
+      collectionId: upload.collectionId,
+      collectionName: upload.collectionName,
       completedAt: upload.completedAt?.toISOString() ?? null,
       createdAt: upload.createdAt.toISOString(),
       chunkingTask: listChunkingTask,
@@ -207,6 +214,14 @@ export const listUploads = async (): Promise<UploadListItem[]> => {
     };
   });
 };
+
+export const listUploads = async (): Promise<UploadListItem[]> =>
+  buildUploadListItems(await listCompletedUploads());
+
+export const listUploadsByCollectionId = async (
+  collectionId: string,
+): Promise<UploadListItem[]> =>
+  buildUploadListItems(await listCompletedUploadsByCollectionId(collectionId));
 
 export type StartVideoProcessingResult =
   | {

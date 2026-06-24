@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { TusdHookRequest } from "../lib/schemas/uploads.js";
+import { resolveUploadCollectionId } from "./collections.js";
 import {
   completeUploadRecord,
   createUploadRecord,
@@ -26,6 +27,7 @@ const getUploadMetadata = (metadata: Record<string, string>) => ({
     metadataValue(metadata.filetype) ??
     metadataValue(metadata.type) ??
     "video/mp4",
+  collectionId: metadataValue(metadata.collectionId),
 });
 
 const handlePreCreate = (hook: TusdHookRequest): TusdHookResponse => {
@@ -34,7 +36,13 @@ const handlePreCreate = (hook: TusdHookRequest): TusdHookResponse => {
   return {
     ChangeFileInfo: {
       ID: randomUUID(),
-      MetaData: metadata,
+      MetaData: {
+        filename: metadata.filename,
+        filetype: metadata.filetype,
+        ...(metadata.collectionId
+          ? { collectionId: metadata.collectionId }
+          : {}),
+      },
     },
   };
 };
@@ -48,12 +56,14 @@ const handlePostCreate = async (hook: TusdHookRequest) => {
   }
 
   const metadata = getUploadMetadata(Upload.MetaData);
+  const collectionId = await resolveUploadCollectionId(metadata.collectionId);
 
   await createUploadRecord({
     id: randomUUID(),
     tusUploadId,
     filename: metadata.filename,
     filetype: metadata.filetype,
+    collectionId,
     sizeBytes: Upload.Size ?? undefined,
   });
 };
@@ -77,11 +87,14 @@ const handlePostFinish = async (hook: TusdHookRequest) => {
 
   if (!existing) {
     const metadata = getUploadMetadata(hook.Event.Upload.MetaData);
+    const collectionId = await resolveUploadCollectionId(metadata.collectionId);
+
     await createUploadRecord({
       id: randomUUID(),
       tusUploadId,
       filename: metadata.filename,
       filetype: metadata.filetype,
+      collectionId,
       sizeBytes,
     });
   }

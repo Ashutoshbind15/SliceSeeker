@@ -1,10 +1,16 @@
-import { searchVideoChunks } from "db/access/video-chunks.js";
+import {
+  searchVideoChunks,
+  searchVideoChunksByCollectionIds,
+} from "db/access/video-chunks.js";
+import { resolveSearchCollectionIds } from "db/access/collections.js";
 import { embedSearchQuery } from "../lib/embeddings.js";
 import { getPresignedObjectUrl } from "../lib/s3.js";
 
 export type SearchVideosInput = {
   query: string;
   uploadId?: string;
+  collectionId?: string;
+  collectionIds?: string[];
   limit?: number;
 };
 
@@ -49,11 +55,15 @@ export const searchVideos = async (
   input: SearchVideosInput,
 ): Promise<SearchVideoResult[]> => {
   const embedding = await embedSearchQuery(input.query.trim());
-  const rows = await searchVideoChunks({
+  const collectionIds = resolveSearchCollectionIds(input);
+  const searchInput = {
     embedding,
     uploadId: input.uploadId,
     limit: input.limit,
-  });
+  };
+  const rows = collectionIds
+    ? await searchVideoChunksByCollectionIds(searchInput, collectionIds)
+    : await searchVideoChunks(searchInput);
 
   const segments = rows
     .filter((row) => row.sourceStorageKey)

@@ -5,6 +5,7 @@ import Todo from "./Todo";
 import VideoUpload from "./VideoUpload";
 import VideoProcess from "./VideoProcess";
 import VideoSearch from "./VideoSearch";
+import Files from "./Files";
 import FileCosts from "./FileCosts";
 import Layout from "./Layout";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -18,6 +19,7 @@ root.render(
         <Route element={<Layout />}>
           <Route path="/" element={<App />} />
           <Route path="/upload" element={<VideoUpload />} />
+          <Route path="/files" element={<Files />} />
           <Route path="/process" element={<VideoProcess />} />
           <Route path="/search" element={<VideoSearch />} />
           <Route path="/costs" element={<FileCosts />} />

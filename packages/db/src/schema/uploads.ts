@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { collectionsTable } from "./collections.js";
 
 export const uploadStatusEnum = pgEnum("upload_status", [
   "uploading",
@@ -22,9 +23,15 @@ export const uploadsTable = pgTable(
     filetype: text("filetype").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }),
     status: uploadStatusEnum("status").notNull().default("uploading"),
+    collectionId: text("collection_id")
+      .notNull()
+      .references(() => collectionsTable.id),
     storageKey: text("storage_key"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
   },
-  (table) => [index("uploads_status_idx").on(table.status)],
+  (table) => [
+    index("uploads_status_idx").on(table.status),
+    index("uploads_collection_id_idx").on(table.collectionId),
+  ],
 );

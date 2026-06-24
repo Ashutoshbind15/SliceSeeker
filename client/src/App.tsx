@@ -16,6 +16,9 @@ const App = () => {
           <Link to="/upload">Upload video</Link>
         </Button>
         <Button asChild variant="outline">
+          <Link to="/files">Manage files</Link>
+        </Button>
+        <Button asChild variant="outline">
           <Link to="/process">Process video</Link>
         </Button>
         <Button asChild variant="outline">

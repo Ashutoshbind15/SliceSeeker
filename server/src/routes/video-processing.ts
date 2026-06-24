@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import {
   getVideoJob,
   listUploads,
+  listUploadsByCollectionId,
   startVideoProcessing,
 } from "../services/video-processing.js";
 
@@ -13,8 +14,14 @@ const getRouteParam = (value: string | string[] | undefined) => {
   return value;
 };
 
-export const listUploadsHandler = async (_req: Request, res: Response) => {
-  const uploads = await listUploads();
+export const listUploadsHandler = async (req: Request, res: Response) => {
+  const collectionId =
+    typeof req.query.collectionId === "string"
+      ? req.query.collectionId
+      : undefined;
+  const uploads = collectionId
+    ? await listUploadsByCollectionId(collectionId)
+    : await listUploads();
   res.json({ uploads });
 };
 

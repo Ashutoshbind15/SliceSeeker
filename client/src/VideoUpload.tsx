@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Uppy from "@uppy/core";
 import Tus from "@uppy/tus";
 import Dashboard from "@uppy/react/dashboard";
@@ -7,8 +7,18 @@ import "@uppy/core/css/style.min.css";
 import "@uppy/dashboard/css/style.min.css";
 
 import { endpoints } from "@/lib/endpoints";
+import { CollectionPicker } from "@/components/CollectionPicker";
+import { CreateCollection } from "@/components/CreateCollection";
 
 const VideoUpload = () => {
+  const [selectedCollectionId, setSelectedCollectionId] = useState("");
+  const [collectionsRefreshKey, setCollectionsRefreshKey] = useState(0);
+  const selectedCollectionIdRef = useRef(selectedCollectionId);
+
+  useEffect(() => {
+    selectedCollectionIdRef.current = selectedCollectionId;
+  }, [selectedCollectionId]);
+
   const uppy = useMemo(() => {
     const instance = new Uppy({
       id: "video-upload",
@@ -25,8 +35,25 @@ const VideoUpload = () => {
       removeFingerprintOnSuccess: true,
     });
 
+    instance.on("file-added", (file) => {
+      const collectionId = selectedCollectionIdRef.current;
+      if (collectionId) {
+        instance.setFileMeta(file.id, { collectionId });
+      }
+    });
+
     return instance;
   }, []);
+
+  useEffect(() => {
+    if (!selectedCollectionId) {
+      return;
+    }
+
+    for (const file of uppy.getFiles()) {
+      uppy.setFileMeta(file.id, { collectionId: selectedCollectionId });
+    }
+  }, [selectedCollectionId, uppy]);
 
   useEffect(() => {
     return () => {
@@ -40,8 +67,26 @@ const VideoUpload = () => {
         <h1 className="text-2xl font-semibold tracking-tight">Upload video</h1>
         <p className="text-sm text-muted-foreground">
           Large files upload in chunks and resume automatically if the
-          connection drops. Completed uploads are stored on RustFS via tusd.
+          connection drops. Completed uploads are stored on RustFS via tusd and
+          assigned to the selected collection.
         </p>
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <CollectionPicker
+            selectedCollectionId={selectedCollectionId}
+            onSelectedCollectionIdChange={setSelectedCollectionId}
+            label="Upload to collection"
+            refreshKey={collectionsRefreshKey}
+          />
+        </div>
+        <CreateCollection
+          onCreated={(collection) => {
+            setSelectedCollectionId(collection.id);
+            setCollectionsRefreshKey((current) => current + 1);
+          }}
+        />
       </div>
 
       <Dashboard

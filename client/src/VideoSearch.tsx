@@ -1,10 +1,12 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
+import { CollectionPicker } from "@/components/CollectionPicker";
 
 type UploadSummary = {
   id: string;
   filename: string;
+  collectionId: string;
   embedding: {
     total: number;
     embedded: number;
@@ -84,6 +86,7 @@ const SegmentVideo = ({ src, startSec, endSec }: SegmentVideoProps) => {
 
 const VideoSearch = () => {
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState("");
   const [selectedUploadId, setSelectedUploadId] = useState<string>("");
   const [query, setQuery] = useState("");
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
@@ -93,11 +96,14 @@ const VideoSearch = () => {
   const [error, setError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
-  const fetchUploads = useCallback(async () => {
+  const fetchUploads = useCallback(async (collectionId?: string) => {
     setLoadingUploads(true);
 
     try {
-      const response = await fetch(`${endpoints.api}/uploads`);
+      const query = collectionId
+        ? `?collectionId=${encodeURIComponent(collectionId)}`
+        : "";
+      const response = await fetch(`${endpoints.api}/uploads${query}`);
       if (!response.ok) {
         throw new Error("Failed to load uploads");
       }
@@ -119,8 +125,12 @@ const VideoSearch = () => {
   }, []);
 
   useEffect(() => {
-    void fetchUploads();
-  }, [fetchUploads]);
+    void fetchUploads(selectedCollectionId || undefined);
+  }, [fetchUploads, selectedCollectionId]);
+
+  useEffect(() => {
+    setSelectedUploadId("");
+  }, [selectedCollectionId]);
 
   const runSearch = async (event: FormEvent) => {
     event.preventDefault();
@@ -141,6 +151,7 @@ const VideoSearch = () => {
         body: JSON.stringify({
           query: trimmedQuery,
           ...(selectedUploadId ? { uploadId: selectedUploadId } : {}),
+          ...(selectedCollectionId ? { collectionId: selectedCollectionId } : {}),
           limit,
         }),
       });
@@ -189,6 +200,13 @@ const VideoSearch = () => {
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
+
+        <CollectionPicker
+          selectedCollectionId={selectedCollectionId}
+          onSelectedCollectionIdChange={setSelectedCollectionId}
+          label="Limit to collection"
+          includeAllOption
+        />
 
         <div className="space-y-2">
           <label htmlFor="upload-filter" className="text-sm font-medium">

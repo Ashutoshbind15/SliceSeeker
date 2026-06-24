@@ -31,6 +31,8 @@ type UploadSummary = {
   filename: string;
   filetype: string;
   sizeBytes: number | null;
+  collectionId: string;
+  collectionName: string;
   completedAt: string | null;
   createdAt: string;
   chunkingTask: ChunkingTask | null;
@@ -350,6 +352,7 @@ const VideoProcess = () => {
             <thead>
               <tr className="border-b bg-muted/40 text-left">
                 <th className="px-4 py-3 font-medium">File</th>
+                <th className="px-4 py-3 font-medium">Collection</th>
                 <th className="px-4 py-3 font-medium">Stage</th>
                 <th className="px-4 py-3 font-medium">Progress</th>
                 <th className="px-4 py-3 font-medium">Error</th>
@@ -364,6 +367,9 @@ const VideoProcess = () => {
                     <div className="text-xs text-muted-foreground">
                       {formatBytes(upload.sizeBytes)}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 align-top text-muted-foreground">
+                    {upload.collectionName}
                   </td>
                   <td className="px-4 py-3 align-top">
                     <StatusBadge status={upload.pipelineStatus} />

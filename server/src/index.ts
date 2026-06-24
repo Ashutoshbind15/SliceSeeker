@@ -10,6 +10,11 @@ import {
 } from "./routes/video-processing.js";
 import { searchVideosHandler } from "./routes/search.js";
 import { listFileCostsHandler } from "./routes/costs.js";
+import {
+  assignUploadCollectionHandler,
+  createCollectionHandler,
+  listCollectionsHandler,
+} from "./routes/collections.js";
 
 const app = express();
 
@@ -36,9 +41,13 @@ app.post("/todos", async (req, res) => {
 });
 
 app.get("/uploads", listUploadsHandler);
+app.patch("/uploads/:uploadId/collection", assignUploadCollectionHandler);
 app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
 app.get("/jobs/:jobId", getVideoJobStatusHandler);
 app.post("/search", searchVideosHandler);
+
+app.get("/collections", listCollectionsHandler);
+app.post("/collections", createCollectionHandler);
 
 app.get("/costs", listFileCostsHandler);
 
