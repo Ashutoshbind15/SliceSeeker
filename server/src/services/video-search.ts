@@ -1,28 +1,11 @@
-// Sample end-client integration: calls the retrieval API and presigns source
-// objects for demo playback. End-users' apps should implement their own
-// auth, DRM, media delivery layer etc.
+import { searchVideoChunks } from "db/access/video-chunks.js";
+import { embedSearchQuery } from "../lib/embeddings.js";
 import { getPresignedObjectUrl } from "../lib/s3.js";
 
 export type SearchVideosInput = {
   query: string;
   uploadId?: string;
   limit?: number;
-};
-
-export type SearchApiSegmentResult = {
-  segmentId: string;
-  fileId: string;
-  uploadId: string;
-  filename: string;
-  chunkIndex: number;
-  startSec: number;
-  endSec: number;
-  durationSec: number;
-  score: number;
-  sourceObject: {
-    bucket: string;
-    key: string;
-  };
 };
 
 export type SearchVideoResult = {
@@ -38,44 +21,57 @@ export type SearchVideoResult = {
   playbackUrl: string;
 };
 
-const getSearchApiUrl = () =>
-  process.env.SEARCH_API_URL ?? "http://127.0.0.1:3001";
+type SourceObject = {
+  bucket: string;
+  key: string;
+};
+
+const getSourceBucket = () => process.env.S3_BUCKET ?? "uploads";
+
+const presignedUrlCache = new Map<string, Promise<string>>();
+
+const getPlaybackUrl = (sourceObject: SourceObject) => {
+  const cacheKey = `${sourceObject.bucket}/${sourceObject.key}`;
+  const existing = presignedUrlCache.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const promise = getPresignedObjectUrl({
+    bucket: sourceObject.bucket,
+    key: sourceObject.key,
+  });
+  presignedUrlCache.set(cacheKey, promise);
+  return promise;
+};
 
 export const searchVideos = async (
   input: SearchVideosInput,
 ): Promise<SearchVideoResult[]> => {
-  const response = await fetch(`${getSearchApiUrl()}/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
+  const embedding = await embedSearchQuery(input.query.trim());
+  const rows = await searchVideoChunks({
+    embedding,
+    uploadId: input.uploadId,
+    limit: input.limit,
   });
 
-  const body = (await response.json().catch(() => null)) as {
-    message?: string;
-    results?: SearchApiSegmentResult[];
-  } | null;
-
-  if (!response.ok) {
-    throw new Error(body?.message ?? "Search request failed");
-  }
-
-  const segments = body?.results ?? [];
-  const playbackUrlBySourceKey = new Map<string, Promise<string>>();
-
-  const getPlaybackUrl = (sourceObject: SearchApiSegmentResult["sourceObject"]) => {
-    const cacheKey = `${sourceObject.bucket}/${sourceObject.key}`;
-    const existing = playbackUrlBySourceKey.get(cacheKey);
-    if (existing) {
-      return existing;
-    }
-
-    const promise = getPresignedObjectUrl({
-      bucket: sourceObject.bucket,
-      key: sourceObject.key,
-    });
-    playbackUrlBySourceKey.set(cacheKey, promise);
-    return promise;
-  };
+  const segments = rows
+    .filter((row) => row.sourceStorageKey)
+    .map((row) => ({
+      segmentId: row.id,
+      fileId: row.fileId,
+      uploadId: row.fileId,
+      filename: row.filename,
+      chunkIndex: row.chunkIndex,
+      startSec: row.startSec,
+      endSec: row.endSec,
+      durationSec: row.durationSec,
+      score: row.score,
+      sourceObject: {
+        bucket: getSourceBucket(),
+        key: row.sourceStorageKey!,
+      },
+    }));
 
   return Promise.all(
     segments.map(async (segment) => ({

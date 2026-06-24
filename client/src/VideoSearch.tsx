@@ -1,5 +1,3 @@
-// Sample end-client integration: demo UI that plays segment matches from
-// presigned source URLs. End-users' frontends should own playback, auth, and UX.
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { endpoints } from "@/lib/endpoints";
 import { Button } from "@/components/ui/button";
@@ -15,8 +13,6 @@ type UploadSummary = {
 
 type SearchResult = {
   segmentId: string;
-  videoJobId: string;
-  uploadId: string;
   filename: string;
   chunkIndex: number;
   startSec: number;
@@ -25,6 +21,8 @@ type SearchResult = {
   score: number;
   playbackUrl: string;
 };
+
+const DEFAULT_LIMIT = 10;
 
 const formatTime = (seconds: number) => {
   const mins = Math.floor(seconds / 60);
@@ -88,6 +86,7 @@ const VideoSearch = () => {
   const [uploads, setUploads] = useState<UploadSummary[]>([]);
   const [selectedUploadId, setSelectedUploadId] = useState<string>("");
   const [query, setQuery] = useState("");
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -142,7 +141,7 @@ const VideoSearch = () => {
         body: JSON.stringify({
           query: trimmedQuery,
           ...(selectedUploadId ? { uploadId: selectedUploadId } : {}),
-          limit: 12,
+          limit,
         }),
       });
 
@@ -208,6 +207,24 @@ const VideoSearch = () => {
                 {upload.embedding.total > 0
                   ? ` (${upload.embedding.embedded}/${upload.embedding.total} embedded)`
                   : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="result-limit" className="text-sm font-medium">
+            Max results
+          </label>
+          <select
+            id="result-limit"
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            value={limit}
+            onChange={(event) => setLimit(Number(event.target.value))}
+          >
+            {[5, 10, 20, 50].map((value) => (
+              <option key={value} value={value}>
+                {value}
               </option>
             ))}
           </select>

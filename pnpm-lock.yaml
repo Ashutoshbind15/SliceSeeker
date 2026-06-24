@@ -167,6 +167,9 @@ importers:
       '@aws-sdk/s3-request-presigner':
         specifier: 3.1070.0
         version: 3.1070.0
+      ai:
+        specifier: 6.0.207
+        version: 6.0.207(zod@4.4.3)
       bullmq:
         specifier: 5.70.1
         version: 5.70.1

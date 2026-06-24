@@ -87,8 +87,6 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
-      search:
-        condition: service_healthy
       rustfs:
         condition: service_healthy
     ports:
@@ -96,7 +94,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/demo_search
       VALKEY_URL: redis://valkey:6379
-      SEARCH_API_URL: http://search:3001
+      EMBEDDING_MODEL: google/gemini-embedding-2
       S3_ENDPOINT: http://rustfs:9000
       S3_REGION: us-east-1
       S3_BUCKET: uploads

@@ -1,8 +1,8 @@
-// Sample end-client integration: app-facing search endpoint that enriches
-// retrieval results with playable URLs. Not part of the core retrieval contract.
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { searchVideos } from "../services/video-search.js";
+
+const DEFAULT_LIMIT = 10;
 
 const searchBodySchema = z.object({
   query: z.string().trim().min(1, "Query is required"),
@@ -19,9 +19,17 @@ export const searchVideosHandler = async (req: Request, res: Response) => {
     return;
   }
 
+  const limit = parsed.data.limit ?? DEFAULT_LIMIT;
+
   try {
-    const results = await searchVideos(parsed.data);
-    res.json({ results });
+    const results = await searchVideos({ ...parsed.data, limit });
+    res.json({
+      query: parsed.data.query,
+      uploadId: parsed.data.uploadId ?? null,
+      limit,
+      count: results.length,
+      results,
+    });
   } catch (error) {
     console.error("Search failed:", error);
     res.status(500).json({
