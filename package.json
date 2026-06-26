@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "infra": "docker compose -f docker-compose.dev.yml up -d db valkey rustfs tusd",
-    "build:packages": "pnpm --filter db --filter queue run build",
+    "build:packages": "pnpm --filter db --filter queue --filter search-client run build",
     "dev:all": "pnpm build:packages && pnpm infra && pnpm --filter client --filter search --filter server --filter worker --parallel run dev",
     "worker:dev": "pnpm --filter worker dev",
     "db:push": "pnpm --filter db db:push",

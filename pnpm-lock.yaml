@@ -137,6 +137,15 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  packages/search-client:
+    devDependencies:
+      '@types/node':
+        specifier: 25.6.0
+        version: 25.6.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   search:
     dependencies:
       ai:
