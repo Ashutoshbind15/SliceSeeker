@@ -28,6 +28,7 @@ import {
   useSearchResultsQuery,
   useUploadsQuery,
 } from "@/query";
+import { Search, SlidersHorizontal, PlayCircle } from "lucide-react";
 
 const DEFAULT_LIMIT = 10;
 const ALL_VIDEOS_VALUE = "__all__";
@@ -89,13 +90,15 @@ const SegmentVideo = ({ src, startSec, endSec }: SegmentVideoProps) => {
   }, [src, startSec, endSec]);
 
   return (
-    <video
-      ref={videoRef}
-      className="aspect-video w-full rounded-md bg-black sm:w-56"
-      controls
-      preload="metadata"
-      src={`${src}#t=${startSec},${endSec}`}
-    />
+    <div className="relative group overflow-hidden rounded-xl bg-black">
+      <video
+        ref={videoRef}
+        className="aspect-video w-full sm:w-64 object-cover opacity-90 transition-opacity group-hover:opacity-100"
+        controls
+        preload="metadata"
+        src={`${src}#t=${startSec},${endSec}`}
+      />
+    </div>
   );
 };
 
@@ -103,6 +106,7 @@ const VideoSearch = () => {
   const [submittedSearch, setSubmittedSearch] = useState<SearchVideosInput | null>(
     null,
   );
+  const [showFilters, setShowFilters] = useState(false);
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
@@ -156,200 +160,239 @@ const VideoSearch = () => {
     uploadsQuery.error?.message ?? searchQuery.error?.message ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Search video</h1>
-        <p className="text-sm text-muted-foreground">
-          Search across indexed video segments using semantic embeddings. Results
-          are ranked by similarity score with inline playback previews.
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+      <div className="space-y-3 text-center pt-8 pb-4">
+        <h1 className="text-4xl font-heading font-semibold tracking-tight">Search your videos</h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          Find exactly what you're looking for across all your indexed video content using semantic search.
         </p>
       </div>
 
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <Controller
-          name="query"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="search-query">Search query</FieldLabel>
-              <Input
-                {...field}
-                id="search-query"
-                type="search"
-                placeholder="e.g. person explaining the dashboard"
-                aria-invalid={fieldState.invalid}
-              />
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
-        />
+      <Card className="border-primary/20 shadow-sm bg-card/50 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <Controller
+              name="query"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    {...field}
+                    id="search-query"
+                    type="text"
+                    autoComplete="off"
+                    className="pl-12 pr-36 h-14 text-lg rounded-2xl bg-background border-primary/20 focus-visible:ring-primary/30 shadow-inner"
+                    placeholder="e.g. person explaining the dashboard..."
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-10 w-10 rounded-full text-muted-foreground hover:text-primary"
+                      onClick={() => setShowFilters(!showFilters)}
+                    >
+                      <SlidersHorizontal className="h-5 w-5" />
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      size="sm"
+                      className="h-10 rounded-xl px-6 font-medium"
+                      disabled={searching || !queryValue.trim()}
+                    >
+                      {searching ? "Searching…" : "Search"}
+                    </Button>
+                  </div>
+                  {fieldState.invalid ? (
+                    <FieldError errors={[fieldState.error]} className="mt-2 pl-4" />
+                  ) : null}
+                </div>
+              )}
+            />
 
-        <Controller
-          name="collectionId"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <CollectionPicker
-                selectedCollectionId={field.value}
-                onSelectedCollectionIdChange={field.onChange}
-                label="Limit to collection"
-                includeAllOption
-              />
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
-        />
-
-        <Controller
-          name="uploadId"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="upload-filter">Limit to video</FieldLabel>
-              <Select
-                name={field.name}
-                value={field.value || ALL_VIDEOS_VALUE}
-                onValueChange={(value) =>
-                  field.onChange(value === ALL_VIDEOS_VALUE ? "" : value)
-                }
-              >
-                <SelectTrigger
-                  id="upload-filter"
-                  className="w-full"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue placeholder="All indexed videos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL_VIDEOS_VALUE}>
-                    All indexed videos
-                  </SelectItem>
-                  {searchableUploads.map((upload) => (
-                    <SelectItem key={upload.id} value={upload.id}>
-                      {upload.filename}
-                      {upload.embedding.total > 0
-                        ? ` (${upload.embedding.embedded}/${upload.embedding.total} embedded)`
-                        : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
-        />
-
-        <Controller
-          name="limit"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="result-limit">Max results</FieldLabel>
-              <Select
-                name={field.name}
-                value={String(field.value)}
-                onValueChange={(value) => field.onChange(Number(value))}
-              >
-                <SelectTrigger
-                  id="result-limit"
-                  className="w-full"
-                  aria-invalid={fieldState.invalid}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[5, 10, 20, 50].map((value) => (
-                    <SelectItem key={value} value={String(value)}>
-                      {value}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {fieldState.invalid ? (
-                <FieldError errors={[fieldState.error]} />
-              ) : null}
-            </Field>
-          )}
-        />
-
-        <Button type="submit" disabled={searching || !queryValue.trim()}>
-          {searching ? "Searching…" : "Search"}
-        </Button>
-      </form>
-
-      {uploadsQuery.isPending && searchableUploads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Loading indexed videos…</p>
-      ) : null}
-
-      {!uploadsQuery.isPending && searchableUploads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No indexed videos yet. Upload and process a video first, then return
-          here to search.
-        </p>
-      ) : null}
-
-      {error ? (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      {hasSearched && !searching && !searchQuery.isError && results.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No matching segments found for &ldquo;{submittedSearch?.query}&rdquo;.
-        </p>
-      ) : null}
-
-      {searchQuery.isFetching && hasSearched && results.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Searching…</p>
-      ) : null}
-
-      {results.length > 0 ? (
-        <div className="space-y-3">
-          <h2 className="text-sm font-medium">
-            {results.length} result{results.length === 1 ? "" : "s"}
-          </h2>
-          <ul className="space-y-4">
-            {results.map((result) => (
-              <li key={result.segmentId}>
-                <Card className="overflow-hidden py-0">
-                  <CardContent className="flex flex-col gap-3 p-4 sm:flex-row">
-                    <div className="shrink-0">
-                      <SegmentVideo
-                        src={result.playbackUrl}
-                        startSec={result.startSec}
-                        endSec={result.endSec}
+            {showFilters && (
+              <div className="grid gap-4 sm:grid-cols-3 pt-4 border-t border-border/50 animate-in fade-in slide-in-from-top-2">
+                <Controller
+                  name="collectionId"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="collection-filter" className="text-xs uppercase tracking-wider text-muted-foreground">Collection</FieldLabel>
+                      <CollectionPicker
+                        selectedCollectionId={field.value}
+                        onSelectedCollectionIdChange={field.onChange}
+                        label=""
+                        includeAllOption
                       />
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-2 text-sm">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary">
-                          {formatScore(result.score)} match
-                        </Badge>
-                        <span className="text-muted-foreground">
-                          Segment {result.chunkIndex + 1}
-                        </span>
+                      {fieldState.invalid ? (
+                        <FieldError errors={[fieldState.error]} />
+                      ) : null}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="uploadId"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="upload-filter" className="text-xs uppercase tracking-wider text-muted-foreground">Video</FieldLabel>
+                      <Select
+                        name={field.name}
+                        value={field.value || ALL_VIDEOS_VALUE}
+                        onValueChange={(value) =>
+                          field.onChange(value === ALL_VIDEOS_VALUE ? "" : value)
+                        }
+                      >
+                        <SelectTrigger
+                          id="upload-filter"
+                          className="w-full bg-background rounded-xl"
+                          aria-invalid={fieldState.invalid}
+                        >
+                          <SelectValue placeholder="All indexed videos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={ALL_VIDEOS_VALUE}>All indexed videos</SelectItem>
+                          {searchableUploads.map((upload) => (
+                            <SelectItem key={upload.id} value={upload.id}>
+                              {upload.filename}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {fieldState.invalid ? (
+                        <FieldError errors={[fieldState.error]} />
+                      ) : null}
+                    </Field>
+                  )}
+                />
+
+                <Controller
+                  name="limit"
+                  control={form.control}
+                  render={({ field, fieldState }) => (
+                    <Field data-invalid={fieldState.invalid}>
+                      <FieldLabel htmlFor="result-limit" className="text-xs uppercase tracking-wider text-muted-foreground">Max Results</FieldLabel>
+                      <Select
+                        name={field.name}
+                        value={String(field.value)}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                      >
+                        <SelectTrigger
+                          id="result-limit"
+                          className="w-full bg-background rounded-xl"
+                          aria-invalid={fieldState.invalid}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[5, 10, 20, 50].map((value) => (
+                            <SelectItem key={value} value={String(value)}>{value} results</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {fieldState.invalid ? (
+                        <FieldError errors={[fieldState.error]} />
+                      ) : null}
+                    </Field>
+                  )}
+                />
+              </div>
+            )}
+          </form>
+        </CardContent>
+      </Card>
+
+      <div className="min-h-[200px]">
+        {uploadsQuery.isPending && searchableUploads.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
+            <div className="animate-pulse flex items-center gap-2">
+              <Search className="h-5 w-5" /> Loading indexed videos…
+            </div>
+          </div>
+        ) : null}
+
+        {!uploadsQuery.isPending && searchableUploads.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 p-8 border border-dashed rounded-2xl bg-muted/30">
+            <PlayCircle className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-muted-foreground">
+              No indexed videos yet. Upload and process a video first, then return here to search.
+            </p>
+          </div>
+        ) : null}
+
+        {error ? (
+          <Alert variant="destructive" className="rounded-2xl">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {hasSearched && !searching && !searchQuery.isError && results.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 p-8 border border-dashed rounded-2xl bg-muted/30">
+            <Search className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-muted-foreground">
+              No matching segments found for &ldquo;<span className="font-medium text-foreground">{submittedSearch?.query}</span>&rdquo;.
+            </p>
+          </div>
+        ) : null}
+
+        {searchQuery.isFetching && hasSearched && results.length === 0 ? (
+          <div className="flex items-center justify-center h-40 text-muted-foreground">
+            <div className="animate-pulse flex items-center gap-2">
+              <Search className="h-5 w-5" /> Searching your videos…
+            </div>
+          </div>
+        ) : null}
+
+        {results.length > 0 ? (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h2 className="text-lg font-heading font-medium">
+                Found {results.length} result{results.length === 1 ? "" : "s"}
+              </h2>
+            </div>
+            <ul className="grid gap-6">
+              {results.map((result) => (
+                <li key={result.segmentId}>
+                  <Card className="overflow-hidden transition-all hover:shadow-md border-border/50 hover:border-primary/30 group">
+                    <CardContent className="flex flex-col gap-6 p-5 sm:flex-row items-start">
+                      <div className="shrink-0 w-full sm:w-auto">
+                        <SegmentVideo
+                          src={result.playbackUrl}
+                          startSec={result.startSec}
+                          endSec={result.endSec}
+                        />
                       </div>
-                      <p className="truncate font-medium">{result.filename}</p>
-                      <p className="text-muted-foreground">
-                        {formatTime(result.startSec)} – {formatTime(result.endSec)}
-                        <span className="mx-1">·</span>
-                        {result.durationSec.toFixed(1)}s segment
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+                      <div className="flex min-w-0 flex-1 flex-col gap-3 py-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                            {formatScore(result.score)} match
+                          </Badge>
+                          <span className="text-sm text-muted-foreground flex items-center gap-1">
+                            <PlayCircle className="h-3.5 w-3.5" /> Segment {result.chunkIndex + 1}
+                          </span>
+                        </div>
+                        <h3 className="text-lg font-heading font-medium leading-tight group-hover:text-primary transition-colors">
+                          {result.filename}
+                        </h3>
+                        <div className="flex items-center gap-3 text-sm text-muted-foreground bg-muted/50 w-fit px-3 py-1.5 rounded-lg">
+                          <span className="font-medium text-foreground">{formatTime(result.startSec)}</span>
+                          <span className="text-muted-foreground/50">to</span>
+                          <span className="font-medium text-foreground">{formatTime(result.endSec)}</span>
+                          <span className="mx-1 text-muted-foreground/30">|</span>
+                          <span>{result.durationSec.toFixed(1)}s duration</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 };

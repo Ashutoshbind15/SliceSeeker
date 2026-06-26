@@ -19,6 +19,7 @@ import {
   useStartProcessingMutation,
   useUploadsQuery,
 } from "@/query";
+import { Cpu, Play, RotateCcw, CheckCircle2, AlertCircle, Loader2, FileVideo, HardDrive } from "lucide-react";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -69,18 +70,25 @@ const pipelineStatusVariant: Record<
 };
 
 const pipelineStatusClass: Record<PipelineStatus, string> = {
-  not_started: "",
-  chunking: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  embedding: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  complete: "bg-green-500/15 text-green-700 dark:text-green-300",
-  failed: "",
+  not_started: "bg-muted/50 text-muted-foreground border-border/50",
+  chunking: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  embedding: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/20",
+  complete: "bg-primary/15 text-primary border-primary/20",
+  failed: "bg-destructive/15 text-destructive border-destructive/20",
 };
 
 const StatusBadge = ({ status }: { status: PipelineStatus }) => (
   <Badge
     variant={pipelineStatusVariant[status]}
-    className={pipelineStatusClass[status]}
+    className={`${pipelineStatusClass[status]} font-medium px-2.5 py-0.5 rounded-lg`}
   >
+    {status === "chunking" || status === "embedding" ? (
+      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+    ) : status === "complete" ? (
+      <CheckCircle2 className="mr-1.5 h-3 w-3" />
+    ) : status === "failed" ? (
+      <AlertCircle className="mr-1.5 h-3 w-3" />
+    ) : null}
     {pipelineStatusLabel[status]}
   </Badge>
 );
@@ -88,17 +96,20 @@ const StatusBadge = ({ status }: { status: PipelineStatus }) => (
 const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
   if (upload.pipelineStatus === "chunking" && upload.chunkingTask) {
     return (
-      <span className="text-muted-foreground">
-        {formatChunkingStatus(upload.chunkingTask.status)}
-        {upload.chunkingTask.chunkCount !== null
-          ? ` · ${upload.chunkingTask.chunkCount} segments`
-          : ""}
-      </span>
+      <div className="flex flex-col gap-1.5 min-w-[8rem]">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>{formatChunkingStatus(upload.chunkingTask.status)}</span>
+          {upload.chunkingTask.chunkCount !== null && (
+            <span>{upload.chunkingTask.chunkCount} segments</span>
+          )}
+        </div>
+        <Progress value={upload.chunkingTask.status === 'completed' ? 100 : 50} className="h-1.5" />
+      </div>
     );
   }
 
   if (upload.embedding.total === 0) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-muted-foreground/50">—</span>;
   }
 
   const pct = Math.round(
@@ -106,24 +117,28 @@ const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
   );
 
   return (
-    <div className="flex min-w-[8rem] flex-col gap-1">
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+    <div className="flex min-w-[10rem] flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
         <span>
-          {upload.embedding.embedded}/{upload.embedding.total}
+          {upload.embedding.embedded} / {upload.embedding.total}
         </span>
-        <span>{pct}%</span>
+        <span className={pct === 100 ? "text-primary" : ""}>{pct}%</span>
       </div>
-      <Progress value={pct} />
-      {upload.embedding.pending > 0 ? (
-        <span className="text-xs text-muted-foreground">
-          {upload.embedding.pending} in progress
-        </span>
-      ) : null}
-      {upload.embedding.failed > 0 ? (
-        <span className="text-xs text-destructive">
-          {upload.embedding.failed} failed
-        </span>
-      ) : null}
+      <Progress value={pct} className="h-1.5" />
+      <div className="flex items-center gap-3 text-[11px]">
+        {upload.embedding.pending > 0 ? (
+          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            {upload.embedding.pending} pending
+          </span>
+        ) : null}
+        {upload.embedding.failed > 0 ? (
+          <span className="text-destructive flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive"></span>
+            {upload.embedding.failed} failed
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 };
@@ -162,7 +177,11 @@ const VideoProcess = () => {
       startProcessingMutation.variables === upload.id;
 
     if (upload.pipelineStatus === "complete") {
-      return <span className="text-xs text-muted-foreground">Done</span>;
+      return (
+        <Button size="sm" variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10 pointer-events-none">
+          <CheckCircle2 className="mr-2 h-4 w-4" /> Done
+        </Button>
+      );
     }
 
     if (
@@ -170,8 +189,8 @@ const VideoProcess = () => {
       upload.pipelineStatus === "embedding"
     ) {
       return (
-        <Button size="sm" variant="outline" disabled>
-          Processing…
+        <Button size="sm" variant="secondary" disabled className="w-full sm:w-auto">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
         </Button>
       );
     }
@@ -181,10 +200,15 @@ const VideoProcess = () => {
         <Button
           size="sm"
           variant="outline"
+          className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
           disabled={isSubmitting}
           onClick={() => startProcessing(upload.id)}
         >
-          {isSubmitting ? "Retrying…" : "Retry all failed"}
+          {isSubmitting ? (
+            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying</>
+          ) : (
+            <><RotateCcw className="mr-2 h-4 w-4" /> Retry Failed</>
+          )}
         </Button>
       );
     }
@@ -192,10 +216,15 @@ const VideoProcess = () => {
     return (
       <Button
         size="sm"
+        className="w-full sm:w-auto rounded-lg"
         disabled={isSubmitting}
         onClick={() => startProcessing(upload.id)}
       >
-        {isSubmitting ? "Starting…" : "Start"}
+        {isSubmitting ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting</>
+        ) : (
+          <><Play className="mr-2 h-4 w-4" /> Start</>
+        )}
       </Button>
     );
   };
@@ -204,80 +233,118 @@ const VideoProcess = () => {
     uploadsQuery.error?.message ?? startProcessingMutation.error?.message ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Process videos
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Chunking splits each source into segments. Embedding runs per segment
-          and can be retried without re-chunking.
-        </p>
-        {summary.total > 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {summary.active > 0
-              ? `${summary.active} processing`
-              : "No jobs running"}
-            {summary.failed > 0 ? ` · ${summary.failed} failed` : ""}
-            {summary.complete > 0 ? ` · ${summary.complete} complete` : ""}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
+            <Cpu className="h-8 w-8 text-primary" />
+            Processing
+          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Extract frames, generate transcripts, and build embeddings for semantic search.
           </p>
-        ) : null}
+        </div>
+        
+        {summary.total > 0 && (
+          <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${summary.active > 0 ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
+              {summary.active} active
+            </span>
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4" />
+              {summary.complete} done
+            </span>
+            {summary.failed > 0 && (
+              <span className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                {summary.failed} failed
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {error ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-2xl">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       {uploadsQuery.isPending && uploads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Loading uploads…</p>
+        <div className="flex items-center justify-center h-40 text-muted-foreground">
+          <div className="animate-pulse flex items-center gap-2">
+            <Cpu className="h-5 w-5" /> Loading processing status…
+          </div>
+        </div>
       ) : null}
 
       {!uploadsQuery.isPending && uploads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No completed uploads yet. Upload a video first, then return here to
-          process it.
-        </p>
+        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <FileVideo className="h-8 w-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-heading font-medium text-lg">No videos to process</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Upload a video first, then return here to process it for semantic search.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {uploads.length > 0 ? (
-        <div className="rounded-md border">
-          <Table className="min-w-[640px]">
+        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+          <Table className="min-w-[800px]">
             <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="px-4">File</TableHead>
-                <TableHead className="px-4">Collection</TableHead>
-                <TableHead className="px-4">Stage</TableHead>
-                <TableHead className="px-4">Progress</TableHead>
-                <TableHead className="px-4">Error</TableHead>
-                <TableHead className="px-4">Actions</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[30%]">File</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Stage</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[25%]">Progress</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Error</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {uploads.map((upload) => (
-                <TableRow key={upload.id}>
-                  <TableCell className="px-4 align-top whitespace-normal">
-                    <div className="font-medium">{upload.filename}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatBytes(upload.sizeBytes)}
+                <TableRow key={upload.id} className="transition-colors hover:bg-muted/20">
+                  <TableCell className="px-6 py-4 align-middle">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                        <FileVideo className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium truncate max-w-[250px]" title={upload.filename}>
+                          {upload.filename}
+                        </div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                          <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" /> {formatBytes(upload.sizeBytes)}</span>
+                          {upload.collectionName && (
+                            <>
+                              <span className="text-border">•</span>
+                              <span className="truncate max-w-[120px]">{upload.collectionName}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="px-4 align-top text-muted-foreground whitespace-normal">
-                    {upload.collectionName}
-                  </TableCell>
-                  <TableCell className="px-4 align-top whitespace-normal">
+                  <TableCell className="px-6 py-4 align-middle">
                     <StatusBadge status={upload.pipelineStatus} />
                   </TableCell>
-                  <TableCell className="px-4 align-top whitespace-normal">
+                  <TableCell className="px-6 py-4 align-middle">
                     <ProgressCell upload={upload} />
                   </TableCell>
-                  <TableCell className="max-w-xs px-4 align-top text-destructive whitespace-normal">
-                    {upload.primaryError ?? (
-                      <span className="text-muted-foreground">—</span>
+                  <TableCell className="px-6 py-4 align-middle">
+                    {upload.primaryError ? (
+                      <div className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2" title={upload.primaryError}>
+                        {upload.primaryError}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground/30">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="px-4 align-top whitespace-normal">
+                  <TableCell className="px-6 py-4 align-middle text-right">
                     {renderAction(upload)}
                   </TableCell>
                 </TableRow>

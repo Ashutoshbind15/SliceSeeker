@@ -25,6 +25,7 @@ import {
   useAssignUploadCollectionMutation,
   useUploadsQuery,
 } from "@/query";
+import { FolderOpen, HardDrive, Clock, FileVideo } from "lucide-react";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -45,7 +46,12 @@ const formatDate = (value: string | null) => {
     return "—";
   }
 
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 };
 
 const Files = () => {
@@ -126,31 +132,30 @@ const Files = () => {
     uploadsQuery.error?.message ?? assignCollectionMutation.error?.message ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Files</h1>
-          <p className="text-sm text-muted-foreground">
-            Browse uploaded files and assign them to collections.
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
+            <FolderOpen className="h-8 w-8 text-primary" />
+            Library
+          </h1>
+          <p className="text-muted-foreground">
+            Manage your uploaded videos and organize them into collections.
           </p>
-          {draftFiles.length > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {draftFiles.length} file{draftFiles.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           {dirtyFiles.length > 0 ? (
             <Badge
               variant="outline"
-              className="border-amber-400 text-amber-700 dark:text-amber-400"
+              className="bg-accent/20 border-accent/50 text-accent-foreground px-3 py-1"
             >
-              {dirtyFiles.length} unsaved change
-              {dirtyFiles.length === 1 ? "" : "s"}
+              {dirtyFiles.length} unsaved change{dirtyFiles.length === 1 ? "" : "s"}
             </Badge>
           ) : null}
           <Button
             type="button"
+            variant={dirtyFiles.length > 0 ? "default" : "secondary"}
+            className="rounded-full px-6"
             disabled={dirtyFiles.length === 0 || saving}
             onClick={() => void saveChanges()}
           >
@@ -161,30 +166,41 @@ const Files = () => {
       </div>
 
       {error ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-2xl">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
 
       {uploadsQuery.isPending && serverFiles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Loading files…</p>
+        <div className="flex items-center justify-center h-40 text-muted-foreground">
+          <div className="animate-pulse flex items-center gap-2">
+            <HardDrive className="h-5 w-5" /> Loading library…
+          </div>
+        </div>
       ) : null}
 
       {!uploadsQuery.isPending && draftFiles.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No files yet. Upload a video first, then assign it to a collection
-          here.
-        </p>
+        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <FileVideo className="h-8 w-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-heading font-medium text-lg">Your library is empty</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Upload a video first, then you can assign it to a collection here to organize your content.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {draftFiles.length > 0 ? (
-        <div className="rounded-md border">
+        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
           <Table className="min-w-[640px]">
             <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead className="px-4">File</TableHead>
-                <TableHead className="px-4">Collection</TableHead>
-                <TableHead className="px-4">Uploaded</TableHead>
+              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground">File Details</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground">Collection</TableHead>
+                <TableHead className="px-6 py-4 font-medium text-muted-foreground text-right">Uploaded</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -194,18 +210,28 @@ const Files = () => {
                 return (
                   <TableRow
                     key={file.id}
-                    className={
-                      dirty ? "bg-amber-50/80 dark:bg-amber-950/20" : undefined
-                    }
+                    className={`transition-colors hover:bg-muted/20 ${
+                      dirty ? "bg-accent/5" : ""
+                    }`}
                   >
-                    <TableCell className="px-4 align-top whitespace-normal">
-                      <div className="font-medium">{file.filename}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatBytes(file.sizeBytes)}
+                    <TableCell className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <FileVideo className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate max-w-[300px]" title={file.filename}>
+                            {file.filename}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                            <HardDrive className="h-3 w-3" />
+                            {formatBytes(file.sizeBytes)}
+                          </div>
+                        </div>
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 align-top whitespace-normal">
-                      <div className="space-y-1">
+                    <TableCell className="px-6 py-4 align-middle">
+                      <div className="space-y-1.5 max-w-[240px]">
                         <Select
                           value={file.collectionId}
                           onValueChange={(value) =>
@@ -214,10 +240,9 @@ const Files = () => {
                           disabled={saving}
                         >
                           <SelectTrigger
-                            size="sm"
-                            className={`w-full min-w-[10rem] ${
+                            className={`w-full rounded-xl bg-background ${
                               dirty
-                                ? "border-amber-400 ring-1 ring-amber-400/50 dark:border-amber-600"
+                                ? "border-accent ring-1 ring-accent/30"
                                 : ""
                             }`}
                           >
@@ -236,14 +261,18 @@ const Files = () => {
                           </SelectContent>
                         </Select>
                         {dirty ? (
-                          <p className="text-xs text-amber-700 dark:text-amber-400">
+                          <p className="text-[11px] font-medium text-accent-foreground flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground"></span>
                             Unsaved change
                           </p>
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell className="px-4 align-top text-muted-foreground whitespace-normal">
-                      {formatDate(file.completedAt ?? file.createdAt)}
+                    <TableCell className="px-6 py-4 align-middle text-right">
+                      <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
+                        <Clock className="h-3.5 w-3.5" />
+                        {formatDate(file.completedAt ?? file.createdAt)}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );

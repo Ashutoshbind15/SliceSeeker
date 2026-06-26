@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
@@ -25,6 +25,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useFileCostsQuery } from "@/query";
+import { DollarSign, Clock, Hash, Activity, LineChart } from "lucide-react";
 
 const formatDuration = (durationSec: number) => {
   const minutes = Math.floor(durationSec / 60);
@@ -96,189 +97,224 @@ const FileCosts = () => {
   }, [files]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">File costs</h1>
-        <p className="text-sm text-muted-foreground">
-          Embedding spend per uploaded video from API-reported gateway costs. Retries
-          are included in each file total for now.
-        </p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
+            <LineChart className="h-8 w-8 text-primary" />
+            Usage & Costs
+          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Track API usage, token consumption, and embedding costs across your workspace.
+          </p>
+        </div>
       </div>
 
       {costsQuery.isError ? (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="rounded-2xl">
           <AlertDescription>{costsQuery.error.message}</AlertDescription>
         </Alert>
       ) : null}
 
       {costsQuery.isPending && files.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Loading costs…</p>
+        <div className="flex items-center justify-center h-40 text-muted-foreground">
+          <div className="animate-pulse flex items-center gap-2">
+            <Activity className="h-5 w-5" /> Loading cost data…
+          </div>
+        </div>
       ) : null}
 
       {!costsQuery.isPending && files.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No cost data yet. Process a video to record embedding usage.
-        </p>
+        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
+          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+            <DollarSign className="h-8 w-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-heading font-medium text-lg">No cost data yet</h3>
+            <p className="text-muted-foreground max-w-sm">
+              Process a video to record embedding usage and track your API costs here.
+            </p>
+          </div>
+        </div>
       ) : null}
 
       {files.length > 0 ? (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Total spend</CardTitle>
-                <CardDescription>All files combined</CardDescription>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <DollarSign className="h-4 w-4 text-primary" /> Total spend
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">{formatUsd(totals.cost)}</p>
+                <p className="text-3xl font-heading font-semibold text-foreground">{formatUsd(totals.cost)}</p>
               </CardContent>
             </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Video length</CardTitle>
-                <CardDescription>Summed chunk durations</CardDescription>
+            
+            <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Clock className="h-4 w-4 text-primary" /> Video length
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">
+                <p className="text-3xl font-heading font-semibold text-foreground">
                   {formatDuration(totals.durationSec)}
                 </p>
               </CardContent>
             </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Tokens</CardTitle>
-                <CardDescription>Reported by the embed API</CardDescription>
+            
+            <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Hash className="h-4 w-4 text-primary" /> Tokens processed
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">
+                <p className="text-3xl font-heading font-semibold text-foreground">
                   {totals.tokens.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Embed requests</CardTitle>
-                <CardDescription>Including retries</CardDescription>
+            
+            <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-2 font-medium">
+                  <Activity className="h-4 w-4 text-primary" /> Embed requests
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-semibold">
+                <p className="text-3xl font-heading font-semibold text-foreground">
                   {totals.requests.toLocaleString()}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Cost vs video length</CardTitle>
+          <Card className="rounded-2xl border-border/50 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/20 border-b border-border/50 pb-4">
+              <CardTitle className="font-heading">Cost vs Video Length</CardTitle>
               <CardDescription>
-                Each bar group is one file — embedding cost (USD) and video length
-                (minutes).
+                Compare the embedding cost (USD) against the total video length (minutes) for each file.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="aspect-[16/9] w-full">
-                <BarChart accessibilityLayer data={chartData} margin={{ left: 12, right: 12 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="label"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                  />
-                  <YAxis
-                    yAxisId="cost"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value: number) => `$${value}`}
-                  />
-                  <YAxis
-                    yAxisId="duration"
-                    orientation="right"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value: number) => `${value}m`}
-                  />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        labelFormatter={(_label, payload) =>
-                          payload?.[0]?.payload?.filename ?? _label
-                        }
-                        formatter={(value, name, item) => {
-                          if (name === "cost") {
-                            return (
-                              <span className="font-mono">
-                                {formatUsd(Number(value))}
-                              </span>
-                            );
+            <CardContent className="pt-6">
+              <ChartContainer config={chartConfig} className="aspect-[21/9] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart accessibilityLayer data={chartData} margin={{ left: 12, right: 12, top: 12, bottom: 12 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="4 4" />
+                    <XAxis
+                      dataKey="label"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={12}
+                    />
+                    <YAxis
+                      yAxisId="cost"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={12}
+                      tickFormatter={(value: number) => `$${value}`}
+                    />
+                    <YAxis
+                      yAxisId="duration"
+                      orientation="right"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={12}
+                      tickFormatter={(value: number) => `${value}m`}
+                    />
+                    <ChartTooltip
+                      cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
+                      content={
+                        <ChartTooltipContent
+                          className="bg-card/95 backdrop-blur-md border-border/50 shadow-lg rounded-xl"
+                          labelFormatter={(_label, payload) =>
+                            <span className="font-medium text-foreground">{payload?.[0]?.payload?.filename ?? _label}</span>
                           }
+                          formatter={(value, name, item) => {
+                            if (name === "cost") {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-chart-1" />
+                                  <span className="text-muted-foreground">Cost:</span>
+                                  <span className="font-mono font-medium text-foreground ml-auto">
+                                    {formatUsd(Number(value))}
+                                  </span>
+                                </div>
+                              );
+                            }
 
-                          if (name === "durationMin") {
-                            return (
-                              <span className="font-mono">
-                                {formatDuration(item.payload.durationSec)} (
-                                {Number(value).toFixed(2)} min)
-                              </span>
-                            );
-                          }
+                            if (name === "durationMin") {
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <div className="h-2 w-2 rounded-full bg-chart-2" />
+                                  <span className="text-muted-foreground">Length:</span>
+                                  <span className="font-mono font-medium text-foreground ml-auto">
+                                    {formatDuration(item.payload.durationSec)}
+                                  </span>
+                                </div>
+                              );
+                            }
 
-                          return value;
-                        }}
-                      />
-                    }
-                  />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  <Bar
-                    yAxisId="cost"
-                    dataKey="cost"
-                    fill="var(--color-cost)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar
-                    yAxisId="duration"
-                    dataKey="durationMin"
-                    fill="var(--color-durationMin)"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
+                            return value;
+                          }}
+                        />
+                      }
+                    />
+                    <ChartLegend content={<ChartLegendContent className="pt-4" />} />
+                    <Bar
+                      yAxisId="cost"
+                      dataKey="cost"
+                      fill="var(--color-cost)"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                    <Bar
+                      yAxisId="duration"
+                      dataKey="durationMin"
+                      fill="var(--color-durationMin)"
+                      radius={[4, 4, 0, 0]}
+                      maxBarSize={40}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Per-file breakdown</CardTitle>
+          <Card className="rounded-2xl border-border/50 shadow-sm overflow-hidden">
+            <CardHeader className="bg-muted/20 border-b border-border/50 pb-4">
+              <CardTitle className="font-heading">Per-file Breakdown</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Table className="min-w-[640px]">
+            <CardContent className="p-0">
+              <Table className="min-w-[800px]">
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="pr-4">File</TableHead>
-                    <TableHead className="pr-4">Length</TableHead>
-                    <TableHead className="pr-4">Cost</TableHead>
-                    <TableHead className="pr-4">Tokens</TableHead>
-                    <TableHead>Requests</TableHead>
+                  <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-border/50">
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">File</TableHead>
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">Length</TableHead>
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">Cost</TableHead>
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">Tokens</TableHead>
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground text-right">Requests</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {files.map((file) => (
-                    <TableRow key={file.fileId}>
-                      <TableCell className="pr-4 whitespace-normal">
+                    <TableRow key={file.fileId} className="transition-colors hover:bg-muted/20">
+                      <TableCell className="px-6 py-4 whitespace-normal font-medium">
                         {file.filename}
                       </TableCell>
-                      <TableCell className="pr-4 font-mono">
+                      <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {formatDuration(file.durationSec)}
                       </TableCell>
-                      <TableCell className="pr-4 font-mono">
+                      <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {formatUsd(file.totalCostUsd)}
                       </TableCell>
-                      <TableCell className="pr-4 font-mono">
+                      <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {file.totalTokens.toLocaleString()}
                       </TableCell>
-                      <TableCell className="font-mono">
+                      <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground text-right">
                         {file.embedRequestCount.toLocaleString()}
                       </TableCell>
                     </TableRow>
@@ -287,7 +323,7 @@ const FileCosts = () => {
               </Table>
             </CardContent>
           </Card>
-        </>
+        </div>
       ) : null}
     </div>
   );
