@@ -1,0 +1,110 @@
+import pg from "pg";
+
+/** Validates DB bootstrap state after `drizzle-kit push` (tables + pgvector). */
+
+export type ReadinessResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+const SEARCH_REQUIRED_TABLES = [
+  "collections",
+  "uploads",
+  "video_chunks",
+] as const;
+
+const INDEXER_REQUIRED_TABLES = [
+  ...SEARCH_REQUIRED_TABLES,
+  "chunking_tasks",
+  "embedding_tasks",
+  "file_costs",
+  "todos",
+] as const;
+
+const connect = async (databaseUrl: string) => {
+  const client = new pg.Client({ connectionString: databaseUrl });
+  await client.connect();
+  return client;
+};
+
+const assertVectorExtension = async (
+  client: pg.Client,
+): Promise<ReadinessResult> => {
+  const result = await client.query<{ exists: boolean }>(
+    "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') AS exists",
+  );
+
+  if (!result.rows[0]?.exists) {
+    return { ok: false, error: "Postgres vector extension is not installed" };
+  }
+
+  return { ok: true };
+};
+
+const assertTables = async (
+  client: pg.Client,
+  tables: readonly string[],
+): Promise<ReadinessResult> => {
+  const result = await client.query<{ table_name: string }>(
+    `SELECT table_name
+     FROM information_schema.tables
+     WHERE table_schema = 'public'
+       AND table_name = ANY($1::text[])`,
+    [tables],
+  );
+
+  const found = new Set(result.rows.map((row) => row.table_name));
+  const missing = tables.filter((table) => !found.has(table));
+
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      error: `Missing required tables: ${missing.join(", ")}`,
+    };
+  }
+
+  return { ok: true };
+};
+
+const runChecks = async (
+  databaseUrl: string,
+  tables: readonly string[],
+): Promise<ReadinessResult> => {
+  let client: pg.Client | undefined;
+
+  try {
+    client = await connect(databaseUrl);
+
+    const vectorCheck = await assertVectorExtension(client);
+    if (!vectorCheck.ok) {
+      return vectorCheck;
+    }
+
+    return await assertTables(client, tables);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Database connection failed";
+    return { ok: false, error: message };
+  } finally {
+    await client?.end().catch(() => undefined);
+  }
+};
+
+export const assertSearchSchema = async (
+  databaseUrl = process.env.DATABASE_URL,
+): Promise<ReadinessResult> => {
+  if (!databaseUrl) {
+    return { ok: false, error: "DATABASE_URL is not set" };
+  }
+
+  return runChecks(databaseUrl, SEARCH_REQUIRED_TABLES);
+};
+
+export const assertIndexerSchema = async (
+  databaseUrl = process.env.DATABASE_URL,
+): Promise<ReadinessResult> => {
+  if (!databaseUrl) {
+    return { ok: false, error: "DATABASE_URL is not set" };
+  }
+
+  return runChecks(databaseUrl, INDEXER_REQUIRED_TABLES);
+};

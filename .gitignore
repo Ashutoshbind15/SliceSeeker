@@ -2,3 +2,5 @@ node_modules
 .cursor
 test-videos/
 .env
+
+.pnpm-store

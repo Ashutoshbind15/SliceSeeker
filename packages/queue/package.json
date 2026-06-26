@@ -4,7 +4,10 @@
   "description": "Shared job queue names, payloads, and connection config",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
   },
   "dependencies": {
     "bullmq": "5.70.1"

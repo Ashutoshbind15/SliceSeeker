@@ -1,0 +1,97 @@
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    ports:
+      - "${VALKEY_PUBLISH_PORT:-6379}:6379"
+    command: ["valkey-server", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db:
+    image: pgvector/pgvector:pg18-trixie
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-demo_search}
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ../docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-demo_search}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rustfs-perms:
+    image: alpine
+    user: root
+    volumes:
+      - rustfs_data:/data
+    command: chown -R 10001:10001 /data
+    restart: "no"
+
+  rustfs:
+    image: rustfs/rustfs:latest
+    restart: unless-stopped
+    depends_on:
+      rustfs-perms:
+        condition: service_completed_successfully
+    ports:
+      - "${RUSTFS_S3_PUBLISH_PORT:-9000}:9000"
+      - "${RUSTFS_CONSOLE_PUBLISH_PORT:-9001}:9001"
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-rustfsadmin}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-rustfsadmin}
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
+    volumes:
+      - rustfs_data:/data
+    command: ["/data"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:9000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  create-bucket:
+    image: rustfs/rc:latest
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-rustfsadmin}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-rustfsadmin}
+      S3_BUCKET: ${S3_BUCKET:-uploads}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        rc alias set rustfs http://rustfs:9000 "$S3_ACCESS_KEY_ID" "$S3_SECRET_ACCESS_KEY"
+        rc mb "rustfs/$S3_BUCKET" || true
+    restart: "no"
+
+  db-push:
+    build:
+      context: ..
+      dockerfile: packages/db/Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"
+
+volumes:
+  postgres_data:
+  rustfs_data:

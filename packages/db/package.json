@@ -1,27 +1,29 @@
 {
   "name": "db",
   "version": "1.0.0",
-  "description": "Shared database schema, access layer, and migrations",
+  "description": "Shared database schema and access layer",
   "type": "module",
   "exports": {
-    ".": "./src/client.ts",
-    "./access/*.js": "./src/access/*.ts",
-    "./schema/*.js": "./src/schema/*.ts"
+    ".": "./dist/client.js",
+    "./access/*.js": "./dist/access/*.js",
+    "./schema/*.js": "./dist/schema/*.js",
+    "./readiness.js": "./dist/readiness.js",
+    "./constants.js": "./dist/constants.js"
   },
   "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "build": "tsc",
+    "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
     "drizzle-orm": "0.45.2",
     "pg": "8.20.0"
   },
   "devDependencies": {
     "@types/node": "25.6.0",
     "@types/pg": "8.20.0",
-    "drizzle-kit": "0.31.10",
     "typescript": "6.0.3"
   }
 }

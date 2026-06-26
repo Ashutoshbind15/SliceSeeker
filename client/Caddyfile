@@ -28,8 +28,8 @@
         reverse_proxy {$API_UPSTREAM:127.0.0.1:3000}
     }
 
-    # tusd — strip /endpoints/tusd prefix before proxying
-    handle_path /endpoints/tusd/* {
+    # tusd — proxy at tusd's native /files path (Location headers use /files/…)
+    handle /files* {
         reverse_proxy {$TUSD_UPSTREAM:127.0.0.1:8080}
     }
 

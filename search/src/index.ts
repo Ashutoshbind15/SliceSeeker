@@ -1,6 +1,7 @@
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
+import { assertSearchSchema } from "db/readiness.js";
 import { searchVideosHandler } from "./routes/search.js";
 
 const app = express();
@@ -14,6 +15,16 @@ app.use(express.json());
 
 app.get("/health", (_req, res) => {
   res.send("OK");
+});
+
+app.get("/ready", async (_req, res) => {
+  const result = await assertSearchSchema();
+  if (!result.ok) {
+    res.status(503).json({ ready: false, error: result.error });
+    return;
+  }
+
+  res.json({ ready: true });
 });
 
 app.post("/search", searchVideosHandler);

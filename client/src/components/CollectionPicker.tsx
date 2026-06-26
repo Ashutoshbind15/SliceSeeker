@@ -61,7 +61,7 @@ export const CollectionPicker = ({
   const selectValue =
     includeAllOption && !selectedCollectionId
       ? ALL_COLLECTIONS_VALUE
-      : selectedCollectionId || undefined;
+      : selectedCollectionId;
 
   return (
     <div className="space-y-2">

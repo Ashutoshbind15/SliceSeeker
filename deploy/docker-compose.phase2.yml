@@ -1,0 +1,31 @@
+services:
+  search-api:
+    build:
+      context: ..
+      dockerfile: search/Dockerfile
+      target: prod
+    image: ${SEARCH_API_IMAGE:-demo-search-ai/search-api:latest}
+    restart: unless-stopped
+    depends_on:
+      db-push:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+    ports:
+      - "${SEARCH_API_PUBLISH_PORT:-3001}:3001"
+    environment:
+      PORT: "3001"
+      DATABASE_URL: ${DATABASE_URL}
+      S3_BUCKET: ${S3_BUCKET:-uploads}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3001/ready').then(async (r)=>{if(!r.ok){process.stderr.write(await r.text());process.exit(1)}process.exit(0)}).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s

@@ -1,7 +1,10 @@
 import express from "express";
 import "dotenv/config";
 import { createTodo, getTodos } from "db/access/index.js";
+import { assertIndexerSchema } from "db/readiness.js";
 import cors from "cors";
+import { Queue } from "bullmq";
+import { getValkeyConnectionOptions, JOB_QUEUE_NAME } from "queue";
 import { tusdHookHandler } from "./routes/uploads.js";
 import {
   getVideoJobStatusHandler,
@@ -27,6 +30,34 @@ app.use(express.json());
 
 app.get("/health", (req, res) => {
   res.send("OK");
+});
+
+app.get("/ready", async (_req, res) => {
+  const schema = await assertIndexerSchema();
+  if (!schema.ok) {
+    res.status(503).json({ ready: false, error: schema.error });
+    return;
+  }
+
+  if (!process.env.VALKEY_URL) {
+    res.status(503).json({ ready: false, error: "VALKEY_URL is not set" });
+    return;
+  }
+
+  let queue: Queue | undefined;
+  try {
+    queue = new Queue(JOB_QUEUE_NAME, {
+      connection: getValkeyConnectionOptions(),
+    });
+    await queue.waitUntilReady();
+    res.json({ ready: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Queue connection failed";
+    res.status(503).json({ ready: false, error: message });
+  } finally {
+    await queue?.close().catch(() => undefined);
+  }
 });
 
 app.get("/todos", async (req, res) => {
