@@ -32,8 +32,6 @@ type SourceObject = {
   key: string;
 };
 
-const getSourceBucket = () => process.env.S3_BUCKET ?? "uploads";
-
 const presignedUrlCache = new Map<string, Promise<string>>();
 
 const getPlaybackUrl = (sourceObject: SourceObject) => {
@@ -78,7 +76,7 @@ export const searchVideos = async (
       durationSec: row.durationSec,
       score: row.score,
       sourceObject: {
-        bucket: getSourceBucket(),
+        bucket: row.sourceStorageBucket,
         key: row.sourceStorageKey!,
       },
     }));

@@ -27,6 +27,7 @@ export const uploadsTable = pgTable(
       .notNull()
       .references(() => collectionsTable.id),
     storageKey: text("storage_key"),
+    storageBucket: text("storage_bucket").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
   },

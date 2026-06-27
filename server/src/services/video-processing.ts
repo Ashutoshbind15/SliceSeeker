@@ -319,6 +319,7 @@ export const startVideoProcessing = async (
     chunkingTaskId,
     fileId: upload.id,
     storageKey: upload.storageKey,
+    storageBucket: upload.storageBucket,
     filename: upload.filename,
     filetype: upload.filetype,
   };

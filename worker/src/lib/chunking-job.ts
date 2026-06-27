@@ -44,6 +44,7 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
 
     const inputPath = path.join(workDir, `source${extension}`);
     await downloadObject({
+      bucket: payload.storageBucket,
       storageKey: payload.storageKey,
       destinationPath: inputPath,
     });
@@ -72,6 +73,7 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
         });
 
         await uploadObject({
+          bucket: payload.storageBucket,
           storageKey: storeKey,
           sourcePath: segment.filePath,
           contentType: payload.filetype,

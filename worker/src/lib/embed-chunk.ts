@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { getChunkById } from "db/access/chunks.js";
+import { getUploadById } from "db/access/uploads.js";
 import {
   commitEmbeddingResult,
   getEmbeddingTaskById,
@@ -32,6 +33,11 @@ export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
     );
   }
 
+  const upload = await getUploadById(chunk.fileId);
+  if (!upload) {
+    throw new Error(`Upload ${chunk.fileId} not found for chunk ${payload.chunkId}`);
+  }
+
   await markEmbeddingTaskRunning(payload.embeddingTaskId);
 
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), "embed-chunk-"));
@@ -41,6 +47,7 @@ export const processEmbedChunkJob = async (payload: EmbedChunkJobPayload) => {
     const chunkPath = path.join(workDir, `chunk${extension}`);
 
     await downloadObject({
+      bucket: upload.storageBucket,
       storageKey: chunk.storeKey,
       destinationPath: chunkPath,
     });

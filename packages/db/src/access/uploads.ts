@@ -40,6 +40,7 @@ export const createUploadRecord = async (input: {
   filetype: string;
   sizeBytes?: number;
   collectionId?: string;
+  storageBucket: string;
 }) => {
   const [upload] = await db
     .insert(uploadsTable)
@@ -50,6 +51,7 @@ export const createUploadRecord = async (input: {
       filetype: input.filetype,
       sizeBytes: input.sizeBytes,
       collectionId: input.collectionId ?? DEFAULT_COLLECTION_ID,
+      storageBucket: input.storageBucket,
       status: "uploading",
     })
     .onConflictDoNothing({ target: uploadsTable.tusUploadId })
@@ -61,6 +63,7 @@ export const createUploadRecord = async (input: {
 export const completeUploadRecord = async (input: {
   tusUploadId: string;
   sizeBytes: number;
+  storageBucket: string;
   storageKey?: string;
 }) => {
   const [upload] = await db
@@ -69,6 +72,7 @@ export const completeUploadRecord = async (input: {
       status: "completed",
       sizeBytes: input.sizeBytes,
       storageKey: input.storageKey,
+      storageBucket: input.storageBucket,
       completedAt: new Date(),
     })
     .where(eq(uploadsTable.tusUploadId, input.tusUploadId))

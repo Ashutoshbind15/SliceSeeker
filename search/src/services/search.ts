@@ -31,8 +31,6 @@ export type SearchSegmentResult = {
   sourceObject: SourceObjectRef;
 };
 
-const getSourceBucket = () => process.env.S3_BUCKET ?? "uploads";
-
 export const searchVideos = async (
   input: SearchVideoChunksInput,
 ): Promise<SearchSegmentResult[]> => {
@@ -60,7 +58,7 @@ export const searchVideos = async (
       durationSec: row.durationSec,
       score: row.score,
       sourceObject: {
-        bucket: getSourceBucket(),
+        bucket: row.sourceStorageBucket,
         key: row.sourceStorageKey!,
       },
     }));

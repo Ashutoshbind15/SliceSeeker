@@ -12,6 +12,7 @@ export type ChunkingJobPayload = {
   chunkingTaskId: string;
   fileId: string;
   storageKey: string;
+  storageBucket: string;
   filename: string;
   filetype: string;
 };

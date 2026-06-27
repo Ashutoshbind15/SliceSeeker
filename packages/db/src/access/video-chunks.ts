@@ -42,6 +42,7 @@ const searchVideoChunkRows = async (
       filetype: uploadsTable.filetype,
       collectionId: uploadsTable.collectionId,
       sourceStorageKey: uploadsTable.storageKey,
+      sourceStorageBucket: uploadsTable.storageBucket,
       score: sql<number>`1 - (${distanceExpr})`.as("score"),
     })
     .from(videoChunksTable)

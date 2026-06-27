@@ -3,8 +3,6 @@ import { pipeline } from "node:stream/promises";
 import { S3 } from "@aws-sdk/client-s3";
 import type { Readable } from "node:stream";
 
-const getS3Bucket = () => process.env.S3_BUCKET ?? "uploads";
-
 const s3 = new S3({
   endpoint: process.env.S3_ENDPOINT ?? "http://127.0.0.1:9000",
   region: process.env.S3_REGION ?? "us-east-1",
@@ -18,11 +16,12 @@ const s3 = new S3({
 });
 
 export const downloadObject = async (input: {
+  bucket: string;
   storageKey: string;
   destinationPath: string;
 }) => {
   const response = await s3.getObject({
-    Bucket: getS3Bucket(),
+    Bucket: input.bucket,
     Key: input.storageKey,
   });
 
@@ -37,12 +36,13 @@ export const downloadObject = async (input: {
 };
 
 export const uploadObject = async (input: {
+  bucket: string;
   storageKey: string;
   sourcePath: string;
   contentType: string;
 }) => {
   await s3.putObject({
-    Bucket: getS3Bucket(),
+    Bucket: input.bucket,
     Key: input.storageKey,
     Body: createReadStream(input.sourcePath),
     ContentType: input.contentType,
@@ -58,13 +58,16 @@ export const buildChunkStorageKey = (input: {
 
 export const buildChunkPrefix = (fileId: string) => `chunks/${fileId}/`;
 
-export const deleteChunkObjectsForFile = async (fileId: string) => {
+export const deleteChunkObjectsForFile = async (
+  fileId: string,
+  bucket: string,
+) => {
   const prefix = buildChunkPrefix(fileId);
   let continuationToken: string | undefined;
 
   do {
     const response = await s3.listObjectsV2({
-      Bucket: getS3Bucket(),
+      Bucket: bucket,
       Prefix: prefix,
       ContinuationToken: continuationToken,
     });
@@ -76,7 +79,7 @@ export const deleteChunkObjectsForFile = async (fileId: string) => {
 
     if (keys.length > 0) {
       await s3.deleteObjects({
-        Bucket: getS3Bucket(),
+        Bucket: bucket,
         Delete: {
           Objects: keys.map((Key) => ({ Key })),
         },

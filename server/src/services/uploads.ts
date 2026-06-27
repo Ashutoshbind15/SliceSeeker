@@ -8,6 +8,8 @@ import {
   getUploadByTusId,
 } from "db/access/uploads.js";
 
+const getUploadStorageBucket = () => process.env.S3_BUCKET ?? "uploads";
+
 export type TusdHookResponse = {
   ChangeFileInfo?: {
     ID?: string;
@@ -65,6 +67,7 @@ const handlePostCreate = async (hook: TusdHookRequest) => {
     filetype: metadata.filetype,
     collectionId,
     sizeBytes: Upload.Size ?? undefined,
+    storageBucket: getUploadStorageBucket(),
   });
 };
 
@@ -96,10 +99,16 @@ const handlePostFinish = async (hook: TusdHookRequest) => {
       filetype: metadata.filetype,
       collectionId,
       sizeBytes,
+      storageBucket: getUploadStorageBucket(),
     });
   }
 
-  await completeUploadRecord({ tusUploadId, sizeBytes, storageKey });
+  await completeUploadRecord({
+    tusUploadId,
+    sizeBytes,
+    storageKey,
+    storageBucket: getUploadStorageBucket(),
+  });
 };
 
 const handlePostTerminate = async (hook: TusdHookRequest) => {
