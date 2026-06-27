@@ -9,6 +9,7 @@ import Files from "./Files";
 import FileCosts from "./FileCosts";
 import Layout from "./Layout";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/query";
 import "./index.css";
 
@@ -16,6 +17,7 @@ const root = createRoot(document.getElementById("root")!);
 root.render(
   <QueryProvider>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <Toaster richColors closeButton />
       <BrowserRouter>
       <Routes>
         <Route element={<Layout />}>

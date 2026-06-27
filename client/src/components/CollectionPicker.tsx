@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { QueryErrorAlert } from "@/components/query-state";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -100,9 +101,12 @@ export const CollectionPicker = ({
       </Select>
 
       {collectionsQuery.isError ? (
-        <p className="text-sm text-destructive">
-          {collectionsQuery.error.message}
-        </p>
+        <QueryErrorAlert
+          message={collectionsQuery.error.message}
+          title="Could not load collections"
+          onRetry={() => void collectionsQuery.refetch()}
+          className="rounded-xl"
+        />
       ) : null}
     </div>
   );

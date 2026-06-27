@@ -3,7 +3,7 @@ import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod/v3";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { QueryErrorAlert } from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -114,11 +114,10 @@ export const CreateCollection = ({
             )}
           />
           {createCollectionMutation.isError ? (
-            <Alert variant="destructive">
-              <AlertDescription>
-                {createCollectionMutation.error.message}
-              </AlertDescription>
-            </Alert>
+            <QueryErrorAlert
+              message={createCollectionMutation.error.message}
+              title="Could not create collection"
+            />
           ) : null}
         </form>
         <DialogFooter>

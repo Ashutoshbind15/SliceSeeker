@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useCollections } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  QueryEmptyState,
+  QueryErrorAlert,
+  TableRowsSkeleton,
+} from "@/components/query-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { toast } from "@/lib/toast";
+import { toast } from "sonner";
 import {
   type UploadSummary,
   useAssignUploadCollectionMutation,
@@ -121,15 +125,18 @@ const Files = () => {
           dirtyFiles.map((file) => [file.id, file.collectionId]),
         ),
       }));
-      toast("Collection assignments saved");
-    } catch {
-      // Mutation error is surfaced via assignCollectionMutation.error
+      toast.success("Collection assignments saved");
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save collection assignments",
+      );
     }
   };
 
   const saving = assignCollectionMutation.isPending;
-  const error =
-    uploadsQuery.error?.message ?? assignCollectionMutation.error?.message ?? null;
+  const fetchError = uploadsQuery.isError ? uploadsQuery.error.message : null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -165,32 +172,25 @@ const Files = () => {
         </div>
       </div>
 
-      {error ? (
-        <Alert variant="destructive" className="rounded-2xl">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      {fetchError ? (
+        <QueryErrorAlert
+          message={fetchError}
+          onRetry={() => void uploadsQuery.refetch()}
+          className="rounded-2xl"
+        />
       ) : null}
 
       {uploadsQuery.isPending && serverFiles.length === 0 ? (
-        <div className="flex items-center justify-center h-40 text-muted-foreground">
-          <div className="animate-pulse flex items-center gap-2">
-            <HardDrive className="h-5 w-5" /> Loading library…
-          </div>
-        </div>
+        <TableRowsSkeleton rows={5} columns={3} />
       ) : null}
 
-      {!uploadsQuery.isPending && draftFiles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <FileVideo className="h-8 w-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-heading font-medium text-lg">Your library is empty</h3>
-            <p className="text-muted-foreground max-w-sm">
-              Upload a video first, then you can assign it to a collection here to organize your content.
-            </p>
-          </div>
-        </div>
+      {!uploadsQuery.isPending && !uploadsQuery.isError && draftFiles.length === 0 ? (
+        <QueryEmptyState
+          icon={<FileVideo />}
+          title="Your library is empty"
+          description="Upload a video first, then you can assign it to a collection here to organize your content."
+          className="rounded-3xl border bg-muted/30"
+        />
       ) : null}
 
       {draftFiles.length > 0 ? (

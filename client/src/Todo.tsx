@@ -1,6 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod/v3";
+import {
+  ListItemsSkeleton,
+  QueryEmptyState,
+  QueryErrorAlert,
+} from "@/components/query-state";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -41,20 +46,25 @@ const Todo = () => {
       <div className="grid gap-8 md:grid-cols-[1fr_300px]">
         <div className="space-y-4">
           {todosQuery.isPending ? (
-            <div className="animate-pulse flex items-center gap-2 text-muted-foreground">
-              Loading tasks…
-            </div>
+            <ListItemsSkeleton count={4} />
           ) : null}
 
           {todosQuery.isError ? (
-            <p className="text-sm text-destructive bg-destructive/10 p-4 rounded-xl">{todosQuery.error.message}</p>
+            <QueryErrorAlert
+              message={todosQuery.error.message}
+              title="Could not load tasks"
+              onRetry={() => void todosQuery.refetch()}
+              className="rounded-xl"
+            />
           ) : null}
 
-          {!todosQuery.isPending && todos.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 p-8 border border-dashed rounded-2xl bg-muted/30">
-              <CheckSquare className="h-8 w-8 text-muted-foreground/50" />
-              <p className="text-muted-foreground">No tasks yet. Create one to get started.</p>
-            </div>
+          {!todosQuery.isPending && !todosQuery.isError && todos.length === 0 ? (
+            <QueryEmptyState
+              icon={<CheckSquare />}
+              title="No tasks yet"
+              description="Create one to get started."
+              className="rounded-2xl border bg-muted/30"
+            />
           ) : null}
 
           {todos.length > 0 ? (
@@ -175,9 +185,11 @@ const CreateTodo = () => {
         )}
       />
       {createTodoMutation.isError ? (
-        <p className="text-sm text-destructive bg-destructive/10 p-2 rounded-lg">
-          {createTodoMutation.error.message}
-        </p>
+        <QueryErrorAlert
+          message={createTodoMutation.error.message}
+          title="Could not create task"
+          className="rounded-lg"
+        />
       ) : null}
       <Button type="submit" disabled={createTodoMutation.isPending} className="rounded-xl w-full mt-2">
         {createTodoMutation.isPending ? "Creating…" : "Add Task"}

@@ -4,7 +4,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { toast } from "@/lib/toast";
+import { toast } from "sonner";
 import { queryClient } from "@/query/client";
 import { queryKeys, type UploadListFilters } from "@/query/keys";
 
@@ -125,7 +125,7 @@ export const useStartProcessingMutation = () => {
   return useMutation({
     mutationFn: startUploadProcessing,
     onSuccess: () => {
-      toast("Processing started");
+      toast.success("Processing started");
       void queryClient.invalidateQueries({ queryKey: queryKeys.uploads.all });
     },
   });

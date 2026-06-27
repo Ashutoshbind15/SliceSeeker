@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { toast } from "@/lib/toast";
+import { toast } from "sonner";
 import { queryKeys } from "@/query/keys";
 
 export type CollectionSummary = {
@@ -42,7 +42,7 @@ export const useCreateCollectionMutation = () => {
   return useMutation({
     mutationFn: createCollection,
     onSuccess: () => {
-      toast("Collection created");
+      toast.success("Collection created");
       void queryClient.invalidateQueries({ queryKey: queryKeys.collections.all });
     },
   });

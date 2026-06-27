@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import { toast } from "@/lib/toast";
+import { toast } from "sonner";
 import { queryKeys } from "@/query/keys";
 
 export type Todo = {
@@ -37,7 +37,7 @@ export const useCreateTodoMutation = () => {
   return useMutation({
     mutationFn: createTodo,
     onSuccess: () => {
-      toast("Todo created");
+      toast.success("Todo created");
       void queryClient.invalidateQueries({ queryKey: queryKeys.todos.all });
     },
   });

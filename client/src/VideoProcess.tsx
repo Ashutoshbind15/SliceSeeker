@@ -1,5 +1,9 @@
 import { useEffect, useMemo } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  QueryEmptyState,
+  QueryErrorAlert,
+  TableRowsSkeleton,
+} from "@/components/query-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { toast } from "sonner";
 import {
   deriveUploadsSummary,
   type ChunkingTask,
@@ -168,7 +173,11 @@ const VideoProcess = () => {
   }, [summary.active, refetch]);
 
   const startProcessing = (uploadId: string) => {
-    startProcessingMutation.mutate(uploadId);
+    startProcessingMutation.mutate(uploadId, {
+      onError: (error) => {
+        toast.error(error.message);
+      },
+    });
   };
 
   const renderAction = (upload: UploadSummary) => {
@@ -229,8 +238,7 @@ const VideoProcess = () => {
     );
   };
 
-  const error =
-    uploadsQuery.error?.message ?? startProcessingMutation.error?.message ?? null;
+  const fetchError = uploadsQuery.isError ? uploadsQuery.error.message : null;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
@@ -265,32 +273,25 @@ const VideoProcess = () => {
         )}
       </div>
 
-      {error ? (
-        <Alert variant="destructive" className="rounded-2xl">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      {fetchError ? (
+        <QueryErrorAlert
+          message={fetchError}
+          onRetry={() => void uploadsQuery.refetch()}
+          className="rounded-2xl"
+        />
       ) : null}
 
       {uploadsQuery.isPending && uploads.length === 0 ? (
-        <div className="flex items-center justify-center h-40 text-muted-foreground">
-          <div className="animate-pulse flex items-center gap-2">
-            <Cpu className="h-5 w-5" /> Loading processing status…
-          </div>
-        </div>
+        <TableRowsSkeleton rows={5} columns={5} />
       ) : null}
 
-      {!uploadsQuery.isPending && uploads.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <FileVideo className="h-8 w-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-heading font-medium text-lg">No videos to process</h3>
-            <p className="text-muted-foreground max-w-sm">
-              Upload a video first, then return here to process it for semantic search.
-            </p>
-          </div>
-        </div>
+      {!uploadsQuery.isPending && !uploadsQuery.isError && uploads.length === 0 ? (
+        <QueryEmptyState
+          icon={<FileVideo />}
+          title="No videos to process"
+          description="Upload a video first, then return here to process it for semantic search."
+          className="rounded-3xl border bg-muted/30"
+        />
       ) : null}
 
       {uploads.length > 0 ? (

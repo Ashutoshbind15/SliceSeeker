@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  QueryEmptyState,
+  QueryErrorAlert,
+  StatsGridSkeleton,
+} from "@/components/query-state";
 import {
   Card,
   CardContent,
@@ -111,31 +115,25 @@ const FileCosts = () => {
       </div>
 
       {costsQuery.isError ? (
-        <Alert variant="destructive" className="rounded-2xl">
-          <AlertDescription>{costsQuery.error.message}</AlertDescription>
-        </Alert>
+        <QueryErrorAlert
+          message={costsQuery.error.message}
+          title="Could not load cost data"
+          onRetry={() => void costsQuery.refetch()}
+          className="rounded-2xl"
+        />
       ) : null}
 
       {costsQuery.isPending && files.length === 0 ? (
-        <div className="flex items-center justify-center h-40 text-muted-foreground">
-          <div className="animate-pulse flex items-center gap-2">
-            <Activity className="h-5 w-5" /> Loading cost data…
-          </div>
-        </div>
+        <StatsGridSkeleton />
       ) : null}
 
-      {!costsQuery.isPending && files.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-center space-y-4 p-8 border border-dashed rounded-3xl bg-muted/30">
-          <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-            <DollarSign className="h-8 w-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-heading font-medium text-lg">No cost data yet</h3>
-            <p className="text-muted-foreground max-w-sm">
-              Process a video to record embedding usage and track your API costs here.
-            </p>
-          </div>
-        </div>
+      {!costsQuery.isPending && !costsQuery.isError && files.length === 0 ? (
+        <QueryEmptyState
+          icon={<DollarSign />}
+          title="No cost data yet"
+          description="Process a video to record embedding usage and track your API costs here."
+          className="rounded-3xl border bg-muted/30"
+        />
       ) : null}
 
       {files.length > 0 ? (

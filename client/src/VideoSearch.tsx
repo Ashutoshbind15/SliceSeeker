@@ -3,7 +3,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod/v3";
 import { CollectionPicker } from "@/components/CollectionPicker";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  InlineLoadingSkeleton,
+  QueryEmptyState,
+  QueryErrorAlert,
+  SearchResultsSkeleton,
+} from "@/components/query-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -156,8 +161,11 @@ const VideoSearch = () => {
   const results = searchQuery.data ?? [];
   const hasSearched = submittedSearch !== null;
   const searching = searchQuery.isFetching && hasSearched;
-  const error =
-    uploadsQuery.error?.message ?? searchQuery.error?.message ?? null;
+  const uploadsFetchError = uploadsQuery.isError
+    ? uploadsQuery.error.message
+    : null;
+  const searchFetchError =
+    hasSearched && searchQuery.isError ? searchQuery.error.message : null;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -307,43 +315,52 @@ const VideoSearch = () => {
 
       <div className="min-h-[200px]">
         {uploadsQuery.isPending && searchableUploads.length === 0 ? (
-          <div className="flex items-center justify-center h-40 text-muted-foreground">
-            <div className="animate-pulse flex items-center gap-2">
-              <Search className="h-5 w-5" /> Loading indexed videos…
-            </div>
-          </div>
+          <InlineLoadingSkeleton className="flex justify-center py-16" />
         ) : null}
 
-        {!uploadsQuery.isPending && searchableUploads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 p-8 border border-dashed rounded-2xl bg-muted/30">
-            <PlayCircle className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              No indexed videos yet. Upload and process a video first, then return here to search.
-            </p>
-          </div>
+        {!uploadsQuery.isPending &&
+        !uploadsQuery.isError &&
+        searchableUploads.length === 0 ? (
+          <QueryEmptyState
+            icon={<PlayCircle />}
+            title="No indexed videos yet"
+            description="Upload and process a video first, then return here to search."
+            className="rounded-2xl border bg-muted/30"
+          />
         ) : null}
 
-        {error ? (
-          <Alert variant="destructive" className="rounded-2xl">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+        {uploadsFetchError ? (
+          <QueryErrorAlert
+            message={uploadsFetchError}
+            title="Could not load indexed videos"
+            onRetry={() => void uploadsQuery.refetch()}
+            className="rounded-2xl"
+          />
         ) : null}
 
-        {hasSearched && !searching && !searchQuery.isError && results.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-center space-y-3 p-8 border border-dashed rounded-2xl bg-muted/30">
-            <Search className="h-8 w-8 text-muted-foreground/50" />
-            <p className="text-muted-foreground">
-              No matching segments found for &ldquo;<span className="font-medium text-foreground">{submittedSearch?.query}</span>&rdquo;.
-            </p>
-          </div>
+        {searchFetchError ? (
+          <QueryErrorAlert
+            message={searchFetchError}
+            title="Search failed"
+            onRetry={() => void searchQuery.refetch()}
+            className="rounded-2xl"
+          />
+        ) : null}
+
+        {hasSearched &&
+        !searching &&
+        !searchQuery.isError &&
+        results.length === 0 ? (
+          <QueryEmptyState
+            icon={<Search />}
+            title="No matching segments"
+            description={`No results found for "${submittedSearch?.query}". Try a different query or broaden your filters.`}
+            className="rounded-2xl border bg-muted/30"
+          />
         ) : null}
 
         {searchQuery.isFetching && hasSearched && results.length === 0 ? (
-          <div className="flex items-center justify-center h-40 text-muted-foreground">
-            <div className="animate-pulse flex items-center gap-2">
-              <Search className="h-5 w-5" /> Searching your videos…
-            </div>
-          </div>
+          <SearchResultsSkeleton />
         ) : null}
 
         {results.length > 0 ? (
