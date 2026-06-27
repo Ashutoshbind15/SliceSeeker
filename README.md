@@ -31,7 +31,7 @@ docker compose -f deploy/docker-compose.infra.yml -f deploy/docker-compose.phase
 docker compose -f deploy/docker-compose.infra.yml -f deploy/docker-compose.phase2.yml --env-file deploy/.env up -d
 ```
 
-Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` (and `S3_BUCKET` for result pointers) at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
+Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 
 ---
 
