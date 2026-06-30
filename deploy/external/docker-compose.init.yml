@@ -1,0 +1,14 @@
+# One-shot schema push against DATABASE_URL. Run before starting application phases:
+#
+#   docker compose -f docker-compose.init.yml --env-file .env up
+#
+# Re-run after upgrading to a release that changes the database schema.
+
+services:
+  db-push:
+    build:
+      context: ../..
+      dockerfile: packages/db/Dockerfile
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    restart: "no"

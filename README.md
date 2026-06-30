@@ -23,13 +23,10 @@ pnpm install
 pnpm dev:all
 ```
 
-**Production-style deploy** (see `deploy/` and `plan.md`):
+**Production deploy** (see [`deploy/README.md`](deploy/README.md)):
 
-```bash
-docker compose -f deploy/docker-compose.infra.yml --env-file deploy/.env up -d
-docker compose -f deploy/docker-compose.infra.yml -f deploy/docker-compose.phase1.yml --env-file deploy/.env up -d
-docker compose -f deploy/docker-compose.infra.yml -f deploy/docker-compose.phase2.yml --env-file deploy/.env up -d
-```
+- **Bundled** — all dependencies as containers: [`deploy/bundled/`](deploy/bundled/)
+- **External** — your Postgres, Valkey, and S3 URLs: [`deploy/external/`](deploy/external/)
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 

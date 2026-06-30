@@ -1,0 +1,95 @@
+services:
+  indexer-api:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+      target: prod
+    image: ${INDEXER_API_IMAGE:-demo-search-ai/indexer-api:latest}
+    restart: unless-stopped
+    ports:
+      - "${INDEXER_API_PUBLISH_PORT:-3000}:3000"
+    environment:
+      PORT: "3000"
+      DATABASE_URL: ${DATABASE_URL}
+      VALKEY_URL: ${VALKEY_URL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-uploads}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/ready').then(async (r)=>{if(!r.ok){process.stderr.write(await r.text());process.exit(1)}process.exit(0)}).catch(()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  indexer-worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile
+      target: prod
+    image: ${INDEXER_WORKER_IMAGE:-demo-search-ai/indexer-worker:latest}
+    restart: unless-stopped
+    depends_on:
+      indexer-api:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      VALKEY_URL: ${VALKEY_URL}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-uploads}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+
+  admin-ui:
+    build:
+      context: ../..
+      dockerfile: client/Dockerfile
+    image: ${ADMIN_UI_IMAGE:-demo-search-ai/admin-ui:latest}
+    restart: unless-stopped
+    depends_on:
+      indexer-api:
+        condition: service_healthy
+    ports:
+      - "${ADMIN_UI_PUBLISH_PORT:-8080}:8080"
+    environment:
+      PORT: "8080"
+      API_UPSTREAM: ${API_UPSTREAM:-indexer-api:3000}
+      TUSD_UPSTREAM: ${TUSD_UPSTREAM:-tusd:8080}
+
+  tusd:
+    image: tusproject/tusd:latest
+    restart: unless-stopped
+    depends_on:
+      indexer-api:
+        condition: service_healthy
+    ports:
+      - "${TUSD_PUBLISH_PORT:-8081}:8080"
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      AWS_REGION: ${S3_REGION:-us-east-1}
+    volumes:
+      - tusd_tmp:/data
+    command:
+      - -verbose
+      - "-cors-allow-origin=.*"
+      - "-s3-bucket=${S3_BUCKET:-uploads}"
+      - "-s3-endpoint=${S3_ENDPOINT}"
+      - -s3-object-prefix=tus/
+      - "-hooks-http=${TUSD_HOOKS_URL:-http://indexer-api:3000/api/tusd-hooks}"
+
+volumes:
+  tusd_tmp:

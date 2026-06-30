@@ -1,16 +1,11 @@
 services:
   search-api:
     build:
-      context: ..
+      context: ../..
       dockerfile: search/Dockerfile
       target: prod
     image: ${SEARCH_API_IMAGE:-demo-search-ai/search-api:latest}
     restart: unless-stopped
-    depends_on:
-      db-push:
-        condition: service_completed_successfully
-      db:
-        condition: service_healthy
     ports:
       - "${SEARCH_API_PUBLISH_PORT:-3001}:3001"
     environment:

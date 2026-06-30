@@ -1,7 +1,7 @@
 services:
   indexer-api:
     build:
-      context: ..
+      context: ../..
       dockerfile: server/Dockerfile
       target: prod
     image: ${INDEXER_API_IMAGE:-demo-search-ai/indexer-api:latest}
@@ -42,7 +42,7 @@ services:
 
   indexer-worker:
     build:
-      context: ..
+      context: ../..
       dockerfile: worker/Dockerfile
       target: prod
     image: ${INDEXER_WORKER_IMAGE:-demo-search-ai/indexer-worker:latest}
@@ -72,7 +72,7 @@ services:
 
   admin-ui:
     build:
-      context: ..
+      context: ../..
       dockerfile: client/Dockerfile
     image: ${ADMIN_UI_IMAGE:-demo-search-ai/admin-ui:latest}
     restart: unless-stopped
@@ -83,8 +83,8 @@ services:
       - "${ADMIN_UI_PUBLISH_PORT:-8080}:8080"
     environment:
       PORT: "8080"
-      API_UPSTREAM: indexer-api:3000
-      TUSD_UPSTREAM: tusd:8080
+      API_UPSTREAM: ${API_UPSTREAM:-indexer-api:3000}
+      TUSD_UPSTREAM: ${TUSD_UPSTREAM:-tusd:8080}
 
   tusd:
     image: tusproject/tusd:latest
@@ -108,7 +108,7 @@ services:
       - "-s3-bucket=${S3_BUCKET:-uploads}"
       - "-s3-endpoint=${S3_ENDPOINT}"
       - -s3-object-prefix=tus/
-      - "-hooks-http=http://indexer-api:3000/api/tusd-hooks"
+      - "-hooks-http=${TUSD_HOOKS_URL:-http://indexer-api:3000/api/tusd-hooks}"
 
 volumes:
   tusd_tmp:

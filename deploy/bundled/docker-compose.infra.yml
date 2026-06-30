@@ -22,7 +22,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-demo_search}
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ../docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../../docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test:
         [
@@ -83,7 +83,7 @@ services:
 
   db-push:
     build:
-      context: ..
+      context: ../..
       dockerfile: packages/db/Dockerfile
     depends_on:
       db:
