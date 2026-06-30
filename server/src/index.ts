@@ -4,7 +4,12 @@ import { createTodo, getTodos } from "db/access/index.js";
 import { assertIndexerSchema } from "db/readiness.js";
 import cors from "cors";
 import { Queue } from "bullmq";
-import { getValkeyConnectionOptions, JOB_QUEUE_NAME } from "queue";
+import {
+  assertValkeyEvictionPolicy,
+  getValkeyConnectionOptions,
+  JOB_QUEUE_NAME,
+} from "queue";
+import { assertS3Access } from "./lib/s3.js";
 import { tusdHookHandler } from "./routes/uploads.js";
 import {
   getVideoJobStatusHandler,
@@ -39,8 +44,15 @@ app.get("/ready", async (_req, res) => {
     return;
   }
 
-  if (!process.env.VALKEY_URL) {
-    res.status(503).json({ ready: false, error: "VALKEY_URL is not set" });
+  const s3 = await assertS3Access();
+  if (!s3.ok) {
+    res.status(503).json({ ready: false, error: s3.error });
+    return;
+  }
+
+  const valkey = await assertValkeyEvictionPolicy();
+  if (!valkey.ok) {
+    res.status(503).json({ ready: false, error: valkey.error });
     return;
   }
 

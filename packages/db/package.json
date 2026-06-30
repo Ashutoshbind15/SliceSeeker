@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "db:push": "drizzle-kit push --force",
+    "db:push": "node scripts/bootstrap-extension.mjs && drizzle-kit push --force",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

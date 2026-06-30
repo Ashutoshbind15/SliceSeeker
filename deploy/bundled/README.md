@@ -1,6 +1,6 @@
 # Bundled deployment
 
-Runs the full stack on one host: application services plus Postgres (pgvector), Valkey, and S3-compatible object storage (RustFS). Suitable for evaluation, development-like staging, or single-node production.
+Runs the full stack on one host: application services plus Postgres (pgvector), Valkey, and bundled S3-compatible object storage. Suitable for evaluation, development-like staging, or single-node production.
 
 ## Layout
 

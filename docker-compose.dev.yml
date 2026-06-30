@@ -22,7 +22,6 @@ services:
       POSTGRES_DB: demo_search
     volumes:
       - postgres_data:/var/lib/postgresql
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d demo_search"]
       interval: 5s
@@ -75,7 +74,7 @@ services:
         rc mb rustfs/uploads || true
     restart: "no"
 
-  # tusd: host networking so it can reach the API and RustFS on localhost
+  # tusd: host networking so it can reach the API and object storage on localhost
   tusd:
     image: tusproject/tusd:latest
     restart: unless-stopped

@@ -1,3 +1,9 @@
+export { getValkeyConnectionOptions } from "./connection.js";
+export {
+  assertValkeyEvictionPolicy,
+  type ReadinessResult,
+} from "./readiness.js";
+
 export const JOB_QUEUE_NAME = "demo-jobs";
 
 export const CHUNKING_JOB_NAME = "chunk-video";
@@ -21,14 +27,4 @@ export type EmbedChunkJobPayload = {
   embeddingTaskId: string;
   chunkId: string;
   filetype: string;
-};
-
-export const getValkeyConnectionOptions = () => {
-  const url = new URL(process.env.VALKEY_URL ?? "redis://127.0.0.1:6379");
-
-  return {
-    host: url.hostname,
-    port: Number(url.port || 6379),
-    maxRetriesPerRequest: null,
-  };
 };

@@ -1,6 +1,6 @@
 import pg from "pg";
 
-/** Validates DB bootstrap state after `drizzle-kit push` (tables + pgvector). */
+/** Validates DB bootstrap state after `db:push` (pgvector extension + tables). */
 
 export type ReadinessResult =
   | { ok: true }

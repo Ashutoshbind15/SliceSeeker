@@ -10,7 +10,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "bullmq": "5.70.1"
+    "bullmq": "5.70.1",
+    "ioredis": "5.9.3"
   },
   "devDependencies": {
     "@types/node": "25.6.0",

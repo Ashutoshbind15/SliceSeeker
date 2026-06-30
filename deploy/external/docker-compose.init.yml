@@ -1,4 +1,4 @@
-# One-shot schema push against DATABASE_URL. Run before starting application phases:
+# One-shot pgvector bootstrap + schema push against DATABASE_URL. Run before starting application phases:
 #
 #   docker compose -f docker-compose.init.yml --env-file .env up
 #

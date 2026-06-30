@@ -11,8 +11,8 @@ const App = () => {
           <span className="text-primary">simplified.</span>
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground leading-relaxed">
-          Upload large video files with resumable tus uploads backed by RustFS
-          object storage. Process, search, and analyze your video library with ease.
+          Upload large video files with resumable tus uploads backed by
+          S3-compatible object storage. Process, search, and analyze your video library with ease.
         </p>
         <div className="flex flex-wrap justify-center gap-4 pt-4">
           <Button asChild size="lg" className="rounded-full px-8">
