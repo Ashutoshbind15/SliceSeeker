@@ -91,3 +91,48 @@ export const deleteChunkObjectsForFile = async (
       : undefined;
   } while (continuationToken);
 };
+
+export const buildAudioStorageKey = (fileId: string) =>
+  `audio/${fileId}/source.mp3`;
+
+export const buildAudioPartStorageKey = (input: {
+  fileId: string;
+  partIndex: number;
+}) =>
+  `audio/${input.fileId}/part_${String(input.partIndex).padStart(3, "0")}.mp3`;
+
+export const buildAudioPrefix = (fileId: string) => `audio/${fileId}/`;
+
+export const deleteAudioObjectsForFile = async (
+  fileId: string,
+  bucket: string,
+) => {
+  const prefix = buildAudioPrefix(fileId);
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3.listObjectsV2({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+
+    const keys =
+      response.Contents?.map((object) => object.Key).filter(
+        (key): key is string => key != null,
+      ) ?? [];
+
+    if (keys.length > 0) {
+      await s3.deleteObjects({
+        Bucket: bucket,
+        Delete: {
+          Objects: keys.map((Key) => ({ Key })),
+        },
+      });
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+};

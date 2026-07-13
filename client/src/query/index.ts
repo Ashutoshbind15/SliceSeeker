@@ -38,6 +38,29 @@ export {
 } from "@/query/search";
 
 export {
+  deriveTranscriptUploadsSummary,
+  type TranscriptEmbeddingProgress,
+  type TranscriptPipelineStatus,
+  type TranscriptUploadSummary,
+  type TranscriptionTask,
+  useStartTranscriptionMutation,
+  useTranscriptUploadsQuery,
+} from "@/query/transcribe";
+
+export {
+  type SearchTranscriptsInput,
+  type TranscriptSearchResult,
+  searchTranscripts,
+  useTranscriptSearchResultsQuery,
+} from "@/query/transcript-search";
+
+export {
+  type TranscriptionCostSummary,
+  fetchTranscriptionCosts,
+  useTranscriptionCostsQuery,
+} from "@/query/transcript-costs";
+
+export {
   type Todo,
   createTodo,
   fetchTodos,

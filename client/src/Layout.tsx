@@ -11,6 +11,9 @@ const Layout = () => {
     { name: "Files", path: "/files" },
     { name: "Process", path: "/process" },
     { name: "Search", path: "/search" },
+    { name: "Transcribe", path: "/transcribe" },
+    { name: "Speech", path: "/transcribe/search" },
+    { name: "Speech $", path: "/transcribe/costs" },
     { name: "Costs", path: "/costs" },
     { name: "Todo", path: "/todo" },
   ];
@@ -21,7 +24,11 @@ const Layout = () => {
         <nav className="pointer-events-auto flex items-center gap-2 rounded-full border bg-background/80 px-4 py-2 shadow-sm backdrop-blur-md max-w-[calc(100vw-2rem)]">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path || (item.path !== "/" && location.pathname.startsWith(item.path));
+              const isActive =
+                location.pathname === item.path ||
+                (item.path !== "/" &&
+                  item.path !== "/transcribe" &&
+                  location.pathname.startsWith(`${item.path}/`));
               return (
                 <Link
                   key={item.path}

@@ -5,6 +5,9 @@ import Todo from "./Todo";
 import VideoUpload from "./VideoUpload";
 import VideoProcess from "./VideoProcess";
 import VideoSearch from "./VideoSearch";
+import TranscriptProcess from "./TranscriptProcess";
+import TranscriptSearch from "./TranscriptSearch";
+import TranscriptCosts from "./TranscriptCosts";
 import Files from "./Files";
 import FileCosts from "./FileCosts";
 import Layout from "./Layout";
@@ -26,6 +29,9 @@ root.render(
           <Route path="/files" element={<Files />} />
           <Route path="/process" element={<VideoProcess />} />
           <Route path="/search" element={<VideoSearch />} />
+          <Route path="/transcribe" element={<TranscriptProcess />} />
+          <Route path="/transcribe/search" element={<TranscriptSearch />} />
+          <Route path="/transcribe/costs" element={<TranscriptCosts />} />
           <Route path="/costs" element={<FileCosts />} />
           <Route path="/todo" element={<Todo />} />
         </Route>

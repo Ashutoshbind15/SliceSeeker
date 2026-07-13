@@ -17,6 +17,10 @@ const INDEXER_REQUIRED_TABLES = [
   "chunking_tasks",
   "embedding_tasks",
   "file_costs",
+  "transcription_tasks",
+  "transcript_segments",
+  "transcript_embedding_tasks",
+  "transcription_costs",
   "todos",
 ] as const;
 

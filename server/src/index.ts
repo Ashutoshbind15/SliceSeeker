@@ -19,6 +19,13 @@ import {
 import { searchVideosHandler } from "./routes/search.js";
 import { listFileCostsHandler } from "./routes/costs.js";
 import {
+  getTranscriptionJobStatusHandler,
+  listTranscriptUploadsHandler,
+  startTranscriptionHandler,
+} from "./routes/transcription.js";
+import { searchTranscriptsHandler } from "./routes/transcript-search.js";
+import { listTranscriptionCostsHandler } from "./routes/transcript-costs.js";
+import {
   assignUploadCollectionHandler,
   createCollectionHandler,
   listCollectionsHandler,
@@ -88,6 +95,12 @@ app.patch("/uploads/:uploadId/collection", assignUploadCollectionHandler);
 app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
 app.get("/jobs/:jobId", getVideoJobStatusHandler);
 app.post("/search", searchVideosHandler);
+
+app.get("/transcribe/uploads", listTranscriptUploadsHandler);
+app.post("/transcribe/:uploadId/start", startTranscriptionHandler);
+app.get("/transcribe/jobs/:jobId", getTranscriptionJobStatusHandler);
+app.post("/transcribe/search", searchTranscriptsHandler);
+app.get("/transcribe/costs", listTranscriptionCostsHandler);
 
 app.get("/collections", listCollectionsHandler);
 app.post("/collections", createCollectionHandler);
