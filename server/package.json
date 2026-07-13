@@ -23,7 +23,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.888.0",
     "@aws-sdk/s3-request-presigner": "3.1070.0",
-    "ai": "6.0.207",
+    "ai": "6.0.220",
     "bullmq": "5.70.1",
     "cors": "2.8.6",
     "db": "workspace:*",

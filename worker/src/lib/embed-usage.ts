@@ -49,6 +49,10 @@ export type ParsedEmbedUsage = {
   costUsd: number;
 };
 
+export const getGatewayCostUsd = (
+  providerMetadata?: ProviderMetadata,
+): number => readGatewayCostUsd(asObject(providerMetadata?.gateway));
+
 export const parseEmbedUsage = (input: {
   tokens: number | null;
   providerMetadata?: ProviderMetadata;
@@ -60,6 +64,6 @@ export const parseEmbedUsage = (input: {
     tokens: input.tokens,
     audioTokens: parseTokenCount(usage?.audioTokens),
     videoTokens: parseTokenCount(usage?.videoTokens),
-    costUsd: readGatewayCostUsd(asObject(input.providerMetadata?.gateway)),
+    costUsd: getGatewayCostUsd(input.providerMetadata),
   };
 };

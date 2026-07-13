@@ -124,7 +124,7 @@ export const processExtractAudioJob = async (
     };
 
     await jobQueue.add(TRANSCRIBE_JOB_NAME, transcribePayload, {
-      jobId: `${payload.transcriptionTaskId}:transcribe`,
+      jobId: `${payload.transcriptionTaskId}-transcribe`,
     });
 
     console.log(
