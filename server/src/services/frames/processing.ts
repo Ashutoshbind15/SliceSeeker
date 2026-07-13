@@ -20,6 +20,7 @@ import {
   listCompletedUploadsByCollectionId,
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
+import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
@@ -233,15 +234,26 @@ const buildFrameUploadListItems = async (
   });
 };
 
-export const listFrameUploads = async (): Promise<FrameUploadListItem[]> =>
-  buildFrameUploadListItems(await listCompletedUploads());
+export const listFrameUploads = async (
+  query: ListPageQuery,
+): Promise<PaginatedRows<FrameUploadListItem>> => {
+  const page = await listCompletedUploads(query);
+  return {
+    data: await buildFrameUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export const listFrameUploadsByCollectionId = async (
   collectionId: string,
-): Promise<FrameUploadListItem[]> =>
-  buildFrameUploadListItems(
-    await listCompletedUploadsByCollectionId(collectionId),
-  );
+  query: ListPageQuery,
+): Promise<PaginatedRows<FrameUploadListItem>> => {
+  const page = await listCompletedUploadsByCollectionId(collectionId, query);
+  return {
+    data: await buildFrameUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export const getFrameUploadStatus = async (
   uploadId: string,

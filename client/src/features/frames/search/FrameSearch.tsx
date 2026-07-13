@@ -107,12 +107,12 @@ const FrameSearch = () => {
   const queryValue = form.watch("query");
 
   const uploadsQuery = useFrameUploadsQuery(
-    collectionId ? { collectionId } : {},
+    collectionId ? { collectionId, limit: 50 } : { limit: 50 },
   );
 
   const searchableUploads = useMemo(
     () =>
-      (uploadsQuery.data ?? []).filter(
+      (uploadsQuery.data?.uploads ?? []).filter(
         (upload) => upload.embedding.embedded > 0,
       ),
     [uploadsQuery.data],

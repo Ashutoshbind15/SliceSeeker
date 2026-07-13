@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { parseListQuery } from "../../lib/pagination.js";
 import {
   firstZodErrorMessage,
   parseCollectionIdQuery,
@@ -14,11 +15,20 @@ import {
 } from "../../services/frames/processing.js";
 
 export const listFrameUploadsHandler = async (req: Request, res: Response) => {
+  let listQuery;
+  try {
+    listQuery = parseListQuery(req.query as Record<string, unknown>);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid query";
+    res.status(400).json({ message });
+    return;
+  }
+
   const collectionId = parseCollectionIdQuery(req.query.collectionId);
-  const uploads = collectionId
-    ? await listFrameUploadsByCollectionId(collectionId)
-    : await listFrameUploads();
-  res.json({ uploads });
+  const result = collectionId
+    ? await listFrameUploadsByCollectionId(collectionId, listQuery)
+    : await listFrameUploads(listQuery);
+  res.json({ uploads: result.data, pagination: result.pagination });
 };
 
 export const startFrameIndexingHandler = async (

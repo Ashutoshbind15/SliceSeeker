@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ListPagination } from "@/components/ListPagination";
 import { useCollections } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
 import {
@@ -23,6 +24,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DEFAULT_LIMIT,
+  type AllowedLimit,
+} from "@/lib/pagination";
 import { toast } from "sonner";
 import {
   type UploadSummary,
@@ -60,10 +65,13 @@ const formatDate = (value: string | null) => {
 
 const Files = () => {
   const { collections } = useCollections();
-  const uploadsQuery = useUploadsQuery();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<AllowedLimit>(DEFAULT_LIMIT);
+  const uploadsQuery = useUploadsQuery({ page, limit });
   const assignCollectionMutation = useAssignUploadCollectionMutation();
 
-  const serverFiles = uploadsQuery.data ?? [];
+  const serverFiles = uploadsQuery.data?.uploads ?? [];
+  const pagination = uploadsQuery.data?.pagination;
   const [draftFiles, setDraftFiles] = useState<UploadSummary[]>([]);
   const [savedCollectionIds, setSavedCollectionIds] = useState<
     Record<string, string>
@@ -74,10 +82,13 @@ const Files = () => {
       return;
     }
 
-    setDraftFiles(uploadsQuery.data);
+    setDraftFiles(uploadsQuery.data.uploads);
     setSavedCollectionIds(
       Object.fromEntries(
-        uploadsQuery.data.map((upload) => [upload.id, upload.collectionId]),
+        uploadsQuery.data.uploads.map((upload) => [
+          upload.id,
+          upload.collectionId,
+        ]),
       ),
     );
   }, [uploadsQuery.data]);
@@ -194,91 +205,104 @@ const Files = () => {
       ) : null}
 
       {draftFiles.length > 0 ? (
-        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-          <Table className="min-w-[640px]">
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground">File Details</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground">Collection</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground text-right">Uploaded</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {draftFiles.map((file) => {
-                const dirty = isFileDirty(file);
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">File Details</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">Collection</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground text-right">Uploaded</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {draftFiles.map((file) => {
+                  const dirty = isFileDirty(file);
 
-                return (
-                  <TableRow
-                    key={file.id}
-                    className={`transition-colors hover:bg-muted/20 ${
-                      dirty ? "bg-accent/5" : ""
-                    }`}
-                  >
-                    <TableCell className="px-6 py-4 align-middle">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                          <FileVideo className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate max-w-[300px]" title={file.filename}>
-                            {file.filename}
+                  return (
+                    <TableRow
+                      key={file.id}
+                      className={`transition-colors hover:bg-muted/20 ${
+                        dirty ? "bg-accent/5" : ""
+                      }`}
+                    >
+                      <TableCell className="px-6 py-4 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                            <FileVideo className="h-5 w-5" />
                           </div>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <HardDrive className="h-3 w-3" />
-                            {formatBytes(file.sizeBytes)}
+                          <div className="min-w-0">
+                            <div className="font-medium truncate max-w-[300px]" title={file.filename}>
+                              {file.filename}
+                            </div>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <HardDrive className="h-3 w-3" />
+                              {formatBytes(file.sizeBytes)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 align-middle">
-                      <div className="space-y-1.5 max-w-[240px]">
-                        <Select
-                          value={file.collectionId}
-                          onValueChange={(value) =>
-                            updateFileCollection(file.id, value)
-                          }
-                          disabled={saving}
-                        >
-                          <SelectTrigger
-                            className={`w-full rounded-xl bg-background ${
-                              dirty
-                                ? "border-accent ring-1 ring-accent/30"
-                                : ""
-                            }`}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 align-middle">
+                        <div className="space-y-1.5 max-w-[240px]">
+                          <Select
+                            value={file.collectionId}
+                            onValueChange={(value) =>
+                              updateFileCollection(file.id, value)
+                            }
+                            disabled={saving}
                           >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {collections.map((collection) => (
-                              <SelectItem
-                                key={collection.id}
-                                value={collection.id}
-                              >
-                                {collection.name}
-                                {collection.isDefault ? " (default)" : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {dirty ? (
-                          <p className="text-[11px] font-medium text-accent-foreground flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground"></span>
-                            Unsaved change
-                          </p>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell className="px-6 py-4 align-middle text-right">
-                      <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
-                        <Clock className="h-3.5 w-3.5" />
-                        {formatDate(file.completedAt ?? file.createdAt)}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                            <SelectTrigger
+                              className={`w-full rounded-xl bg-background ${
+                                dirty
+                                  ? "border-accent ring-1 ring-accent/30"
+                                  : ""
+                              }`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {collections.map((collection) => (
+                                <SelectItem
+                                  key={collection.id}
+                                  value={collection.id}
+                                >
+                                  {collection.name}
+                                  {collection.isDefault ? " (default)" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {dirty ? (
+                            <p className="text-[11px] font-medium text-accent-foreground flex items-center gap-1">
+                              <span className="h-1.5 w-1.5 rounded-full bg-accent-foreground"></span>
+                              Unsaved change
+                            </p>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 align-middle text-right">
+                        <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-lg">
+                          <Clock className="h-3.5 w-3.5" />
+                          {formatDate(file.completedAt ?? file.createdAt)}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          {pagination ? (
+            <ListPagination
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              disabled={uploadsQuery.isFetching || saving}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

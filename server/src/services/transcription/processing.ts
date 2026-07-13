@@ -22,6 +22,7 @@ import {
   listCompletedUploadsByCollectionId,
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
+import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   EXTRACT_AUDIO_JOB_NAME,
   getValkeyConnectionOptions,
@@ -230,16 +231,26 @@ const buildTranscriptUploadListItems = async (
   });
 };
 
-export const listTranscriptUploads = async (): Promise<
-  TranscriptUploadListItem[]
-> => buildTranscriptUploadListItems(await listCompletedUploads());
+export const listTranscriptUploads = async (
+  query: ListPageQuery,
+): Promise<PaginatedRows<TranscriptUploadListItem>> => {
+  const page = await listCompletedUploads(query);
+  return {
+    data: await buildTranscriptUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export const listTranscriptUploadsByCollectionId = async (
   collectionId: string,
-): Promise<TranscriptUploadListItem[]> =>
-  buildTranscriptUploadListItems(
-    await listCompletedUploadsByCollectionId(collectionId),
-  );
+  query: ListPageQuery,
+): Promise<PaginatedRows<TranscriptUploadListItem>> => {
+  const page = await listCompletedUploadsByCollectionId(collectionId, query);
+  return {
+    data: await buildTranscriptUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export type StartTranscriptionResult =
   | {

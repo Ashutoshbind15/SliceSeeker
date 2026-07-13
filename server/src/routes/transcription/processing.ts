@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { parseListQuery } from "../../lib/pagination.js";
 import {
   parseCollectionIdQuery,
   parseRouteParam,
@@ -14,11 +15,20 @@ export const listTranscriptUploadsHandler = async (
   req: Request,
   res: Response,
 ) => {
+  let listQuery;
+  try {
+    listQuery = parseListQuery(req.query as Record<string, unknown>);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid query";
+    res.status(400).json({ message });
+    return;
+  }
+
   const collectionId = parseCollectionIdQuery(req.query.collectionId);
-  const uploads = collectionId
-    ? await listTranscriptUploadsByCollectionId(collectionId)
-    : await listTranscriptUploads();
-  res.json({ uploads });
+  const result = collectionId
+    ? await listTranscriptUploadsByCollectionId(collectionId, listQuery)
+    : await listTranscriptUploads(listQuery);
+  res.json({ uploads: result.data, pagination: result.pagination });
 };
 
 export const startTranscriptionHandler = async (

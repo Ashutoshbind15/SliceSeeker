@@ -20,6 +20,7 @@ import {
   listCompletedUploadsByCollectionId,
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
+import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
@@ -215,13 +216,26 @@ const buildUploadListItems = async (
   });
 };
 
-export const listUploads = async (): Promise<UploadListItem[]> =>
-  buildUploadListItems(await listCompletedUploads());
+export const listUploads = async (
+  query: ListPageQuery,
+): Promise<PaginatedRows<UploadListItem>> => {
+  const page = await listCompletedUploads(query);
+  return {
+    data: await buildUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export const listUploadsByCollectionId = async (
   collectionId: string,
-): Promise<UploadListItem[]> =>
-  buildUploadListItems(await listCompletedUploadsByCollectionId(collectionId));
+  query: ListPageQuery,
+): Promise<PaginatedRows<UploadListItem>> => {
+  const page = await listCompletedUploadsByCollectionId(collectionId, query);
+  return {
+    data: await buildUploadListItems(page.data),
+    pagination: page.pagination,
+  };
+};
 
 export type StartVideoProcessingResult =
   | {

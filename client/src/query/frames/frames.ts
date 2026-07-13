@@ -4,6 +4,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import {
+  buildListQueryString,
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  type PaginatedListResponse,
+} from "@/lib/pagination";
 import { toast } from "sonner";
 import { queryKeys, type UploadListFilters } from "@/query/keys";
 
@@ -51,22 +57,23 @@ export type FrameUploadSummary = {
 
 export type FrameIntervalSec = 2 | 5 | 10;
 
-type FrameUploadsResponse = {
-  uploads: FrameUploadSummary[];
-};
+const normalizeUploadListFilters = (
+  filters: UploadListFilters = {},
+): UploadListFilters => ({
+  page: filters.page ?? DEFAULT_PAGE,
+  limit: filters.limit ?? DEFAULT_LIMIT,
+  count: filters.count ?? true,
+  ...(filters.collectionId ? { collectionId: filters.collectionId } : {}),
+});
 
 const buildFrameUploadsPath = (filters: UploadListFilters = {}) => {
-  if (!filters.collectionId) {
-    return "/frames/uploads";
-  }
-
-  const params = new URLSearchParams({ collectionId: filters.collectionId });
-  return `/frames/uploads?${params.toString()}`;
+  const query = buildListQueryString(normalizeUploadListFilters(filters));
+  return query ? `/frames/uploads?${query}` : "/frames/uploads";
 };
 
 export const fetchFrameUploads = (filters: UploadListFilters = {}) =>
-  apiFetch<FrameUploadsResponse>(buildFrameUploadsPath(filters)).then(
-    (response) => response.uploads,
+  apiFetch<PaginatedListResponse<FrameUploadSummary>>(
+    buildFrameUploadsPath(filters),
   );
 
 export const startFrameIndexing = (input: {
@@ -99,11 +106,13 @@ export const deriveFrameUploadsSummary = (uploads: FrameUploadSummary[]) => ({
     .length,
 });
 
-export const useFrameUploadsQuery = (filters: UploadListFilters = {}) =>
-  useQuery({
-    queryKey: queryKeys.frames.uploads.list(filters),
-    queryFn: () => fetchFrameUploads(filters),
+export const useFrameUploadsQuery = (filters: UploadListFilters = {}) => {
+  const normalized = normalizeUploadListFilters(filters);
+  return useQuery({
+    queryKey: queryKeys.frames.uploads.list(normalized),
+    queryFn: () => fetchFrameUploads(normalized),
   });
+};
 
 export const useStartFrameIndexingMutation = () => {
   const queryClient = useQueryClient();

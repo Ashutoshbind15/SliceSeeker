@@ -1,6 +1,11 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import db from "../../client.js";
 import { DEFAULT_COLLECTION_ID } from "../../constants.js";
+import {
+  paginateRows,
+  type ListPageQuery,
+  type PaginatedRows,
+} from "../../pagination.js";
 import { collectionsTable } from "../../schema/shared/collections.js";
 import { uploadsTable } from "../../schema/shared/uploads.js";
 
@@ -111,23 +116,57 @@ export const getUploadById = async (uploadId: string) => {
   return upload ?? null;
 };
 
-export const listCompletedUploads = async (): Promise<CompletedUploadRow[]> => {
-  return completedUploadSelect()
-    .where(eq(uploadsTable.status, "completed"))
-    .orderBy(desc(uploadsTable.completedAt));
+export const listCompletedUploads = async (
+  query: ListPageQuery,
+): Promise<PaginatedRows<CompletedUploadRow>> => {
+  return paginateRows({
+    query,
+    fetchPage: (limit, offset) =>
+      completedUploadSelect()
+        .where(eq(uploadsTable.status, "completed"))
+        .orderBy(desc(uploadsTable.completedAt), desc(uploadsTable.id))
+        .limit(limit)
+        .offset(offset),
+    fetchTotal: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(uploadsTable)
+        .where(eq(uploadsTable.status, "completed"));
+      return row?.value ?? 0;
+    },
+  });
 };
 
 export const listCompletedUploadsByCollectionId = async (
   collectionId: string,
-): Promise<CompletedUploadRow[]> => {
-  return completedUploadSelect()
-    .where(
-      and(
-        eq(uploadsTable.status, "completed"),
-        eq(uploadsTable.collectionId, collectionId),
-      ),
-    )
-    .orderBy(desc(uploadsTable.completedAt));
+  query: ListPageQuery,
+): Promise<PaginatedRows<CompletedUploadRow>> => {
+  return paginateRows({
+    query,
+    fetchPage: (limit, offset) =>
+      completedUploadSelect()
+        .where(
+          and(
+            eq(uploadsTable.status, "completed"),
+            eq(uploadsTable.collectionId, collectionId),
+          ),
+        )
+        .orderBy(desc(uploadsTable.completedAt), desc(uploadsTable.id))
+        .limit(limit)
+        .offset(offset),
+    fetchTotal: async () => {
+      const [row] = await db
+        .select({ value: count() })
+        .from(uploadsTable)
+        .where(
+          and(
+            eq(uploadsTable.status, "completed"),
+            eq(uploadsTable.collectionId, collectionId),
+          ),
+        );
+      return row?.value ?? 0;
+    },
+  });
 };
 
 export const updateUploadCollection = async (input: {

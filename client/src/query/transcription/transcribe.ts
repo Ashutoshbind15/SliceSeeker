@@ -4,6 +4,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import {
+  buildListQueryString,
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  type PaginatedListResponse,
+} from "@/lib/pagination";
 import { toast } from "sonner";
 import { queryKeys, type UploadListFilters } from "@/query/keys";
 
@@ -50,22 +56,23 @@ export type TranscriptUploadSummary = {
   primaryError: string | null;
 };
 
-type TranscriptUploadsResponse = {
-  uploads: TranscriptUploadSummary[];
-};
+const normalizeUploadListFilters = (
+  filters: UploadListFilters = {},
+): UploadListFilters => ({
+  page: filters.page ?? DEFAULT_PAGE,
+  limit: filters.limit ?? DEFAULT_LIMIT,
+  count: filters.count ?? true,
+  ...(filters.collectionId ? { collectionId: filters.collectionId } : {}),
+});
 
 const buildTranscriptUploadsPath = (filters: UploadListFilters = {}) => {
-  if (!filters.collectionId) {
-    return "/transcribe/uploads";
-  }
-
-  const params = new URLSearchParams({ collectionId: filters.collectionId });
-  return `/transcribe/uploads?${params.toString()}`;
+  const query = buildListQueryString(normalizeUploadListFilters(filters));
+  return query ? `/transcribe/uploads?${query}` : "/transcribe/uploads";
 };
 
 export const fetchTranscriptUploads = (filters: UploadListFilters = {}) =>
-  apiFetch<TranscriptUploadsResponse>(buildTranscriptUploadsPath(filters)).then(
-    (response) => response.uploads,
+  apiFetch<PaginatedListResponse<TranscriptUploadSummary>>(
+    buildTranscriptUploadsPath(filters),
   );
 
 export const startTranscription = (uploadId: string) =>
@@ -92,11 +99,13 @@ export const deriveTranscriptUploadsSummary = (
 
 export const useTranscriptUploadsQuery = (
   filters: UploadListFilters = {},
-) =>
-  useQuery({
-    queryKey: queryKeys.transcribe.uploads.list(filters),
-    queryFn: () => fetchTranscriptUploads(filters),
+) => {
+  const normalized = normalizeUploadListFilters(filters);
+  return useQuery({
+    queryKey: queryKeys.transcribe.uploads.list(normalized),
+    queryFn: () => fetchTranscriptUploads(normalized),
   });
+};
 
 export const useStartTranscriptionMutation = () => {
   const queryClient = useQueryClient();

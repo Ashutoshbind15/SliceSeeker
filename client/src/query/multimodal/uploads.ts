@@ -4,6 +4,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import {
+  buildListQueryString,
+  DEFAULT_LIMIT,
+  DEFAULT_PAGE,
+  type PaginatedListResponse,
+} from "@/lib/pagination";
 import { toast } from "sonner";
 import { queryClient } from "@/query/client";
 import { queryKeys, type UploadListFilters } from "@/query/keys";
@@ -49,27 +55,26 @@ export type UploadSummary = {
   primaryError: string | null;
 };
 
-type UploadsResponse = {
-  uploads: UploadSummary[];
-};
-
 type AssignCollectionResponse = {
   upload: UploadSummary;
 };
 
-const buildUploadsPath = (filters: UploadListFilters = {}) => {
-  if (!filters.collectionId) {
-    return "/uploads";
-  }
+const normalizeUploadListFilters = (
+  filters: UploadListFilters = {},
+): UploadListFilters => ({
+  page: filters.page ?? DEFAULT_PAGE,
+  limit: filters.limit ?? DEFAULT_LIMIT,
+  count: filters.count ?? true,
+  ...(filters.collectionId ? { collectionId: filters.collectionId } : {}),
+});
 
-  const params = new URLSearchParams({ collectionId: filters.collectionId });
-  return `/uploads?${params.toString()}`;
+const buildUploadsPath = (filters: UploadListFilters = {}) => {
+  const query = buildListQueryString(normalizeUploadListFilters(filters));
+  return query ? `/uploads?${query}` : "/uploads";
 };
 
 export const fetchUploads = (filters: UploadListFilters = {}) =>
-  apiFetch<UploadsResponse>(buildUploadsPath(filters)).then(
-    (response) => response.uploads,
-  );
+  apiFetch<PaginatedListResponse<UploadSummary>>(buildUploadsPath(filters));
 
 export const assignUploadCollection = (input: {
   uploadId: string;
@@ -102,11 +107,13 @@ export const deriveUploadsSummary = (uploads: UploadSummary[]) => ({
     .length,
 });
 
-export const useUploadsQuery = (filters: UploadListFilters = {}) =>
-  useQuery({
-    queryKey: queryKeys.uploads.list(filters),
-    queryFn: () => fetchUploads(filters),
+export const useUploadsQuery = (filters: UploadListFilters = {}) => {
+  const normalized = normalizeUploadListFilters(filters);
+  return useQuery({
+    queryKey: queryKeys.uploads.list(normalized),
+    queryFn: () => fetchUploads(normalized),
   });
+};
 
 export const useAssignUploadCollectionMutation = () => {
   const queryClient = useQueryClient();

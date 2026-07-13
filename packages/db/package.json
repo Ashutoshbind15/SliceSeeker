@@ -47,6 +47,10 @@
     "./constants.js": {
       "types": "./dist/constants.d.ts",
       "import": "./dist/constants.js"
+    },
+    "./pagination.js": {
+      "types": "./dist/pagination.d.ts",
+      "import": "./dist/pagination.js"
     }
   },
   "scripts": {

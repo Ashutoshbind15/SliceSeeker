@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { parseListQuery } from "../../lib/pagination.js";
 import {
   parseCollectionIdQuery,
   parseRouteParam,
@@ -11,11 +12,20 @@ import {
 } from "../../services/multimodal/processing.js";
 
 export const listUploadsHandler = async (req: Request, res: Response) => {
+  let listQuery;
+  try {
+    listQuery = parseListQuery(req.query as Record<string, unknown>);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Invalid query";
+    res.status(400).json({ message });
+    return;
+  }
+
   const collectionId = parseCollectionIdQuery(req.query.collectionId);
-  const uploads = collectionId
-    ? await listUploadsByCollectionId(collectionId)
-    : await listUploads();
-  res.json({ uploads });
+  const result = collectionId
+    ? await listUploadsByCollectionId(collectionId, listQuery)
+    : await listUploads(listQuery);
+  res.json({ uploads: result.data, pagination: result.pagination });
 };
 
 export const startVideoProcessingHandler = async (

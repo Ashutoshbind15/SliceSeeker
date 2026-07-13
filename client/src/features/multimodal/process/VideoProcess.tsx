@@ -1,4 +1,5 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ListPagination } from "@/components/ListPagination";
 import {
   QueryEmptyState,
   QueryErrorAlert,
@@ -15,6 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DEFAULT_LIMIT,
+  type AllowedLimit,
+} from "@/lib/pagination";
 import { toast } from "sonner";
 import {
   deriveUploadsSummary,
@@ -151,11 +156,14 @@ const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
 const PROCESS_POLL_INTERVAL_MS = 2_000;
 
 const VideoProcess = () => {
-  const uploadsQuery = useUploadsQuery();
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<AllowedLimit>(DEFAULT_LIMIT);
+  const uploadsQuery = useUploadsQuery({ page, limit });
   const startProcessingMutation = useStartProcessingMutation();
   const { refetch } = uploadsQuery;
 
-  const uploads = uploadsQuery.data ?? [];
+  const uploads = uploadsQuery.data?.uploads ?? [];
+  const pagination = uploadsQuery.data?.pagination;
   const summary = useMemo(() => deriveUploadsSummary(uploads), [uploads]);
 
   useEffect(() => {
@@ -295,63 +303,76 @@ const VideoProcess = () => {
       ) : null}
 
       {uploads.length > 0 ? (
-        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-          <Table className="min-w-[800px]">
-            <TableHeader>
-              <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[30%]">File</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Stage</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[25%]">Progress</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Error</TableHead>
-                <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%] text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {uploads.map((upload) => (
-                <TableRow key={upload.id} className="transition-colors hover:bg-muted/20">
-                  <TableCell className="px-6 py-4 align-middle">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                        <FileVideo className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-medium truncate max-w-[250px]" title={upload.filename}>
-                          {upload.filename}
-                        </div>
-                        <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                          <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" /> {formatBytes(upload.sizeBytes)}</span>
-                          {upload.collectionName && (
-                            <>
-                              <span className="text-border">•</span>
-                              <span className="truncate max-w-[120px]">{upload.collectionName}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-6 py-4 align-middle">
-                    <StatusBadge status={upload.pipelineStatus} />
-                  </TableCell>
-                  <TableCell className="px-6 py-4 align-middle">
-                    <ProgressCell upload={upload} />
-                  </TableCell>
-                  <TableCell className="px-6 py-4 align-middle">
-                    {upload.primaryError ? (
-                      <div className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2" title={upload.primaryError}>
-                        {upload.primaryError}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground/30">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 align-middle text-right">
-                    {renderAction(upload)}
-                  </TableCell>
+        <div className="space-y-4">
+          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+            <Table className="min-w-[800px]">
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[30%]">File</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Stage</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[25%]">Progress</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">Error</TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%] text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {uploads.map((upload) => (
+                  <TableRow key={upload.id} className="transition-colors hover:bg-muted/20">
+                    <TableCell className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <FileVideo className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate max-w-[250px]" title={upload.filename}>
+                            {upload.filename}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                            <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" /> {formatBytes(upload.sizeBytes)}</span>
+                            {upload.collectionName && (
+                              <>
+                                <span className="text-border">•</span>
+                                <span className="truncate max-w-[120px]">{upload.collectionName}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      <StatusBadge status={upload.pipelineStatus} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      <ProgressCell upload={upload} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      {upload.primaryError ? (
+                        <div className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2" title={upload.primaryError}>
+                          {upload.primaryError}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle text-right">
+                      {renderAction(upload)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {pagination ? (
+            <ListPagination
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              disabled={uploadsQuery.isFetching}
+            />
+          ) : null}
         </div>
       ) : null}
     </div>

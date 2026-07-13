@@ -1,9 +1,13 @@
 import type { SearchVideosInput } from "./multimodal/search";
 import type { SearchTranscriptsInput } from "./transcription/transcript-search";
 import type { SearchFramesInput } from "./frames/frame-search";
+import type { AllowedLimit } from "@/lib/pagination";
 
 export type UploadListFilters = {
   collectionId?: string;
+  page?: number;
+  limit?: AllowedLimit;
+  count?: boolean;
 };
 
 export const queryKeys = {
