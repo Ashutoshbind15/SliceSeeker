@@ -1,17 +1,17 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
-import { updateChunkingTaskStatus } from "db/access/chunking-tasks.js";
-import { markEmbeddingTaskFailed } from "db/access/embedding-tasks.js";
-import { updateFrameTaskStatus } from "db/access/frame-tasks.js";
-import { markTranscriptEmbeddingTaskFailed } from "db/access/transcript-embedding-tasks.js";
-import { updateTranscriptionTaskStatus } from "db/access/transcription-tasks.js";
-import { processChunkingJob } from "./lib/chunking-job.js";
-import { processEmbedChunkJob } from "./lib/embed-chunk.js";
-import { processEmbedFrameJob, markEmbedFrameBatchFailed } from "./lib/embed-frame-job.js";
-import { processEmbedTranscriptJob } from "./lib/embed-transcript-job.js";
-import { processExtractAudioJob } from "./lib/extract-audio-job.js";
-import { processSampleFramesJob } from "./lib/sample-frames-job.js";
-import { processTranscribeJob } from "./lib/transcribe-job.js";
+import { updateChunkingTaskStatus } from "db/access/multimodal/chunking-tasks.js";
+import { markEmbeddingTaskFailed } from "db/access/multimodal/embedding-tasks.js";
+import { updateFrameTaskStatus } from "db/access/frames/frame-tasks.js";
+import { markTranscriptEmbeddingTaskFailed } from "db/access/transcription/transcript-embedding-tasks.js";
+import { updateTranscriptionTaskStatus } from "db/access/transcription/transcription-tasks.js";
+import { processChunkingJob } from "./jobs/multimodal/chunking-job.js";
+import { processEmbedChunkJob } from "./jobs/multimodal/embed-chunk.js";
+import { processEmbedFrameJob, markEmbedFrameBatchFailed } from "./jobs/frames/embed-frame-job.js";
+import { processEmbedTranscriptJob } from "./jobs/transcription/embed-transcript-job.js";
+import { processExtractAudioJob } from "./jobs/transcription/extract-audio-job.js";
+import { processSampleFramesJob } from "./jobs/frames/sample-frames-job.js";
+import { processTranscribeJob } from "./jobs/transcription/transcribe-job.js";
 import {
   CHUNKING_JOB_NAME,
   EMBED_CHUNK_JOB_NAME,

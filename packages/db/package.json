@@ -4,11 +4,50 @@
   "description": "Shared database schema and access layer",
   "type": "module",
   "exports": {
-    ".": "./dist/client.js",
-    "./access/*.js": "./dist/access/*.js",
-    "./schema/*.js": "./dist/schema/*.js",
-    "./readiness.js": "./dist/readiness.js",
-    "./constants.js": "./dist/constants.js"
+    ".": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    },
+    "./access/shared/*.js": {
+      "types": "./dist/access/shared/*.d.ts",
+      "import": "./dist/access/shared/*.js"
+    },
+    "./access/multimodal/*.js": {
+      "types": "./dist/access/multimodal/*.d.ts",
+      "import": "./dist/access/multimodal/*.js"
+    },
+    "./access/transcription/*.js": {
+      "types": "./dist/access/transcription/*.d.ts",
+      "import": "./dist/access/transcription/*.js"
+    },
+    "./access/frames/*.js": {
+      "types": "./dist/access/frames/*.d.ts",
+      "import": "./dist/access/frames/*.js"
+    },
+    "./schema/shared/*.js": {
+      "types": "./dist/schema/shared/*.d.ts",
+      "import": "./dist/schema/shared/*.js"
+    },
+    "./schema/multimodal/*.js": {
+      "types": "./dist/schema/multimodal/*.d.ts",
+      "import": "./dist/schema/multimodal/*.js"
+    },
+    "./schema/transcription/*.js": {
+      "types": "./dist/schema/transcription/*.d.ts",
+      "import": "./dist/schema/transcription/*.js"
+    },
+    "./schema/frames/*.js": {
+      "types": "./dist/schema/frames/*.d.ts",
+      "import": "./dist/schema/frames/*.js"
+    },
+    "./readiness.js": {
+      "types": "./dist/readiness.d.ts",
+      "import": "./dist/readiness.js"
+    },
+    "./constants.js": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
+    }
   },
   "scripts": {
     "build": "tsc",

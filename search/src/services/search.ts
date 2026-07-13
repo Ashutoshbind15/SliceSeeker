@@ -1,8 +1,8 @@
 import {
   searchVideoChunks,
   searchVideoChunksByCollectionIds,
-} from "db/access/video-chunks.js";
-import { resolveSearchCollectionIds } from "db/access/collections.js";
+} from "db/access/multimodal/video-chunks.js";
+import { resolveSearchCollectionIds } from "db/access/shared/collections.js";
 import { embedSearchQuery } from "../lib/embeddings.js";
 
 export type SearchVideoChunksInput = {

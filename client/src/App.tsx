@@ -21,8 +21,8 @@ const App = () => {
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground leading-relaxed">
           Upload large video files with resumable tus uploads backed by
-          S3-compatible object storage. Process, search, and analyze your video
-          library with ease.
+          S3-compatible object storage. Index and search your library three
+          ways — multimodal chunks, speech, or still frames.
         </p>
         <div className="flex flex-wrap justify-center gap-4 pt-4">
           <Button asChild size="lg" className="rounded-full px-8">
@@ -41,7 +41,7 @@ const App = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 pt-12 border-t">
+      <div className="grid gap-6 sm:grid-cols-2 pt-12 border-t">
         <Link
           to="/upload"
           className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
@@ -67,71 +67,120 @@ const App = () => {
             Organize your video library and track processing status.
           </p>
         </Link>
+      </div>
 
-        <Link
-          to="/process"
-          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <Cpu className="h-6 w-6" />
-          </div>
-          <h3 className="font-heading text-xl font-medium">Process</h3>
-          <p className="text-sm text-muted-foreground">
-            Chunk video and build multimodal embeddings.
-          </p>
-        </Link>
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Multimodal
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Link
+            to="/process"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Cpu className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Process</h3>
+            <p className="text-sm text-muted-foreground">
+              Chunk video and build multimodal embeddings.
+            </p>
+          </Link>
+          <Link
+            to="/search"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Search className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Search</h3>
+            <p className="text-sm text-muted-foreground">
+              Semantic search across multimodal video chunks.
+            </p>
+          </Link>
+          <Link
+            to="/costs"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <DollarSign className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Costs</h3>
+            <p className="text-sm text-muted-foreground">
+              Multimodal embedding spend by file.
+            </p>
+          </Link>
+        </div>
+      </div>
 
-        <Link
-          to="/search"
-          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <Search className="h-6 w-6" />
-          </div>
-          <h3 className="font-heading text-xl font-medium">Search</h3>
-          <p className="text-sm text-muted-foreground">
-            Semantic search across multimodal video chunks.
-          </p>
-        </Link>
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Speech
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Link
+            to="/transcribe"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Mic className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Process</h3>
+            <p className="text-sm text-muted-foreground">
+              Whisper transcription with segment embeddings.
+            </p>
+          </Link>
+          <Link
+            to="/transcribe/search"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Search className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Search</h3>
+            <p className="text-sm text-muted-foreground">
+              Find spoken phrases with timestamps.
+            </p>
+          </Link>
+          <Link
+            to="/transcribe/costs"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <DollarSign className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Costs</h3>
+            <p className="text-sm text-muted-foreground">
+              ASR and transcript-embedding spend.
+            </p>
+          </Link>
+        </div>
+      </div>
 
-        <Link
-          to="/transcribe"
-          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <Mic className="h-6 w-6" />
-          </div>
-          <h3 className="font-heading text-xl font-medium">Transcribe</h3>
-          <p className="text-sm text-muted-foreground">
-            Whisper speech index with segment timestamps for spoken search.
-          </p>
-        </Link>
-
-        <Link
-          to="/frames"
-          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <Images className="h-6 w-6" />
-          </div>
-          <h3 className="font-heading text-xl font-medium">Frames</h3>
-          <p className="text-sm text-muted-foreground">
-            Still-frame image embeds for visual search by what’s on screen.
-          </p>
-        </Link>
-
-        <Link
-          to="/costs"
-          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-            <DollarSign className="h-6 w-6" />
-          </div>
-          <h3 className="font-heading text-xl font-medium">Costs</h3>
-          <p className="text-sm text-muted-foreground">
-            Track multimodal embedding costs across your workspace.
-          </p>
-        </Link>
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Vision
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Link
+            to="/frames"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Images className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Process</h3>
+            <p className="text-sm text-muted-foreground">
+              Sample still frames and build image embeddings.
+            </p>
+          </Link>
+          <Link
+            to="/frames/search"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Search className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Search</h3>
+            <p className="text-sm text-muted-foreground">
+              Visual search by what appears on screen.
+            </p>
+          </Link>
+          <Link
+            to="/frames/costs"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <DollarSign className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Costs</h3>
+            <p className="text-sm text-muted-foreground">
+              Frame image-embedding spend.
+            </p>
+          </Link>
+        </div>
       </div>
     </div>
   );

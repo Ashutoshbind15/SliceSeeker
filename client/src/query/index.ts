@@ -8,7 +8,7 @@ export {
   useCollectionsQuery,
   useCreateCollectionMutation,
   useDefaultCollection,
-} from "@/query/collections";
+} from "@/query/shared/collections";
 
 export {
   assignUploadCollection,
@@ -22,20 +22,20 @@ export {
   useAssignUploadCollectionMutation,
   useStartProcessingMutation,
   useUploadsQuery,
-} from "@/query/uploads";
+} from "@/query/multimodal/uploads";
 
 export {
   type FileCostSummary,
   fetchFileCosts,
   useFileCostsQuery,
-} from "@/query/costs";
+} from "@/query/multimodal/costs";
 
 export {
   type SearchResult,
   type SearchVideosInput,
   searchVideos,
   useSearchResultsQuery,
-} from "@/query/search";
+} from "@/query/multimodal/search";
 
 export {
   deriveTranscriptUploadsSummary,
@@ -45,20 +45,20 @@ export {
   type TranscriptionTask,
   useStartTranscriptionMutation,
   useTranscriptUploadsQuery,
-} from "@/query/transcribe";
+} from "@/query/transcription/transcribe";
 
 export {
   type SearchTranscriptsInput,
   type TranscriptSearchResult,
   searchTranscripts,
   useTranscriptSearchResultsQuery,
-} from "@/query/transcript-search";
+} from "@/query/transcription/transcript-search";
 
 export {
   type TranscriptionCostSummary,
   fetchTranscriptionCosts,
   useTranscriptionCostsQuery,
-} from "@/query/transcript-costs";
+} from "@/query/transcription/transcript-costs";
 
 export {
   deriveFrameUploadsSummary,
@@ -69,14 +69,20 @@ export {
   type FrameUploadSummary,
   useFrameUploadsQuery,
   useStartFrameIndexingMutation,
-} from "@/query/frames";
+} from "@/query/frames/frames";
 
 export {
   type FrameSearchResult,
   type SearchFramesInput,
   searchFrames,
   useFrameSearchResultsQuery,
-} from "@/query/frame-search";
+} from "@/query/frames/frame-search";
+
+export {
+  type FrameCostSummary,
+  fetchFrameCosts,
+  useFrameCostsQuery,
+} from "@/query/frames/costs";
 
 export {
   type Todo,

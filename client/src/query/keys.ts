@@ -1,6 +1,6 @@
-import type { SearchVideosInput } from "./search";
-import type { SearchTranscriptsInput } from "./transcript-search";
-import type { SearchFramesInput } from "./frame-search";
+import type { SearchVideosInput } from "./multimodal/search";
+import type { SearchTranscriptsInput } from "./transcription/transcript-search";
+import type { SearchFramesInput } from "./frames/frame-search";
 
 export type UploadListFilters = {
   collectionId?: string;
@@ -57,6 +57,10 @@ export const queryKeys = {
       all: ["frames", "search"] as const,
       results: (input: SearchFramesInput) =>
         [...queryKeys.frames.search.all, "results", input] as const,
+    },
+    costs: {
+      all: ["frames", "costs"] as const,
+      list: () => [...queryKeys.frames.costs.all, "list"] as const,
     },
   },
   todos: {
