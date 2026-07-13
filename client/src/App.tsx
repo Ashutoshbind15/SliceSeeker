@@ -8,6 +8,7 @@ import {
   Search,
   DollarSign,
   Mic,
+  Images,
 } from "lucide-react";
 
 const App = () => {
@@ -103,6 +104,19 @@ const App = () => {
           <h3 className="font-heading text-xl font-medium">Transcribe</h3>
           <p className="text-sm text-muted-foreground">
             Whisper speech index with segment timestamps for spoken search.
+          </p>
+        </Link>
+
+        <Link
+          to="/frames"
+          className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+        >
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+            <Images className="h-6 w-6" />
+          </div>
+          <h3 className="font-heading text-xl font-medium">Frames</h3>
+          <p className="text-sm text-muted-foreground">
+            Still-frame image embeds for visual search by what’s on screen.
           </p>
         </Link>
 

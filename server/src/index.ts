@@ -26,6 +26,13 @@ import {
 import { searchTranscriptsHandler } from "./routes/transcript-search.js";
 import { listTranscriptionCostsHandler } from "./routes/transcript-costs.js";
 import {
+  getFrameJobStatusHandler,
+  getFrameUploadStatusHandler,
+  listFrameUploadsHandler,
+  startFrameIndexingHandler,
+} from "./routes/frames.js";
+import { searchFramesHandler } from "./routes/frame-search.js";
+import {
   assignUploadCollectionHandler,
   createCollectionHandler,
   listCollectionsHandler,
@@ -101,6 +108,12 @@ app.post("/transcribe/:uploadId/start", startTranscriptionHandler);
 app.get("/transcribe/jobs/:jobId", getTranscriptionJobStatusHandler);
 app.post("/transcribe/search", searchTranscriptsHandler);
 app.get("/transcribe/costs", listTranscriptionCostsHandler);
+
+app.get("/frames/uploads", listFrameUploadsHandler);
+app.post("/frames/:uploadId/start", startFrameIndexingHandler);
+app.get("/frames/:uploadId/status", getFrameUploadStatusHandler);
+app.get("/frames/jobs/:jobId", getFrameJobStatusHandler);
+app.post("/frames/search", searchFramesHandler);
 
 app.get("/collections", listCollectionsHandler);
 app.post("/collections", createCollectionHandler);

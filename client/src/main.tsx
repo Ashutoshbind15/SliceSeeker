@@ -8,6 +8,8 @@ import VideoSearch from "./VideoSearch";
 import TranscriptProcess from "./TranscriptProcess";
 import TranscriptSearch from "./TranscriptSearch";
 import TranscriptCosts from "./TranscriptCosts";
+import FramesProcess from "./FramesProcess";
+import FrameSearch from "./FrameSearch";
 import Files from "./Files";
 import FileCosts from "./FileCosts";
 import Layout from "./Layout";
@@ -32,6 +34,8 @@ root.render(
           <Route path="/transcribe" element={<TranscriptProcess />} />
           <Route path="/transcribe/search" element={<TranscriptSearch />} />
           <Route path="/transcribe/costs" element={<TranscriptCosts />} />
+          <Route path="/frames" element={<FramesProcess />} />
+          <Route path="/frames/search" element={<FrameSearch />} />
           <Route path="/costs" element={<FileCosts />} />
           <Route path="/todo" element={<Todo />} />
         </Route>

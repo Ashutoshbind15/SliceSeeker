@@ -14,6 +14,8 @@ const Layout = () => {
     { name: "Transcribe", path: "/transcribe" },
     { name: "Speech", path: "/transcribe/search" },
     { name: "Speech $", path: "/transcribe/costs" },
+    { name: "Frames", path: "/frames" },
+    { name: "Vision", path: "/frames/search" },
     { name: "Costs", path: "/costs" },
     { name: "Todo", path: "/todo" },
   ];
@@ -28,6 +30,7 @@ const Layout = () => {
                 location.pathname === item.path ||
                 (item.path !== "/" &&
                   item.path !== "/transcribe" &&
+                  item.path !== "/frames" &&
                   location.pathname.startsWith(`${item.path}/`));
               return (
                 <Link

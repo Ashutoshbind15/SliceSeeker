@@ -13,7 +13,18 @@ export const EXTRACT_AUDIO_JOB_NAME = "extract-audio";
 export const TRANSCRIBE_JOB_NAME = "transcribe";
 export const EMBED_TRANSCRIPT_JOB_NAME = "embed-transcript";
 
+export const SAMPLE_FRAMES_JOB_NAME = "sample-frames";
+export const EMBED_FRAME_JOB_NAME = "embed-frame";
+
 export const EMBED_JOB_ATTEMPTS = 3;
+/** Frames per BullMQ embed job — keeps queue chatter low for cheap still embeds. */
+export const EMBED_FRAME_BATCH_SIZE = Number(
+  process.env.EMBED_FRAME_BATCH_SIZE ?? "8",
+);
+/** Concurrent image embeds inside a single batch job. */
+export const EMBED_FRAME_CONCURRENCY = Number(
+  process.env.EMBED_FRAME_CONCURRENCY ?? "2",
+);
 export const PREP_UPLOAD_CONCURRENCY = Number(
   process.env.PREP_UPLOAD_CONCURRENCY ?? "4",
 );
@@ -54,4 +65,24 @@ export type TranscribeJobPayload = {
 export type EmbedTranscriptJobPayload = {
   embeddingTaskId: string;
   segmentId: string;
+};
+
+export type SampleFramesJobPayload = {
+  frameTaskId: string;
+  fileId: string;
+  storageKey: string;
+  storageBucket: string;
+  filename: string;
+  filetype: string;
+  frameIntervalSec: number;
+};
+
+export type EmbedFrameJobItem = {
+  embeddingTaskId: string;
+  frameId: string;
+};
+
+export type EmbedFrameJobPayload = {
+  fileId: string;
+  items: EmbedFrameJobItem[];
 };

@@ -136,3 +136,52 @@ export const deleteAudioObjectsForFile = async (
       : undefined;
   } while (continuationToken);
 };
+
+const formatFrameTimestampKey = (timestampSec: number) => {
+  const normalized = Number.isInteger(timestampSec)
+    ? String(timestampSec)
+    : timestampSec.toFixed(3).replace(/\.?0+$/, "");
+  return normalized;
+};
+
+export const buildFrameStorageKey = (input: {
+  fileId: string;
+  timestampSec: number;
+}) =>
+  `frames/${input.fileId}/${formatFrameTimestampKey(input.timestampSec)}.jpg`;
+
+export const buildFramePrefix = (fileId: string) => `frames/${fileId}/`;
+
+export const deleteFrameObjectsForFile = async (
+  fileId: string,
+  bucket: string,
+) => {
+  const prefix = buildFramePrefix(fileId);
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3.listObjectsV2({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+
+    const keys =
+      response.Contents?.map((object) => object.Key).filter(
+        (key): key is string => key != null,
+      ) ?? [];
+
+    if (keys.length > 0) {
+      await s3.deleteObjects({
+        Bucket: bucket,
+        Delete: {
+          Objects: keys.map((Key) => ({ Key })),
+        },
+      });
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+};

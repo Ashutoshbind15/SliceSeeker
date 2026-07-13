@@ -61,6 +61,24 @@ export {
 } from "@/query/transcript-costs";
 
 export {
+  deriveFrameUploadsSummary,
+  type FrameEmbeddingProgress,
+  type FrameIntervalSec,
+  type FramePipelineStatus,
+  type FrameTask,
+  type FrameUploadSummary,
+  useFrameUploadsQuery,
+  useStartFrameIndexingMutation,
+} from "@/query/frames";
+
+export {
+  type FrameSearchResult,
+  type SearchFramesInput,
+  searchFrames,
+  useFrameSearchResultsQuery,
+} from "@/query/frame-search";
+
+export {
   type Todo,
   createTodo,
   fetchTodos,
