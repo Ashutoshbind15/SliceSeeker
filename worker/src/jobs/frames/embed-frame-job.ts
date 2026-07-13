@@ -98,10 +98,6 @@ const embedOneFrame = async (input: {
 };
 
 export const processEmbedFrameJob = async (payload: EmbedFrameJobPayload) => {
-  if (!payload.items?.length) {
-    return;
-  }
-
   const upload = await getUploadById(payload.fileId);
   if (!upload) {
     throw new Error(`Upload ${payload.fileId} not found for frame embed batch`);

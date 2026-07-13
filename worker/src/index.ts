@@ -7,21 +7,32 @@ import { markTranscriptEmbeddingTaskFailed } from "db/access/transcription/trans
 import { updateTranscriptionTaskStatus } from "db/access/transcription/transcription-tasks.js";
 import { processChunkingJob } from "./jobs/multimodal/chunking-job.js";
 import { processEmbedChunkJob } from "./jobs/multimodal/embed-chunk.js";
-import { processEmbedFrameJob, markEmbedFrameBatchFailed } from "./jobs/frames/embed-frame-job.js";
+import {
+  markEmbedFrameBatchFailed,
+  processEmbedFrameJob,
+} from "./jobs/frames/embed-frame-job.js";
 import { processEmbedTranscriptJob } from "./jobs/transcription/embed-transcript-job.js";
 import { processExtractAudioJob } from "./jobs/transcription/extract-audio-job.js";
 import { processSampleFramesJob } from "./jobs/frames/sample-frames-job.js";
 import { processTranscribeJob } from "./jobs/transcription/transcribe-job.js";
 import {
   CHUNKING_JOB_NAME,
+  chunkingJobPayloadSchema,
   EMBED_CHUNK_JOB_NAME,
+  embedChunkJobPayloadSchema,
   EMBED_FRAME_JOB_NAME,
+  embedFrameJobPayloadSchema,
   EMBED_TRANSCRIPT_JOB_NAME,
+  embedTranscriptJobPayloadSchema,
   EXTRACT_AUDIO_JOB_NAME,
+  extractAudioJobPayloadSchema,
   getValkeyConnectionOptions,
   JOB_QUEUE_NAME,
+  parseJobPayload,
   SAMPLE_FRAMES_JOB_NAME,
+  sampleFramesJobPayloadSchema,
   TRANSCRIBE_JOB_NAME,
+  transcribeJobPayloadSchema,
   type ChunkingJobPayload,
   type EmbedChunkJobPayload,
   type EmbedFrameJobPayload,
@@ -36,25 +47,39 @@ const worker = new Worker(
   async (job) => {
     switch (job.name) {
       case CHUNKING_JOB_NAME:
-        await processChunkingJob(job.data as ChunkingJobPayload);
+        await processChunkingJob(
+          parseJobPayload(chunkingJobPayloadSchema, job.data, job.name),
+        );
         return;
       case EMBED_CHUNK_JOB_NAME:
-        await processEmbedChunkJob(job.data as EmbedChunkJobPayload);
+        await processEmbedChunkJob(
+          parseJobPayload(embedChunkJobPayloadSchema, job.data, job.name),
+        );
         return;
       case EXTRACT_AUDIO_JOB_NAME:
-        await processExtractAudioJob(job.data as ExtractAudioJobPayload);
+        await processExtractAudioJob(
+          parseJobPayload(extractAudioJobPayloadSchema, job.data, job.name),
+        );
         return;
       case TRANSCRIBE_JOB_NAME:
-        await processTranscribeJob(job.data as TranscribeJobPayload);
+        await processTranscribeJob(
+          parseJobPayload(transcribeJobPayloadSchema, job.data, job.name),
+        );
         return;
       case EMBED_TRANSCRIPT_JOB_NAME:
-        await processEmbedTranscriptJob(job.data as EmbedTranscriptJobPayload);
+        await processEmbedTranscriptJob(
+          parseJobPayload(embedTranscriptJobPayloadSchema, job.data, job.name),
+        );
         return;
       case SAMPLE_FRAMES_JOB_NAME:
-        await processSampleFramesJob(job.data as SampleFramesJobPayload);
+        await processSampleFramesJob(
+          parseJobPayload(sampleFramesJobPayloadSchema, job.data, job.name),
+        );
         return;
       case EMBED_FRAME_JOB_NAME:
-        await processEmbedFrameJob(job.data as EmbedFrameJobPayload);
+        await processEmbedFrameJob(
+          parseJobPayload(embedFrameJobPayloadSchema, job.data, job.name),
+        );
         return;
       default:
         console.log(`Skipping unsupported job type: ${job.name}`);
@@ -71,7 +96,9 @@ worker.on("completed", (job) => {
 });
 
 worker.on("failed", (job, err) => {
-  console.log(`Job ${job?.id ?? "unknown"} (${job?.name}) failed: ${err.message}`);
+  console.log(
+    `Job ${job?.id ?? "unknown"} (${job?.name}) failed: ${err.message}`,
+  );
 
   if (!job) {
     return;

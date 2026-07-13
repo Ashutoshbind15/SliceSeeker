@@ -1,27 +1,20 @@
 import type { Request, Response } from "express";
 import {
+  parseCollectionIdQuery,
+  parseRouteParam,
+} from "../../lib/schemas/http.js";
+import {
   getTranscriptionJob,
   listTranscriptUploads,
   listTranscriptUploadsByCollectionId,
   startTranscription,
 } from "../../services/transcription/processing.js";
 
-const getRouteParam = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
-};
-
 export const listTranscriptUploadsHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const collectionId =
-    typeof req.query.collectionId === "string"
-      ? req.query.collectionId
-      : undefined;
+  const collectionId = parseCollectionIdQuery(req.query.collectionId);
   const uploads = collectionId
     ? await listTranscriptUploadsByCollectionId(collectionId)
     : await listTranscriptUploads();
@@ -32,7 +25,7 @@ export const startTranscriptionHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const uploadId = getRouteParam(req.params.uploadId);
+  const uploadId = parseRouteParam(req.params.uploadId);
   if (!uploadId) {
     res.status(400).json({ message: "Upload id is required" });
     return;
@@ -68,7 +61,7 @@ export const getTranscriptionJobStatusHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const jobId = getRouteParam(req.params.jobId);
+  const jobId = parseRouteParam(req.params.jobId);
   if (!jobId) {
     res.status(400).json({ message: "Job id is required" });
     return;

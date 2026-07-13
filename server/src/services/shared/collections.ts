@@ -34,12 +34,7 @@ export const getCollections = async () => {
 };
 
 export const createCollectionRecord = async (name: string) => {
-  const trimmedName = name.trim();
-  if (!trimmedName) {
-    return { ok: false as const, message: "Collection name is required" };
-  }
-
-  const collection = await createCollection(trimmedName);
+  const collection = await createCollection(name);
   return { ok: true as const, collection: serializeCollection(collection) };
 };
 

@@ -1,33 +1,20 @@
 import type { Request, Response } from "express";
-import { z } from "zod";
+import {
+  firstZodErrorMessage,
+  parseCollectionIdQuery,
+  parseRouteParam,
+} from "../../lib/schemas/http.js";
+import { startFrameBodySchema } from "../../lib/schemas/frames.js";
 import {
   getFrameJob,
   getFrameUploadStatus,
   listFrameUploads,
   listFrameUploadsByCollectionId,
-  parseFrameIntervalSec,
   startFrameIndexing,
 } from "../../services/frames/processing.js";
 
-const getRouteParam = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
-};
-
-const startBodySchema = z
-  .object({
-    frameIntervalSec: z.union([z.number(), z.string()]).optional(),
-  })
-  .optional();
-
 export const listFrameUploadsHandler = async (req: Request, res: Response) => {
-  const collectionId =
-    typeof req.query.collectionId === "string"
-      ? req.query.collectionId
-      : undefined;
+  const collectionId = parseCollectionIdQuery(req.query.collectionId);
   const uploads = collectionId
     ? await listFrameUploadsByCollectionId(collectionId)
     : await listFrameUploads();
@@ -38,29 +25,28 @@ export const startFrameIndexingHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const uploadId = getRouteParam(req.params.uploadId);
+  const uploadId = parseRouteParam(req.params.uploadId);
   if (!uploadId) {
     res.status(400).json({ message: "Upload id is required" });
     return;
   }
 
-  const parsedBody = startBodySchema.safeParse(req.body ?? {});
+  const parsedBody = startFrameBodySchema.safeParse(req.body ?? {});
   if (!parsedBody.success) {
-    res.status(400).json({ message: "Invalid start request" });
-    return;
-  }
-
-  const frameIntervalSec = parseFrameIntervalSec(
-    parsedBody.data?.frameIntervalSec,
-  );
-  if (frameIntervalSec === null) {
     res.status(400).json({
-      message: "frameIntervalSec must be one of 2, 5, or 10",
+      message:
+        firstZodErrorMessage(
+          parsedBody.error,
+          "frameIntervalSec must be one of 2, 5, or 10",
+        ),
     });
     return;
   }
 
-  const result = await startFrameIndexing(uploadId, frameIntervalSec);
+  const result = await startFrameIndexing(
+    uploadId,
+    parsedBody.data.frameIntervalSec,
+  );
   if (!result.ok) {
     const status =
       result.reason === "not_found"
@@ -88,7 +74,7 @@ export const getFrameUploadStatusHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const uploadId = getRouteParam(req.params.uploadId);
+  const uploadId = parseRouteParam(req.params.uploadId);
   if (!uploadId) {
     res.status(400).json({ message: "Upload id is required" });
     return;
@@ -107,7 +93,7 @@ export const getFrameJobStatusHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const jobId = getRouteParam(req.params.jobId);
+  const jobId = parseRouteParam(req.params.jobId);
   if (!jobId) {
     res.status(400).json({ message: "Job id is required" });
     return;

@@ -1,24 +1,17 @@
 import type { Request, Response } from "express";
 import {
+  parseCollectionIdQuery,
+  parseRouteParam,
+} from "../../lib/schemas/http.js";
+import {
   getVideoJob,
   listUploads,
   listUploadsByCollectionId,
   startVideoProcessing,
 } from "../../services/multimodal/processing.js";
 
-const getRouteParam = (value: string | string[] | undefined) => {
-  if (Array.isArray(value)) {
-    return value[0];
-  }
-
-  return value;
-};
-
 export const listUploadsHandler = async (req: Request, res: Response) => {
-  const collectionId =
-    typeof req.query.collectionId === "string"
-      ? req.query.collectionId
-      : undefined;
+  const collectionId = parseCollectionIdQuery(req.query.collectionId);
   const uploads = collectionId
     ? await listUploadsByCollectionId(collectionId)
     : await listUploads();
@@ -29,7 +22,7 @@ export const startVideoProcessingHandler = async (
   req: Request,
   res: Response,
 ) => {
-  const uploadId = getRouteParam(req.params.uploadId);
+  const uploadId = parseRouteParam(req.params.uploadId);
   if (!uploadId) {
     res.status(400).json({ message: "Upload id is required" });
     return;
@@ -60,7 +53,7 @@ export const startVideoProcessingHandler = async (
 };
 
 export const getVideoJobStatusHandler = async (req: Request, res: Response) => {
-  const jobId = getRouteParam(req.params.jobId);
+  const jobId = parseRouteParam(req.params.jobId);
   if (!jobId) {
     res.status(400).json({ message: "Job id is required" });
     return;

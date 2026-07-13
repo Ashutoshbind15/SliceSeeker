@@ -26,16 +26,21 @@ import {
   SAMPLE_FRAMES_JOB_NAME,
   type SampleFramesJobPayload,
 } from "queue";
+import {
+  DEFAULT_FRAME_INTERVAL_SEC,
+  type FrameIntervalSec,
+} from "../../lib/schemas/frames.js";
 import { enqueueFrameEmbeddingJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
-export const ALLOWED_FRAME_INTERVALS_SEC = [2, 5, 10] as const;
-export const DEFAULT_FRAME_INTERVAL_SEC = 5;
-
-export type FrameIntervalSec = (typeof ALLOWED_FRAME_INTERVALS_SEC)[number];
+export {
+  ALLOWED_FRAME_INTERVALS_SEC,
+  DEFAULT_FRAME_INTERVAL_SEC,
+  type FrameIntervalSec,
+} from "../../lib/schemas/frames.js";
 
 export type SerializedFrameTask = {
   id: string;
@@ -284,8 +289,7 @@ export type StartFramesResult =
         | "not_found"
         | "not_ready"
         | "missing_storage"
-        | "already_complete"
-        | "invalid_interval";
+        | "already_complete";
       message: string;
     }
   | {
@@ -294,23 +298,6 @@ export type StartFramesResult =
       message: string;
       frameTask: SerializedFrameTask;
     };
-
-export const parseFrameIntervalSec = (
-  value: unknown,
-): FrameIntervalSec | null => {
-  if (value === undefined || value === null) {
-    return DEFAULT_FRAME_INTERVAL_SEC;
-  }
-
-  const numeric = typeof value === "number" ? value : Number(value);
-  if (
-    !ALLOWED_FRAME_INTERVALS_SEC.includes(numeric as FrameIntervalSec)
-  ) {
-    return null;
-  }
-
-  return numeric as FrameIntervalSec;
-};
 
 export const startFrameIndexing = async (
   uploadId: string,

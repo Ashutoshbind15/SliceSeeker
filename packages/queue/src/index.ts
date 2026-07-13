@@ -3,6 +3,25 @@ export {
   assertValkeyEvictionPolicy,
   type ReadinessResult,
 } from "./readiness.js";
+export {
+  chunkingJobPayloadSchema,
+  embedChunkJobPayloadSchema,
+  embedFrameJobItemSchema,
+  embedFrameJobPayloadSchema,
+  embedTranscriptJobPayloadSchema,
+  extractAudioJobPayloadSchema,
+  parseJobPayload,
+  sampleFramesJobPayloadSchema,
+  transcribeJobPayloadSchema,
+  type ChunkingJobPayload,
+  type EmbedChunkJobPayload,
+  type EmbedFrameJobItem,
+  type EmbedFrameJobPayload,
+  type EmbedTranscriptJobPayload,
+  type ExtractAudioJobPayload,
+  type SampleFramesJobPayload,
+  type TranscribeJobPayload,
+} from "./payloads.js";
 
 export const JOB_QUEUE_NAME = "demo-jobs";
 
@@ -28,61 +47,3 @@ export const EMBED_FRAME_CONCURRENCY = Number(
 export const PREP_UPLOAD_CONCURRENCY = Number(
   process.env.PREP_UPLOAD_CONCURRENCY ?? "4",
 );
-
-export type ChunkingJobPayload = {
-  chunkingTaskId: string;
-  fileId: string;
-  storageKey: string;
-  storageBucket: string;
-  filename: string;
-  filetype: string;
-};
-
-export type EmbedChunkJobPayload = {
-  embeddingTaskId: string;
-  chunkId: string;
-  filetype: string;
-};
-
-export type ExtractAudioJobPayload = {
-  transcriptionTaskId: string;
-  fileId: string;
-  storageKey: string;
-  storageBucket: string;
-  filename: string;
-  filetype: string;
-};
-
-export type TranscribeJobPayload = {
-  transcriptionTaskId: string;
-  fileId: string;
-  storageBucket: string;
-  audioStorageKey: string;
-  audioPartKeys: string[];
-  partStartSecs: number[];
-};
-
-export type EmbedTranscriptJobPayload = {
-  embeddingTaskId: string;
-  segmentId: string;
-};
-
-export type SampleFramesJobPayload = {
-  frameTaskId: string;
-  fileId: string;
-  storageKey: string;
-  storageBucket: string;
-  filename: string;
-  filetype: string;
-  frameIntervalSec: number;
-};
-
-export type EmbedFrameJobItem = {
-  embeddingTaskId: string;
-  frameId: string;
-};
-
-export type EmbedFrameJobPayload = {
-  fileId: string;
-  items: EmbedFrameJobItem[];
-};
