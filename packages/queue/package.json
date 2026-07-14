@@ -4,7 +4,11 @@
   "description": "Shared job queue names, payloads, and connection config",
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "@workspace/source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "scripts": {
     "build": "tsc"

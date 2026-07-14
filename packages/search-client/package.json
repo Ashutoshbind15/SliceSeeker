@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "@workspace/source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }

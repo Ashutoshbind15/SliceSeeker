@@ -5,50 +5,62 @@
   "type": "module",
   "exports": {
     ".": {
+      "@workspace/source": "./src/client.ts",
       "types": "./dist/client.d.ts",
       "import": "./dist/client.js"
     },
     "./access/shared/*.js": {
+      "@workspace/source": "./src/access/shared/*.ts",
       "types": "./dist/access/shared/*.d.ts",
       "import": "./dist/access/shared/*.js"
     },
     "./access/multimodal/*.js": {
+      "@workspace/source": "./src/access/multimodal/*.ts",
       "types": "./dist/access/multimodal/*.d.ts",
       "import": "./dist/access/multimodal/*.js"
     },
     "./access/transcription/*.js": {
+      "@workspace/source": "./src/access/transcription/*.ts",
       "types": "./dist/access/transcription/*.d.ts",
       "import": "./dist/access/transcription/*.js"
     },
     "./access/frames/*.js": {
+      "@workspace/source": "./src/access/frames/*.ts",
       "types": "./dist/access/frames/*.d.ts",
       "import": "./dist/access/frames/*.js"
     },
     "./schema/shared/*.js": {
+      "@workspace/source": "./src/schema/shared/*.ts",
       "types": "./dist/schema/shared/*.d.ts",
       "import": "./dist/schema/shared/*.js"
     },
     "./schema/multimodal/*.js": {
+      "@workspace/source": "./src/schema/multimodal/*.ts",
       "types": "./dist/schema/multimodal/*.d.ts",
       "import": "./dist/schema/multimodal/*.js"
     },
     "./schema/transcription/*.js": {
+      "@workspace/source": "./src/schema/transcription/*.ts",
       "types": "./dist/schema/transcription/*.d.ts",
       "import": "./dist/schema/transcription/*.js"
     },
     "./schema/frames/*.js": {
+      "@workspace/source": "./src/schema/frames/*.ts",
       "types": "./dist/schema/frames/*.d.ts",
       "import": "./dist/schema/frames/*.js"
     },
     "./readiness.js": {
+      "@workspace/source": "./src/readiness.ts",
       "types": "./dist/readiness.d.ts",
       "import": "./dist/readiness.js"
     },
     "./constants.js": {
+      "@workspace/source": "./src/constants.ts",
       "types": "./dist/constants.d.ts",
       "import": "./dist/constants.js"
     },
     "./pagination.js": {
+      "@workspace/source": "./src/pagination.ts",
       "types": "./dist/pagination.d.ts",
       "import": "./dist/pagination.js"
     }
