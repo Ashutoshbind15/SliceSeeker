@@ -10,7 +10,6 @@ import {
   updateChunkingTaskStatus,
 } from "db/access/multimodal/chunking-tasks.js";
 import { chunkVideoFile } from "./chunking.js";
-import { mapWithConcurrency } from "../shared/concurrency.js";
 import { enqueueEmbeddingJobsForFile } from "./enqueue-embedding.js";
 import {
   buildChunkStorageKey,
@@ -18,8 +17,11 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
-import type { ChunkingJobPayload } from "queue";
-import { PREP_UPLOAD_CONCURRENCY } from "queue";
+import {
+  mapWithConcurrency,
+  PREP_UPLOAD_CONCURRENCY,
+  type ChunkingJobPayload,
+} from "queue";
 
 export const processChunkingJob = async (payload: ChunkingJobPayload) => {
   const task = await getChunkingTaskById(payload.chunkingTaskId);

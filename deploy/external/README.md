@@ -49,6 +49,7 @@ docker compose -f docker-compose.phase2.yml --env-file .env up -d
 | `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | 1 | Object storage credentials |
 | `EMBEDDING_MODEL`, `AI_GATEWAY_API_KEY` | 1, 2 | Embedding provider |
 | `PREP_WORKER_CONCURRENCY`, `API_WORKER_CONCURRENCY` | 1 | Separate BullMQ workers for ffmpeg/S3 prep vs embed/ASR (defaults `4` / `2`) |
+| `ENQUEUE_CONCURRENCY` | 1 | Max concurrent BullMQ adds + DB writes when fan-out enqueueing jobs for one file (default `16`) |
 | `PREP_JOB_*`, `API_JOB_*` | 1 | Retry attempts, exponential backoff base ms, and max job age ms. |
 | `API_UPSTREAM` | 1 | `host:port` for admin UI → indexer API proxy |
 | `TUSD_UPSTREAM` | 1 | `host:port` for admin UI → upload server proxy |

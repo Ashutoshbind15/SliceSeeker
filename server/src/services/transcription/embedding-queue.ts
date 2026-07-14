@@ -15,7 +15,9 @@ import {
   API_QUEUE_NAME,
   apiJobOptions,
   EMBED_TRANSCRIPT_JOB_NAME,
+  ENQUEUE_CONCURRENCY,
   getValkeyConnectionOptions,
+  mapWithConcurrency,
   type EmbedTranscriptJobPayload,
 } from "queue";
 
@@ -107,7 +109,9 @@ export const enqueueTranscriptEmbeddingJobsForFile = async (input: {
     });
   }
 
-  await Promise.all(jobsToQueue.map((job) => addTranscriptEmbeddingJob(job)));
+  await mapWithConcurrency(jobsToQueue, ENQUEUE_CONCURRENCY, (job) =>
+    addTranscriptEmbeddingJob(job),
+  );
 
   return jobsToQueue.length;
 };

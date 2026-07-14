@@ -7,7 +7,6 @@ import {
   getFrameTaskById,
   updateFrameTaskStatus,
 } from "db/access/frames/frame-tasks.js";
-import { mapWithConcurrency } from "../shared/concurrency.js";
 import { enqueueFrameEmbeddingJobsForFile } from "./enqueue-frame-embedding.js";
 import { sampleVideoFrames } from "./frame-sampling.js";
 import {
@@ -16,8 +15,12 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
-import type { SampleFramesJobPayload } from "queue";
-import { PREP_UPLOAD_CONCURRENCY, SAMPLE_FRAMES_JOB_NAME } from "queue";
+import {
+  mapWithConcurrency,
+  PREP_UPLOAD_CONCURRENCY,
+  SAMPLE_FRAMES_JOB_NAME,
+  type SampleFramesJobPayload,
+} from "queue";
 
 export const processSampleFramesJob = async (
   payload: SampleFramesJobPayload,

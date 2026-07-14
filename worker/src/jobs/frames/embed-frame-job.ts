@@ -17,10 +17,10 @@ import {
 import { getUploadById } from "db/access/shared/uploads.js";
 import {
   EMBED_FRAME_CONCURRENCY,
+  mapWithConcurrency,
   type EmbedFrameJobItem,
   type EmbedFrameJobPayload,
 } from "queue";
-import { mapWithConcurrency } from "../shared/concurrency.js";
 import {
   EMBEDDING_MODEL,
   FRAME_EMBED_PROVIDER,

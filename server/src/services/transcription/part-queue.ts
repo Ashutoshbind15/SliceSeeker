@@ -10,7 +10,9 @@ import { updateTranscriptionTaskStatus } from "db/access/transcription/transcrip
 import {
   API_QUEUE_NAME,
   apiJobOptions,
+  ENQUEUE_CONCURRENCY,
   getValkeyConnectionOptions,
+  mapWithConcurrency,
   TRANSCRIBE_PART_JOB_NAME,
   type TranscribePartJobPayload,
 } from "queue";
@@ -56,8 +58,8 @@ export const enqueueTranscriptPartJobs = async (input: {
   parts: TranscriptPartTask[];
   storageBucket: string;
 }) => {
-  await Promise.all(
-    input.parts.map((part) => addTranscribePartJob(part, input.storageBucket)),
+  await mapWithConcurrency(input.parts, ENQUEUE_CONCURRENCY, (part) =>
+    addTranscribePartJob(part, input.storageBucket),
   );
   return input.parts.length;
 };

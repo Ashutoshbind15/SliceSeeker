@@ -1,3 +1,4 @@
+/** Run async work over `items` with at most `limit` in flight. */
 export const mapWithConcurrency = async <T, R>(
   items: T[],
   limit: number,
@@ -9,6 +10,7 @@ export const mapWithConcurrency = async <T, R>(
 
   const results = new Array<R>(items.length);
   let nextIndex = 0;
+  const workers = Math.min(Math.max(1, limit), items.length);
 
   const worker = async () => {
     while (true) {
@@ -21,9 +23,7 @@ export const mapWithConcurrency = async <T, R>(
     }
   };
 
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: workers }, () => worker()));
 
   return results;
 };

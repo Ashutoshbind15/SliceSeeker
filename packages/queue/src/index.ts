@@ -34,6 +34,7 @@ export {
   PREP_JOB_MAX_AGE_MS,
   prepJobOptions,
 } from "./job-options.js";
+export { mapWithConcurrency } from "./concurrency.js";
 
 /** ffmpeg / S3 prep work — safe to run hotter than API jobs. */
 export const PREP_QUEUE_NAME = "demo-prep-jobs";
@@ -60,4 +61,11 @@ export const EMBED_FRAME_CONCURRENCY = Number(
 );
 export const PREP_UPLOAD_CONCURRENCY = Number(
   process.env.PREP_UPLOAD_CONCURRENCY ?? "4",
+);
+/**
+ * Max concurrent BullMQ `add`s and accompanying DB writes when fan-out
+ * enqueueing many jobs for one file (chunks / segments / parts / frame batches).
+ */
+export const ENQUEUE_CONCURRENCY = Number(
+  process.env.ENQUEUE_CONCURRENCY ?? "16",
 );

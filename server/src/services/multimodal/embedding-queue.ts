@@ -15,7 +15,9 @@ import {
   API_QUEUE_NAME,
   apiJobOptions,
   EMBED_CHUNK_JOB_NAME,
+  ENQUEUE_CONCURRENCY,
   getValkeyConnectionOptions,
+  mapWithConcurrency,
   type EmbedChunkJobPayload,
 } from "queue";
 
@@ -105,13 +107,14 @@ export const enqueueEmbeddingJobsForFile = async (input: {
     });
   }
 
-  await Promise.all(
-    jobsToQueue.map((job) =>
+  await mapWithConcurrency(
+    jobsToQueue,
+    ENQUEUE_CONCURRENCY,
+    (job) =>
       addEmbeddingJob({
         ...job,
         filetype: input.filetype,
       }),
-    ),
   );
 
   return jobsToQueue.length;

@@ -17,7 +17,9 @@ import {
   apiJobOptions,
   EMBED_FRAME_BATCH_SIZE,
   EMBED_FRAME_JOB_NAME,
+  ENQUEUE_CONCURRENCY,
   getValkeyConnectionOptions,
+  mapWithConcurrency,
   type EmbedFrameJobItem,
   type EmbedFrameJobPayload,
 } from "queue";
@@ -135,13 +137,11 @@ export const enqueueFrameEmbeddingJobsForFile = async (input: {
   const batchSize = Math.max(1, EMBED_FRAME_BATCH_SIZE);
   const batches = chunkItems(itemsToQueue, batchSize);
 
-  await Promise.all(
-    batches.map((items) =>
-      addFrameEmbeddingBatchJob({
-        fileId: input.fileId,
-        items,
-      }),
-    ),
+  await mapWithConcurrency(batches, ENQUEUE_CONCURRENCY, (items) =>
+    addFrameEmbeddingBatchJob({
+      fileId: input.fileId,
+      items,
+    }),
   );
 
   if (batches.length > 0) {
