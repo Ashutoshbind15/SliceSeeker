@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   doublePrecision,
   index,
@@ -6,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { uploadsTable } from "../shared/uploads.js";
 
@@ -36,5 +38,9 @@ export const frameTasksTable = pgTable(
   (table) => [
     index("frame_tasks_file_id_idx").on(table.fileId),
     index("frame_tasks_status_idx").on(table.status),
+    // Matches ACTIVE_FRAME_TASK_STATUSES (queued|sampling); embedding is restartable.
+    uniqueIndex("frame_tasks_one_active_per_file_idx")
+      .on(table.fileId)
+      .where(sql`${table.status} IN ('queued', 'sampling')`),
   ],
 );

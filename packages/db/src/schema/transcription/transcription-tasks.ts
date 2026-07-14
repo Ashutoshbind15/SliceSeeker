@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   doublePrecision,
   index,
@@ -6,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { uploadsTable } from "../shared/uploads.js";
 
@@ -38,5 +40,8 @@ export const transcriptionTasksTable = pgTable(
   (table) => [
     index("transcription_tasks_file_id_idx").on(table.fileId),
     index("transcription_tasks_status_idx").on(table.status),
+    uniqueIndex("transcription_tasks_one_active_per_file_idx")
+      .on(table.fileId)
+      .where(sql`${table.status} IN ('queued', 'extracting', 'transcribing')`),
   ],
 );

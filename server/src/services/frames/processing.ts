@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 import {
   ACTIVE_FRAME_TASK_STATUSES,
   createFrameTask,
+  getActiveFrameTaskForFile,
   getFrameTaskById,
   getLatestFrameTaskForFile,
   getLatestFrameTasksForFiles,
@@ -32,6 +33,7 @@ import {
   DEFAULT_FRAME_INTERVAL_SEC,
   type FrameIntervalSec,
 } from "../../lib/schemas/frames.js";
+import { isUniqueViolation } from "../../lib/pg-errors.js";
 import { enqueueFrameEmbeddingJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(PREP_QUEUE_NAME, {
@@ -382,11 +384,31 @@ export const startFrameIndexing = async (
   }
 
   const frameTaskId = randomUUID();
-  await createFrameTask({
-    id: frameTaskId,
-    fileId: upload.id,
-    frameIntervalSec,
-  });
+  try {
+    await createFrameTask({
+      id: frameTaskId,
+      fileId: upload.id,
+      frameIntervalSec,
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) {
+      throw err;
+    }
+    const active =
+      (await getActiveFrameTaskForFile(upload.id)) ??
+      (await getLatestFrameTaskForFile(upload.id));
+    if (!active) {
+      throw new Error(
+        "Frame task create conflicted but no existing task was found",
+      );
+    }
+    return {
+      ok: false,
+      reason: "already_running",
+      message: "Frame indexing is already in progress for this upload",
+      frameTask: serializeFrameTask(active),
+    };
+  }
 
   const payload: SampleFramesJobPayload = {
     frameTaskId,

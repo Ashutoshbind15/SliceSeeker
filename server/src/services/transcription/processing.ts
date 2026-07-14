@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 import {
   ACTIVE_TRANSCRIPTION_STATUSES,
   createTranscriptionTask,
+  getActiveTranscriptionTaskForFile,
   getLatestTranscriptionTaskForFile,
   getLatestTranscriptionTasksForFiles,
   getTranscriptionTaskById,
@@ -35,6 +36,7 @@ import {
   prepJobOptions,
   type ExtractAudioJobPayload,
 } from "queue";
+import { isUniqueViolation } from "../../lib/pg-errors.js";
 import { enqueueTranscriptEmbeddingJobsForFile } from "./embedding-queue.js";
 import { enqueueFailedTranscriptPartJobs } from "./part-queue.js";
 
@@ -432,10 +434,33 @@ export const startTranscription = async (
 
   // Fresh run (or extract-level failure with no part tree): all-or-nothing extract.
   const transcriptionTaskId = randomUUID();
-  await createTranscriptionTask({
-    id: transcriptionTaskId,
-    fileId: upload.id,
-  });
+  try {
+    await createTranscriptionTask({
+      id: transcriptionTaskId,
+      fileId: upload.id,
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) {
+      throw err;
+    }
+    const active =
+      (await getActiveTranscriptionTaskForFile(upload.id)) ??
+      (await getLatestTranscriptionTaskForFile(upload.id));
+    if (!active) {
+      throw new Error(
+        "Transcription task create conflicted but no existing task was found",
+      );
+    }
+    return {
+      ok: false,
+      reason: "already_running",
+      message:
+        active.status === "extracting" || active.status === "queued"
+          ? "Audio extraction is already in progress for this upload"
+          : "Transcription is already in progress for this upload",
+      transcriptionTask: serializeTranscriptionTask(active),
+    };
+  }
 
   const payload: ExtractAudioJobPayload = {
     transcriptionTaskId,

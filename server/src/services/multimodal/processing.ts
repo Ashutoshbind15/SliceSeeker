@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 import {
   ACTIVE_CHUNKING_STATUSES,
   createChunkingTask,
+  getActiveChunkingTaskForFile,
   getChunkingTaskById,
   getLatestChunkingTaskForFile,
   getLatestChunkingTasksForFiles,
@@ -28,6 +29,7 @@ import {
   prepJobOptions,
   type ChunkingJobPayload,
 } from "queue";
+import { isUniqueViolation } from "../../lib/pg-errors.js";
 import { enqueueEmbeddingJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(PREP_QUEUE_NAME, {
@@ -325,10 +327,30 @@ export const startVideoProcessing = async (
   }
 
   const chunkingTaskId = randomUUID();
-  await createChunkingTask({
-    id: chunkingTaskId,
-    fileId: upload.id,
-  });
+  try {
+    await createChunkingTask({
+      id: chunkingTaskId,
+      fileId: upload.id,
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) {
+      throw err;
+    }
+    const active =
+      (await getActiveChunkingTaskForFile(upload.id)) ??
+      (await getLatestChunkingTaskForFile(upload.id));
+    if (!active) {
+      throw new Error(
+        "Chunking task create conflicted but no existing task was found",
+      );
+    }
+    return {
+      ok: false,
+      reason: "already_chunking",
+      message: "Chunking is already in progress for this upload",
+      chunkingTask: serializeChunkingTask(active),
+    };
+  }
 
   const payload: ChunkingJobPayload = {
     chunkingTaskId,

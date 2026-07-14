@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -5,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { uploadsTable } from "../shared/uploads.js";
 
@@ -34,5 +36,8 @@ export const chunkingTasksTable = pgTable(
   (table) => [
     index("chunking_tasks_file_id_idx").on(table.fileId),
     index("chunking_tasks_status_idx").on(table.status),
+    uniqueIndex("chunking_tasks_one_active_per_file_idx")
+      .on(table.fileId)
+      .where(sql`${table.status} IN ('queued', 'downloading', 'chunking')`),
   ],
 );
