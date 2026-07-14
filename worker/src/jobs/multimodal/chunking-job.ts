@@ -14,6 +14,7 @@ import { mapWithConcurrency } from "../shared/concurrency.js";
 import { enqueueEmbeddingJobsForFile } from "./enqueue-embedding.js";
 import {
   buildChunkStorageKey,
+  deleteChunkObjectsForFile,
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
@@ -41,6 +42,8 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
     await updateChunkingTaskStatus(payload.chunkingTaskId, {
       status: "downloading",
     });
+
+    await deleteChunkObjectsForFile(payload.fileId, payload.storageBucket);
 
     const inputPath = path.join(workDir, `source${extension}`);
     await downloadObject({
@@ -91,7 +94,11 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
       },
     );
 
-    await commitChunkingResult(payload.chunkingTaskId, chunkRecords);
+    await commitChunkingResult({
+      chunkingTaskId: payload.chunkingTaskId,
+      fileId: payload.fileId,
+      chunks: chunkRecords,
+    });
 
     console.log(
       `[chunking] file ${payload.fileId} split into ${chunkRecords.length} chunk(s)`,

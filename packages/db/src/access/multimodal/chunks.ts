@@ -24,14 +24,30 @@ export const fileIsChunked = async (fileId: string) => {
   return (result?.count ?? 0) > 0;
 };
 
-export const commitChunkingResult = async (
-  chunkingTaskId: string,
-  chunks: ChunkMetadataInsert[],
-) => {
+export const deleteChunksForFile = async (fileId: string) => {
+  await db
+    .delete(videoChunksTable)
+    .where(eq(videoChunksTable.fileId, fileId));
+};
+
+/**
+ * Atomically replace chunks for a file. Deletes prior rows first so re-chunk
+ * (retries, concurrent tasks, or an intentional re-process) cannot hit
+ * `video_chunks_file_id_chunk_index_idx`.
+ */
+export const commitChunkingResult = async (input: {
+  chunkingTaskId: string;
+  fileId: string;
+  chunks: ChunkMetadataInsert[];
+}) => {
   await db.transaction(async (tx) => {
-    if (chunks.length > 0) {
+    await tx
+      .delete(videoChunksTable)
+      .where(eq(videoChunksTable.fileId, input.fileId));
+
+    if (input.chunks.length > 0) {
       await tx.insert(videoChunksTable).values(
-        chunks.map((chunk) => ({
+        input.chunks.map((chunk) => ({
           id: chunk.id,
           fileId: chunk.fileId,
           chunkIndex: chunk.chunkIndex,
@@ -47,19 +63,19 @@ export const commitChunkingResult = async (
       .update(chunkingTasksTable)
       .set({
         status: "completed",
-        chunkCount: chunks.length,
+        chunkCount: input.chunks.length,
         errorMessage: null,
         completedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(chunkingTasksTable.id, chunkingTaskId));
+      .where(eq(chunkingTasksTable.id, input.chunkingTaskId));
 
-    if (chunks.length > 0) {
-      const durationSec = chunks.reduce(
+    if (input.chunks.length > 0) {
+      const durationSec = input.chunks.reduce(
         (total, chunk) => total + chunk.durationSec,
         0,
       );
-      await setFileDurationSec(chunks[0].fileId, durationSec, tx);
+      await setFileDurationSec(input.fileId, durationSec, tx);
     }
   });
 };
