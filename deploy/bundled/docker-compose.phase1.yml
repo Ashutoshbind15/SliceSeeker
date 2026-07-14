@@ -20,6 +20,7 @@ services:
     environment:
       PORT: "3000"
       DATABASE_URL: ${DATABASE_URL}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
       VALKEY_URL: ${VALKEY_URL}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}
@@ -60,6 +61,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
       VALKEY_URL: ${VALKEY_URL}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL}
       AI_GATEWAY_API_KEY: ${AI_GATEWAY_API_KEY:-}

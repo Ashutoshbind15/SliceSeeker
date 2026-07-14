@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { chunkingTasksTable } from "./schema/multimodal/chunking-tasks.js";
 import { collectionsTable } from "./schema/shared/collections.js";
 import { embeddingTasksTable } from "./schema/multimodal/embedding-tasks.js";
@@ -17,7 +18,27 @@ import { uploadsTable } from "./schema/shared/uploads.js";
 import { fileCostsTable } from "./schema/multimodal/file-costs.js";
 import { videoChunksTable } from "./schema/multimodal/video-chunks.js";
 
-const db = drizzle(process.env.DATABASE_URL!, {
+const DEFAULT_POOL_MAX = 10;
+
+function poolMax(): number {
+  const raw = process.env.DB_POOL_MAX;
+  if (raw === undefined || raw === "") return DEFAULT_POOL_MAX;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) {
+    throw new Error(
+      `DB_POOL_MAX must be a positive integer (got ${JSON.stringify(raw)})`,
+    );
+  }
+  return Math.floor(n);
+}
+
+/** Per-process pool; total connections ≈ sum(replicas × DB_POOL_MAX) across API/worker/search. */
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL!,
+  max: poolMax(),
+});
+
+const db = drizzle(pool, {
   schema: {
     todos: todosTable,
     collections: collectionsTable,

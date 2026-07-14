@@ -40,6 +40,7 @@ docker compose -f docker-compose.phase2.yml --env-file .env up -d
 | Variable | Phase | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | 1, 2 | Postgres connection URL (must include pgvector) |
+| `DB_POOL_MAX` | 1, 2 | Max connections per API/worker/search process (default `10`). Keep `replicas × DB_POOL_MAX` under Postgres `max_connections`. |
 | `VALKEY_URL` | 1 | Redis-compatible URL for the job queue (`redis://` or `rediss://` with optional user/password). **`maxmemory-policy` must be `noeviction`** — LRU eviction can silently drop job keys. Self-hosted: `valkey-server --maxmemory-policy noeviction`. Managed: set the equivalent in your provider's Redis/Valkey settings. |
 | `VALKEY_SKIP_EVICTION_CHECK` | 1 | Set `true` when your provider blocks `CONFIG GET` but you confirmed `noeviction` in the dashboard. `/ready` still fails if policy is readable and wrong. |
 | `S3_ENDPOINT` | 1 | S3 API endpoint reachable from containers |
