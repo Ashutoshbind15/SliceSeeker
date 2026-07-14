@@ -10,6 +10,8 @@ const SEARCH_REQUIRED_TABLES = [
   "collections",
   "uploads",
   "video_chunks",
+  "transcript_segments",
+  "frame_embeddings",
 ] as const;
 
 const INDEXER_REQUIRED_TABLES = [

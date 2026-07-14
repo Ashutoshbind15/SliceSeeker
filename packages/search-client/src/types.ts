@@ -20,6 +20,7 @@ export type SourceObject = {
   key: string;
 };
 
+/** Multimodal video-chunk hit (`POST /search`) */
 export type SearchHit = {
   segmentId: string;
   fileId: string;
@@ -33,8 +34,44 @@ export type SearchHit = {
   sourceObject: SourceObject;
 };
 
+/** Speech / transcript hit (`POST /transcribe/search`) */
+export type TranscriptSearchHit = {
+  segmentId: string;
+  fileId: string;
+  uploadId: string;
+  filename: string;
+  segmentIndex: number;
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  text: string;
+  score: number;
+  sourceObject: SourceObject;
+};
+
+/** Frame hit (`POST /frames/search`) */
+export type FrameSearchHit = {
+  frameId: string;
+  fileId: string;
+  uploadId: string;
+  filename: string;
+  timestampSec: number;
+  frameIntervalSec: number;
+  score: number;
+  thumbnailObject: SourceObject;
+  sourceObject: SourceObject;
+};
+
 export type SearchResponse = {
   results: SearchHit[];
+};
+
+export type TranscriptSearchResponse = {
+  results: TranscriptSearchHit[];
+};
+
+export type FrameSearchResponse = {
+  results: FrameSearchHit[];
 };
 
 export type ReadyResult =

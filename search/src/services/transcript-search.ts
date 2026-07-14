@@ -1,32 +1,29 @@
 import {
-  searchVideoChunks,
-  searchVideoChunksByCollectionIds,
-} from "db/access/multimodal/video-chunks.js";
+  searchTranscriptSegments,
+  searchTranscriptSegmentsByCollectionIds,
+} from "db/access/transcription/transcript-search.js";
 import { resolveSearchCollectionIds } from "db/access/shared/collections.js";
 import { embedSearchQuery } from "../lib/embeddings.js";
 import type { SearchBody } from "../lib/schemas.js";
+import type { SourceObjectRef } from "./search.js";
 
-export type SourceObjectRef = {
-  bucket: string;
-  key: string;
-};
-
-export type SearchSegmentResult = {
+export type SearchTranscriptResult = {
   segmentId: string;
   fileId: string;
   uploadId: string;
   filename: string;
-  chunkIndex: number;
+  segmentIndex: number;
   startSec: number;
   endSec: number;
   durationSec: number;
+  text: string;
   score: number;
   sourceObject: SourceObjectRef;
 };
 
-export const searchVideos = async (
+export const searchTranscripts = async (
   input: SearchBody,
-): Promise<SearchSegmentResult[]> => {
+): Promise<SearchTranscriptResult[]> => {
   const embedding = await embedSearchQuery(input.query.trim());
   const collectionIds = resolveSearchCollectionIds(input);
   const searchInput = {
@@ -35,8 +32,8 @@ export const searchVideos = async (
     limit: input.limit,
   };
   const rows = collectionIds
-    ? await searchVideoChunksByCollectionIds(searchInput, collectionIds)
-    : await searchVideoChunks(searchInput);
+    ? await searchTranscriptSegmentsByCollectionIds(searchInput, collectionIds)
+    : await searchTranscriptSegments(searchInput);
 
   return rows
     .filter((row) => row.sourceStorageKey)
@@ -45,10 +42,11 @@ export const searchVideos = async (
       fileId: row.fileId,
       uploadId: row.fileId,
       filename: row.filename,
-      chunkIndex: row.chunkIndex,
+      segmentIndex: row.segmentIndex,
       startSec: row.startSec,
       endSec: row.endSec,
       durationSec: row.durationSec,
+      text: row.text,
       score: row.score,
       sourceObject: {
         bucket: row.sourceStorageBucket,

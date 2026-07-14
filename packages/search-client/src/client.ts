@@ -1,10 +1,14 @@
 import { SearchApiError } from "./errors.js";
 import type {
+  FrameSearchHit,
+  FrameSearchResponse,
   ReadyResult,
   SearchClientOptions,
   SearchHit,
   SearchParams,
   SearchResponse,
+  TranscriptSearchHit,
+  TranscriptSearchResponse,
 } from "./types.js";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -38,8 +42,34 @@ export class SearchClient {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
+  /** Multimodal video-chunk search (`POST /search`) */
   async search(params: SearchParams): Promise<SearchHit[]> {
     const response = await this.request<SearchResponse>("/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(toSearchBody(params)),
+    });
+
+    return response.results;
+  }
+
+  /** Speech / transcript segment search (`POST /transcribe/search`) */
+  async searchTranscripts(params: SearchParams): Promise<TranscriptSearchHit[]> {
+    const response = await this.request<TranscriptSearchResponse>(
+      "/transcribe/search",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(toSearchBody(params)),
+      },
+    );
+
+    return response.results;
+  }
+
+  /** Frame embedding search (`POST /frames/search`) */
+  async searchFrames(params: SearchParams): Promise<FrameSearchHit[]> {
+    const response = await this.request<FrameSearchResponse>("/frames/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toSearchBody(params)),

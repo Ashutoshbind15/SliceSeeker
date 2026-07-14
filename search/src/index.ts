@@ -2,7 +2,11 @@ import express from "express";
 import "dotenv/config";
 import cors from "cors";
 import { assertSearchSchema } from "db/readiness.js";
-import { searchVideosHandler } from "./routes/search.js";
+import {
+  searchFramesHandler,
+  searchTranscriptsHandler,
+  searchVideosHandler,
+} from "./routes/search.js";
 
 const app = express();
 
@@ -28,6 +32,8 @@ app.get("/ready", async (_req, res) => {
 });
 
 app.post("/search", searchVideosHandler);
+app.post("/transcribe/search", searchTranscriptsHandler);
+app.post("/frames/search", searchFramesHandler);
 
 const PORT = process.env.PORT ?? "3001";
 
