@@ -190,3 +190,30 @@ apiWorker.on("failed", onFailed);
 console.log(
   `Worker listening on "${PREP_QUEUE_NAME}" (concurrency=${process.env.PREP_WORKER_CONCURRENCY ?? "4"}) and "${API_QUEUE_NAME}" (concurrency=${process.env.API_WORKER_CONCURRENCY ?? "2"})`,
 );
+
+let shuttingDown = false;
+
+const shutdown = async (signal: string) => {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+  console.log(`Received ${signal}, closing workers…`);
+
+  try {
+    // Stops fetching new jobs and waits for in-flight work so locks are released cleanly.
+    await Promise.all([prepWorker.close(), apiWorker.close()]);
+    console.log("Workers closed");
+    process.exit(0);
+  } catch (error) {
+    console.error("Error during worker shutdown:", error);
+    process.exit(1);
+  }
+};
+
+process.on("SIGTERM", () => {
+  void shutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  void shutdown("SIGINT");
+});
