@@ -63,6 +63,7 @@ export const startTranscriptionHandler = async (
     ...(result.transcriptionTask
       ? { transcriptionTask: result.transcriptionTask }
       : {}),
+    ...(result.parts ? { parts: result.parts } : {}),
     embedding: result.embedding,
   });
 };

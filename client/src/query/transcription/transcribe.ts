@@ -34,6 +34,13 @@ export type TranscriptionTask = {
   partCount: number | null;
 };
 
+export type TranscriptPartProgress = {
+  total: number;
+  completed: number;
+  failed: number;
+  pending: number;
+};
+
 export type TranscriptEmbeddingProgress = {
   total: number;
   embedded: number;
@@ -51,6 +58,7 @@ export type TranscriptUploadSummary = {
   completedAt: string | null;
   createdAt: string;
   transcriptionTask: TranscriptionTask | null;
+  parts: TranscriptPartProgress;
   embedding: TranscriptEmbeddingProgress;
   pipelineStatus: TranscriptPipelineStatus;
   primaryError: string | null;
@@ -78,6 +86,7 @@ export const fetchTranscriptUploads = (filters: UploadListFilters = {}) =>
 export const startTranscription = (uploadId: string) =>
   apiFetch<{
     transcriptionTask?: TranscriptionTask;
+    parts?: TranscriptPartProgress;
     embedding?: TranscriptEmbeddingProgress;
   }>(`/transcribe/${uploadId}/start`, { method: "POST" });
 

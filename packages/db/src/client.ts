@@ -9,6 +9,7 @@ import { frameEmbeddingsTable } from "./schema/frames/frame-embeddings.js";
 import { frameTasksTable } from "./schema/frames/frame-tasks.js";
 import { todosTable } from "./schema/shared/index.js";
 import { transcriptEmbeddingTasksTable } from "./schema/transcription/transcript-embedding-tasks.js";
+import { transcriptPartTasksTable } from "./schema/transcription/transcript-part-tasks.js";
 import { transcriptSegmentsTable } from "./schema/transcription/transcript-segments.js";
 import { transcriptionCostsTable } from "./schema/transcription/transcription-costs.js";
 import { transcriptionTasksTable } from "./schema/transcription/transcription-tasks.js";
@@ -26,6 +27,7 @@ const db = drizzle(process.env.DATABASE_URL!, {
     videoChunks: videoChunksTable,
     fileCosts: fileCostsTable,
     transcriptionTasks: transcriptionTasksTable,
+    transcriptPartTasks: transcriptPartTasksTable,
     transcriptSegments: transcriptSegmentsTable,
     transcriptEmbeddingTasks: transcriptEmbeddingTasksTable,
     transcriptionCosts: transcriptionCostsTable,

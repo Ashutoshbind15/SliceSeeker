@@ -12,7 +12,7 @@ export {
   extractAudioJobPayloadSchema,
   parseJobPayload,
   sampleFramesJobPayloadSchema,
-  transcribeJobPayloadSchema,
+  transcribePartJobPayloadSchema,
   type ChunkingJobPayload,
   type EmbedChunkJobPayload,
   type EmbedFrameJobItem,
@@ -20,7 +20,7 @@ export {
   type EmbedTranscriptJobPayload,
   type ExtractAudioJobPayload,
   type SampleFramesJobPayload,
-  type TranscribeJobPayload,
+  type TranscribePartJobPayload,
 } from "./payloads.js";
 
 export const JOB_QUEUE_NAME = "demo-jobs";
@@ -29,13 +29,15 @@ export const CHUNKING_JOB_NAME = "chunk-video";
 export const EMBED_CHUNK_JOB_NAME = "embed-chunk";
 
 export const EXTRACT_AUDIO_JOB_NAME = "extract-audio";
-export const TRANSCRIBE_JOB_NAME = "transcribe";
+export const TRANSCRIBE_PART_JOB_NAME = "transcribe-part";
 export const EMBED_TRANSCRIPT_JOB_NAME = "embed-transcript";
 
 export const SAMPLE_FRAMES_JOB_NAME = "sample-frames";
 export const EMBED_FRAME_JOB_NAME = "embed-frame";
 
 export const EMBED_JOB_ATTEMPTS = 3;
+/** Whisper ASR retries per audio part (mirrors embed-level retry). */
+export const TRANSCRIBE_JOB_ATTEMPTS = 3;
 /** Frames per BullMQ embed job — keeps queue chatter low for cheap still embeds. */
 export const EMBED_FRAME_BATCH_SIZE = Number(
   process.env.EMBED_FRAME_BATCH_SIZE ?? "8",

@@ -17,6 +17,11 @@ import {
   getTranscriptEmbeddingStatsForFiles,
 } from "db/access/transcription/transcript-embedding-tasks.js";
 import {
+  getTranscriptPartStatsForTranscriptionTask,
+  getTranscriptPartStatsForTranscriptionTasks,
+  type TranscriptPartProgress,
+} from "db/access/transcription/transcript-part-tasks.js";
+import {
   getUploadById,
   listCompletedUploads,
   listCompletedUploadsByCollectionId,
@@ -30,6 +35,7 @@ import {
   type ExtractAudioJobPayload,
 } from "queue";
 import { enqueueTranscriptEmbeddingJobsForFile } from "./embedding-queue.js";
+import { enqueueFailedTranscriptPartJobs } from "./part-queue.js";
 
 const jobQueue = new Queue(JOB_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
@@ -52,6 +58,13 @@ export type SerializedTranscriptionTask = {
 export type SerializedTranscriptEmbeddingProgress = {
   total: number;
   embedded: number;
+  failed: number;
+  pending: number;
+};
+
+export type SerializedTranscriptPartProgress = {
+  total: number;
+  completed: number;
   failed: number;
   pending: number;
 };
@@ -82,6 +95,7 @@ export type TranscriptUploadListItem = {
   pipelineStatus: TranscriptPipelineStatus;
   primaryError: string | null;
   transcriptionTask: UploadListTranscriptionTask | null;
+  parts: SerializedTranscriptPartProgress;
   embedding: SerializedTranscriptEmbeddingProgress;
 };
 
@@ -108,12 +122,29 @@ const emptyEmbeddingProgress = (): SerializedTranscriptEmbeddingProgress => ({
   pending: 0,
 });
 
+const emptyPartProgress = (): SerializedTranscriptPartProgress => ({
+  total: 0,
+  completed: 0,
+  failed: 0,
+  pending: 0,
+});
+
+const toSerializedPartProgress = (
+  progress: TranscriptPartProgress,
+): SerializedTranscriptPartProgress => ({
+  total: progress.total,
+  completed: progress.completed,
+  failed: progress.failed,
+  pending: progress.pending,
+});
+
 export const deriveTranscriptPipelineStatus = (input: {
   transcriptionTask: SerializedTranscriptionTask | null;
+  parts: SerializedTranscriptPartProgress;
   embedding: SerializedTranscriptEmbeddingProgress;
   hasSegments: boolean;
 }): TranscriptPipelineStatus => {
-  const { transcriptionTask, embedding, hasSegments } = input;
+  const { transcriptionTask, parts, embedding, hasSegments } = input;
 
   if (
     transcriptionTask &&
@@ -127,6 +158,7 @@ export const deriveTranscriptPipelineStatus = (input: {
     if (transcriptionTask.status === "transcribing") {
       return "transcribing";
     }
+    // queued → still in extract phase from the UI's perspective
     return "extracting";
   }
 
@@ -135,6 +167,11 @@ export const deriveTranscriptPipelineStatus = (input: {
   }
 
   if (transcriptionTask?.status === "failed") {
+    return "failed";
+  }
+
+  // Part-level failures after extract (parent may still say failed)
+  if (parts.total > 0 && parts.failed > 0 && parts.pending === 0 && !hasSegments) {
     return "failed";
   }
 
@@ -155,6 +192,7 @@ export const deriveTranscriptPipelineStatus = (input: {
 
 export const deriveTranscriptPrimaryError = (input: {
   transcriptionTask: SerializedTranscriptionTask | null;
+  parts: SerializedTranscriptPartProgress;
   embedding: SerializedTranscriptEmbeddingProgress;
   pipelineStatus: TranscriptPipelineStatus;
 }): string | null => {
@@ -164,6 +202,11 @@ export const deriveTranscriptPrimaryError = (input: {
 
   if (input.transcriptionTask?.errorMessage) {
     return input.transcriptionTask.errorMessage;
+  }
+
+  if (input.parts.failed > 0) {
+    const label = input.parts.failed === 1 ? "part" : "parts";
+    return `${input.parts.failed} audio ${label} failed to transcribe`;
   }
 
   if (input.embedding.failed > 0) {
@@ -192,6 +235,13 @@ const buildTranscriptUploadListItems = async (
     getTranscriptEmbeddingStatsForFiles(fileIds),
   ]);
 
+  const transcriptionTaskIds = [...transcriptionTasks.values()].map(
+    (task) => task.id,
+  );
+  const partStats = await getTranscriptPartStatsForTranscriptionTasks(
+    transcriptionTaskIds,
+  );
+
   return uploads.map((upload) => {
     const transcriptionTask = transcriptionTasks.get(upload.id);
     const serializedTask = transcriptionTask
@@ -202,14 +252,21 @@ const buildTranscriptUploadListItems = async (
       : null;
     const embedding =
       embeddingStats.get(upload.id) ?? emptyEmbeddingProgress();
+    const parts = transcriptionTask
+      ? toSerializedPartProgress(
+          partStats.get(transcriptionTask.id) ?? emptyPartProgress(),
+        )
+      : emptyPartProgress();
     const hasSegments = embedding.total > 0;
     const pipelineStatus = deriveTranscriptPipelineStatus({
       transcriptionTask: serializedTask,
+      parts,
       embedding,
       hasSegments,
     });
     const primaryError = deriveTranscriptPrimaryError({
       transcriptionTask: serializedTask,
+      parts,
       embedding,
       pipelineStatus,
     });
@@ -224,6 +281,7 @@ const buildTranscriptUploadListItems = async (
       completedAt: upload.completedAt?.toISOString() ?? null,
       createdAt: upload.createdAt.toISOString(),
       transcriptionTask: listTask,
+      parts,
       embedding,
       pipelineStatus,
       primaryError,
@@ -257,6 +315,7 @@ export type StartTranscriptionResult =
       ok: true;
       transcriptionTask?: SerializedTranscriptionTask;
       embedding: SerializedTranscriptEmbeddingProgress;
+      parts?: SerializedTranscriptPartProgress;
     }
   | {
       ok: false;
@@ -304,6 +363,7 @@ export const startTranscription = async (
     getTranscriptEmbeddingStatsForFile(upload.id),
   ]);
 
+  // Extracting / queued / transcribing — refuse duplicate starts (incl. retry while extracting).
   if (
     latestTask &&
     ACTIVE_TRANSCRIPTION_STATUSES.includes(
@@ -313,11 +373,15 @@ export const startTranscription = async (
     return {
       ok: false,
       reason: "already_running",
-      message: "Transcription is already in progress for this upload",
+      message:
+        latestTask.status === "extracting" || latestTask.status === "queued"
+          ? "Audio extraction is already in progress for this upload"
+          : "Transcription is already in progress for this upload",
       transcriptionTask: serializeTranscriptionTask(latestTask),
     };
   }
 
+  // Segments exist → only re-enqueue failed/missing embeddings.
   if (hasSegments) {
     if (fileTranscriptEmbeddingIsComplete(embedding)) {
       return {
@@ -337,6 +401,35 @@ export const startTranscription = async (
     };
   }
 
+  // Extract succeeded and parts exist, but ASR failed → retry only failed parts.
+  if (latestTask && latestTask.status === "failed") {
+    const partStats = await getTranscriptPartStatsForTranscriptionTask(
+      latestTask.id,
+    );
+
+    if (partStats.total > 0 && partStats.failed > 0) {
+      await enqueueFailedTranscriptPartJobs({
+        transcriptionTaskId: latestTask.id,
+        storageBucket: upload.storageBucket,
+      });
+
+      const [refreshedTask, refreshedParts] = await Promise.all([
+        getTranscriptionTaskById(latestTask.id),
+        getTranscriptPartStatsForTranscriptionTask(latestTask.id),
+      ]);
+
+      return {
+        ok: true,
+        ...(refreshedTask
+          ? { transcriptionTask: serializeTranscriptionTask(refreshedTask) }
+          : {}),
+        embedding,
+        parts: toSerializedPartProgress(refreshedParts),
+      };
+    }
+  }
+
+  // Fresh run (or extract-level failure with no part tree): all-or-nothing extract.
   const transcriptionTaskId = randomUUID();
   await createTranscriptionTask({
     id: transcriptionTaskId,

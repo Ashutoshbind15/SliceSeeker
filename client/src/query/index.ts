@@ -48,6 +48,7 @@ export {
 export {
   deriveTranscriptUploadsSummary,
   type TranscriptEmbeddingProgress,
+  type TranscriptPartProgress,
   type TranscriptPipelineStatus,
   type TranscriptUploadSummary,
   type TranscriptionTask,

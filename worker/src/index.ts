@@ -14,7 +14,10 @@ import {
 import { processEmbedTranscriptJob } from "./jobs/transcription/embed-transcript-job.js";
 import { processExtractAudioJob } from "./jobs/transcription/extract-audio-job.js";
 import { processSampleFramesJob } from "./jobs/frames/sample-frames-job.js";
-import { processTranscribeJob } from "./jobs/transcription/transcribe-job.js";
+import {
+  markTranscribePartJobFailed,
+  processTranscribePartJob,
+} from "./jobs/transcription/transcribe-part-job.js";
 import {
   CHUNKING_JOB_NAME,
   chunkingJobPayloadSchema,
@@ -31,15 +34,15 @@ import {
   parseJobPayload,
   SAMPLE_FRAMES_JOB_NAME,
   sampleFramesJobPayloadSchema,
-  TRANSCRIBE_JOB_NAME,
-  transcribeJobPayloadSchema,
+  TRANSCRIBE_PART_JOB_NAME,
+  transcribePartJobPayloadSchema,
   type ChunkingJobPayload,
   type EmbedChunkJobPayload,
   type EmbedFrameJobPayload,
   type EmbedTranscriptJobPayload,
   type ExtractAudioJobPayload,
   type SampleFramesJobPayload,
-  type TranscribeJobPayload,
+  type TranscribePartJobPayload,
 } from "queue";
 
 const worker = new Worker(
@@ -61,9 +64,9 @@ const worker = new Worker(
           parseJobPayload(extractAudioJobPayloadSchema, job.data, job.name),
         );
         return;
-      case TRANSCRIBE_JOB_NAME:
-        await processTranscribeJob(
-          parseJobPayload(transcribeJobPayloadSchema, job.data, job.name),
+      case TRANSCRIBE_PART_JOB_NAME:
+        await processTranscribePartJob(
+          parseJobPayload(transcribePartJobPayloadSchema, job.data, job.name),
         );
         return;
       case EMBED_TRANSCRIPT_JOB_NAME:
@@ -125,16 +128,19 @@ worker.on("failed", (job, err) => {
     return;
   }
 
-  if (
-    job.name === EXTRACT_AUDIO_JOB_NAME ||
-    job.name === TRANSCRIBE_JOB_NAME
-  ) {
-    const data = job.data as ExtractAudioJobPayload | TranscribeJobPayload;
+  if (job.name === EXTRACT_AUDIO_JOB_NAME) {
+    const data = job.data as ExtractAudioJobPayload;
     void updateTranscriptionTaskStatus(data.transcriptionTaskId, {
       status: "failed",
       errorMessage: err.message,
       completedAt: new Date(),
     });
+    return;
+  }
+
+  if (job.name === TRANSCRIBE_PART_JOB_NAME) {
+    const data = job.data as TranscribePartJobPayload;
+    void markTranscribePartJobFailed(data, err.message);
     return;
   }
 

@@ -32,6 +32,10 @@ export const deleteTranscriptSegmentsForFile = async (fileId: string) => {
     .where(eq(transcriptSegmentsTable.fileId, fileId));
 };
 
+/**
+ * Atomically commit merged segments. Only one concurrent finalizer wins:
+ * the parent row must still be `transcribing`.
+ */
 export const commitTranscriptionResult = async (input: {
   transcriptionTaskId: string;
   fileId: string;
@@ -39,8 +43,21 @@ export const commitTranscriptionResult = async (input: {
   audioDurationSec: number;
   partCount: number;
   segments: TranscriptSegmentInsert[];
-}) => {
-  await db.transaction(async (tx) => {
+}): Promise<{ committed: boolean }> => {
+  return db.transaction(async (tx) => {
+    const [locked] = await tx
+      .select({
+        id: transcriptionTasksTable.id,
+        status: transcriptionTasksTable.status,
+      })
+      .from(transcriptionTasksTable)
+      .where(eq(transcriptionTasksTable.id, input.transcriptionTaskId))
+      .for("update");
+
+    if (!locked || locked.status !== "transcribing") {
+      return { committed: false };
+    }
+
     await tx
       .delete(transcriptSegmentsTable)
       .where(eq(transcriptSegmentsTable.fileId, input.fileId));
@@ -80,6 +97,8 @@ export const commitTranscriptionResult = async (input: {
       input.audioDurationSec,
       tx,
     );
+
+    return { committed: true };
   });
 };
 

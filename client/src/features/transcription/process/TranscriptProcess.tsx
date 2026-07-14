@@ -121,31 +121,58 @@ const StatusBadge = ({ status }: { status: TranscriptPipelineStatus }) => (
 );
 
 const ProgressCell = ({ upload }: { upload: TranscriptUploadSummary }) => {
-  if (
-    (upload.pipelineStatus === "extracting" ||
-      upload.pipelineStatus === "transcribing") &&
-    upload.transcriptionTask
-  ) {
+  if (upload.pipelineStatus === "extracting") {
+    return (
+      <div className="flex flex-col gap-1.5 min-w-[8rem]">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>Extracting audio</span>
+        </div>
+        <Progress value={35} className="h-1.5" />
+      </div>
+    );
+  }
+
+  if (upload.pipelineStatus === "transcribing" && upload.parts.total > 0) {
+    const pct = Math.round(
+      (upload.parts.completed / upload.parts.total) * 100,
+    );
+    return (
+      <div className="flex min-w-[10rem] flex-col gap-1.5">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>
+            {upload.parts.completed} / {upload.parts.total} parts
+          </span>
+          <span>{pct}%</span>
+        </div>
+        <Progress value={pct} className="h-1.5" />
+        <div className="flex items-center gap-3 text-[11px]">
+          {upload.parts.pending > 0 ? (
+            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+              {upload.parts.pending} pending
+            </span>
+          ) : null}
+          {upload.parts.failed > 0 ? (
+            <span className="text-destructive flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              {upload.parts.failed} failed
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // Transcribing before part stats arrive (or single-part still settling).
+  if (upload.pipelineStatus === "transcribing" && upload.transcriptionTask) {
     return (
       <div className="flex flex-col gap-1.5 min-w-[8rem]">
         <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
           <span>
             {formatTranscriptionStatus(upload.transcriptionTask.status)}
           </span>
-          {upload.transcriptionTask.segmentCount !== null && (
-            <span>{upload.transcriptionTask.segmentCount} segments</span>
-          )}
         </div>
-        <Progress
-          value={
-            upload.transcriptionTask.status === "completed"
-              ? 100
-              : upload.pipelineStatus === "transcribing"
-                ? 70
-                : 35
-          }
-          className="h-1.5"
-        />
+        <Progress value={70} className="h-1.5" />
       </div>
     );
   }

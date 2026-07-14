@@ -1,24 +1,24 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Queue } from "bullmq";
+import {
+  createTranscriptPartTasks,
+  deleteTranscriptPartTasksForTranscriptionTask,
+} from "db/access/transcription/transcript-part-tasks.js";
 import {
   getTranscriptionTaskById,
   updateTranscriptionTaskStatus,
 } from "db/access/transcription/transcription-tasks.js";
 import {
   EXTRACT_AUDIO_JOB_NAME,
-  getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
-  TRANSCRIBE_JOB_NAME,
   type ExtractAudioJobPayload,
-  type TranscribeJobPayload,
 } from "queue";
 import {
   extractSpeechAudio,
   getMediaDurationSec,
   splitAudioForTranscription,
 } from "./audio-extract.js";
+import { enqueueTranscriptPartJobs } from "./enqueue-transcript-parts.js";
 import {
   buildAudioPartStorageKey,
   buildAudioStorageKey,
@@ -27,10 +27,11 @@ import {
   uploadObject,
 } from "../shared/s3.js";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
-  connection: getValkeyConnectionOptions(),
-});
-
+/**
+ * All-or-nothing audio extraction: download → ffmpeg speech MP3 → size-split →
+ * S3 upload → create part-task tree → fan out retryable transcribe-part jobs.
+ * No partial DB commit if any step fails before the tree is enqueued.
+ */
 export const processExtractAudioJob = async (
   payload: ExtractAudioJobPayload,
 ) => {
@@ -88,8 +89,12 @@ export const processExtractAudioJob = async (
       contentType: "audio/mpeg",
     });
 
-    const audioPartKeys: string[] = [];
-    const partStartSecs: number[] = [];
+    const partSpecs: Array<{
+      partIndex: number;
+      audioStorageKey: string;
+      startSec: number;
+    }> = [];
+
     for (const part of parts) {
       const partKey = buildAudioPartStorageKey({
         fileId: payload.fileId,
@@ -101,9 +106,27 @@ export const processExtractAudioJob = async (
         sourcePath: part.filePath,
         contentType: "audio/mpeg",
       });
-      audioPartKeys.push(partKey);
-      partStartSecs.push(part.startSec);
+      partSpecs.push({
+        partIndex: part.partIndex,
+        audioStorageKey: partKey,
+        startSec: part.startSec,
+      });
     }
+
+    // Replace any prior part tree for this run, then create the new one.
+    await deleteTranscriptPartTasksForTranscriptionTask(
+      payload.transcriptionTaskId,
+    );
+
+    const partTasks = await createTranscriptPartTasks(
+      partSpecs.map((part) => ({
+        transcriptionTaskId: payload.transcriptionTaskId,
+        fileId: payload.fileId,
+        partIndex: part.partIndex,
+        audioStorageKey: part.audioStorageKey,
+        startSec: part.startSec,
+      })),
+    );
 
     await updateTranscriptionTaskStatus(payload.transcriptionTaskId, {
       status: "transcribing",
@@ -114,21 +137,13 @@ export const processExtractAudioJob = async (
       completedAt: null,
     });
 
-    const transcribePayload: TranscribeJobPayload = {
-      transcriptionTaskId: payload.transcriptionTaskId,
-      fileId: payload.fileId,
+    await enqueueTranscriptPartJobs({
+      parts: partTasks,
       storageBucket: payload.storageBucket,
-      audioStorageKey,
-      audioPartKeys,
-      partStartSecs,
-    };
-
-    await jobQueue.add(TRANSCRIBE_JOB_NAME, transcribePayload, {
-      jobId: `${payload.transcriptionTaskId}-transcribe`,
     });
 
     console.log(
-      `[${EXTRACT_AUDIO_JOB_NAME}] file ${payload.fileId} extracted ${parts.length} audio part(s) (${durationSec.toFixed(1)}s)`,
+      `[${EXTRACT_AUDIO_JOB_NAME}] file ${payload.fileId} extracted ${parts.length} audio part(s) (${durationSec.toFixed(1)}s) — fan-out ${partTasks.length} transcribe-part job(s)`,
     );
   } finally {
     await fs.rm(workDir, { recursive: true, force: true });

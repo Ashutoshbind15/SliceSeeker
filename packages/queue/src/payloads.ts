@@ -26,13 +26,14 @@ export const extractAudioJobPayloadSchema = z.object({
   filetype: nonEmptyString,
 });
 
-export const transcribeJobPayloadSchema = z.object({
+export const transcribePartJobPayloadSchema = z.object({
+  partTaskId: nonEmptyString,
   transcriptionTaskId: nonEmptyString,
   fileId: nonEmptyString,
   storageBucket: nonEmptyString,
   audioStorageKey: nonEmptyString,
-  audioPartKeys: z.array(nonEmptyString),
-  partStartSecs: z.array(z.number().finite()),
+  partIndex: z.number().int().nonnegative(),
+  startSec: z.number(),
 });
 
 export const embedTranscriptJobPayloadSchema = z.object({
@@ -47,7 +48,7 @@ export const sampleFramesJobPayloadSchema = z.object({
   storageBucket: nonEmptyString,
   filename: nonEmptyString,
   filetype: nonEmptyString,
-  frameIntervalSec: z.number().positive().finite(),
+  frameIntervalSec: z.number().positive(),
 });
 
 export const embedFrameJobItemSchema = z.object({
@@ -65,7 +66,9 @@ export type EmbedChunkJobPayload = z.infer<typeof embedChunkJobPayloadSchema>;
 export type ExtractAudioJobPayload = z.infer<
   typeof extractAudioJobPayloadSchema
 >;
-export type TranscribeJobPayload = z.infer<typeof transcribeJobPayloadSchema>;
+export type TranscribePartJobPayload = z.infer<
+  typeof transcribePartJobPayloadSchema
+>;
 export type EmbedTranscriptJobPayload = z.infer<
   typeof embedTranscriptJobPayloadSchema
 >;
