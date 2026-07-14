@@ -181,3 +181,12 @@ export const updateUploadCollection = async (input: {
 
   return upload ?? null;
 };
+
+export const deleteUploadRecord = async (uploadId: string) => {
+  const [upload] = await db
+    .delete(uploadsTable)
+    .where(eq(uploadsTable.id, uploadId))
+    .returning();
+
+  return upload ?? null;
+};

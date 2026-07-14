@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -48,6 +49,7 @@ type QueryEmptyStateProps = {
   title: string;
   description: string;
   className?: string;
+  action?: ReactNode;
 };
 
 export const QueryEmptyState = ({
@@ -55,6 +57,7 @@ export const QueryEmptyState = ({
   title,
   description,
   className,
+  action,
 }: QueryEmptyStateProps) => (
   <Empty className={className}>
     <EmptyHeader>
@@ -62,6 +65,7 @@ export const QueryEmptyState = ({
       <EmptyTitle>{title}</EmptyTitle>
       <EmptyDescription>{description}</EmptyDescription>
     </EmptyHeader>
+    {action ? <EmptyContent>{action}</EmptyContent> : null}
   </Empty>
 );
 

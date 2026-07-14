@@ -95,6 +95,12 @@ export const startUploadProcessing = (uploadId: string) =>
     { method: "POST" },
   );
 
+export const deleteUpload = (uploadId: string) =>
+  apiFetch<{ deleted: true; uploadId: string; filename: string }>(
+    `/uploads/${uploadId}`,
+    { method: "DELETE" },
+  );
+
 export const deriveUploadsSummary = (uploads: UploadSummary[]) => ({
   total: uploads.length,
   active: uploads.filter(
@@ -133,6 +139,18 @@ export const useStartProcessingMutation = () => {
     mutationFn: startUploadProcessing,
     onSuccess: () => {
       toast.success("Processing started");
+      void queryClient.invalidateQueries({ queryKey: queryKeys.uploads.all });
+    },
+  });
+};
+
+export const useDeleteUploadMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteUpload,
+    onSuccess: (result) => {
+      toast.success(`Deleted ${result.filename}`);
       void queryClient.invalidateQueries({ queryKey: queryKeys.uploads.all });
     },
   });

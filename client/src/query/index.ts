@@ -20,6 +20,7 @@ export {
 
 export {
   assignUploadCollection,
+  deleteUpload,
   deriveUploadsSummary,
   fetchUploads,
   invalidateUploads,
@@ -28,6 +29,7 @@ export {
   type PipelineStatus,
   type UploadSummary,
   useAssignUploadCollectionMutation,
+  useDeleteUploadMutation,
   useStartProcessingMutation,
   useUploadsQuery,
 } from "@/query/multimodal/uploads";

@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { TusdHookRequest } from "../../lib/schemas/uploads.js";
+import { deleteUploadStorageArtifacts } from "../../lib/s3.js";
 import { resolveUploadCollectionId } from "./collections.js";
 import {
   completeUploadRecord,
   createUploadRecord,
+  deleteUploadRecord,
   failUploadRecord,
+  getUploadById,
   getUploadByTusId,
 } from "db/access/shared/uploads.js";
 
@@ -138,4 +141,42 @@ export const handleTusdHook = async (
     default:
       return {};
   }
+};
+
+export type DeleteUploadResult =
+  | { ok: true; uploadId: string; filename: string }
+  | { ok: false; reason: "not_found"; message: string };
+
+export const deleteUploadById = async (
+  uploadId: string,
+): Promise<DeleteUploadResult> => {
+  const upload = await getUploadById(uploadId);
+  if (!upload) {
+    return {
+      ok: false,
+      reason: "not_found",
+      message: "Upload not found",
+    };
+  }
+
+  await deleteUploadStorageArtifacts({
+    fileId: upload.id,
+    bucket: upload.storageBucket,
+    storageKey: upload.storageKey,
+  });
+
+  const deleted = await deleteUploadRecord(upload.id);
+  if (!deleted) {
+    return {
+      ok: false,
+      reason: "not_found",
+      message: "Upload not found",
+    };
+  }
+
+  return {
+    ok: true,
+    uploadId: deleted.id,
+    filename: deleted.filename,
+  };
 };

@@ -7,6 +7,7 @@ import {
   type ChangeEvent,
   type DragEvent,
 } from "react";
+import { useSearchParams } from "react-router";
 import Uppy from "@uppy/core";
 import Tus from "@uppy/tus";
 import { useUppyState } from "@uppy/react";
@@ -449,8 +450,18 @@ const UploadPanel = ({ uppy }: { uppy: VideoUppy }) => {
 };
 
 const VideoUpload = () => {
-  const [selectedCollectionId, setSelectedCollectionId] = useState("");
+  const [searchParams] = useSearchParams();
+  const collectionIdFromQuery = searchParams.get("collectionId") ?? "";
+  const [selectedCollectionId, setSelectedCollectionId] = useState(
+    collectionIdFromQuery,
+  );
   const selectedCollectionIdRef = useRef(selectedCollectionId);
+
+  useEffect(() => {
+    if (collectionIdFromQuery) {
+      setSelectedCollectionId(collectionIdFromQuery);
+    }
+  }, [collectionIdFromQuery]);
 
   useEffect(() => {
     selectedCollectionIdRef.current = selectedCollectionId;

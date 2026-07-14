@@ -34,10 +34,23 @@ type NavSegment =
 const navSegments: NavSegment[] = [
   {
     kind: "links",
+    items: [{ name: "Home", path: "/" }],
+  },
+  {
+    kind: "menu",
+    label: "Files",
     items: [
-      { name: "Home", path: "/" },
-      { name: "Upload", path: "/upload" },
-      { name: "Files", path: "/files" },
+      {
+        name: "Library",
+        path: "/files",
+        exact: true,
+        description: "Browse & manage videos",
+      },
+      {
+        name: "Upload",
+        path: "/files/upload",
+        description: "Add videos to a collection",
+      },
     ],
   },
   {

@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import Todo from "./Todo";
 import VideoUpload from "@/features/shared/upload/VideoUpload";
 import VideoProcess from "@/features/multimodal/process/VideoProcess";
@@ -28,8 +28,9 @@ root.render(
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<App />} />
-          <Route path="/upload" element={<VideoUpload />} />
           <Route path="/files" element={<Files />} />
+          <Route path="/files/upload" element={<VideoUpload />} />
+          <Route path="/upload" element={<Navigate to="/files/upload" replace />} />
           <Route path="/process" element={<VideoProcess />} />
           <Route path="/search" element={<VideoSearch />} />
           <Route path="/costs" element={<FileCosts />} />

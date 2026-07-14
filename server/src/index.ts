@@ -10,7 +10,10 @@ import {
   JOB_QUEUE_NAME,
 } from "queue";
 import { assertS3Access } from "./lib/s3.js";
-import { tusdHookHandler } from "./routes/shared/uploads.js";
+import {
+  deleteUploadHandler,
+  tusdHookHandler,
+} from "./routes/shared/uploads.js";
 import {
   getVideoJobStatusHandler,
   listUploadsHandler,
@@ -99,6 +102,7 @@ app.post("/todos", async (req, res) => {
 });
 
 app.get("/uploads", listUploadsHandler);
+app.delete("/uploads/:uploadId", deleteUploadHandler);
 app.patch("/uploads/:uploadId/collection", assignUploadCollectionHandler);
 app.post("/uploads/:uploadId/process", startVideoProcessingHandler);
 app.get("/jobs/:jobId", getVideoJobStatusHandler);

@@ -26,7 +26,7 @@ const App = () => {
         </p>
         <div className="flex flex-wrap justify-center gap-4 pt-4">
           <Button asChild size="lg" className="rounded-full px-8">
-            <Link to="/upload">
+            <Link to="/files/upload">
               Get Started <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -43,7 +43,7 @@ const App = () => {
 
       <div className="grid gap-6 sm:grid-cols-2 pt-12 border-t">
         <Link
-          to="/upload"
+          to="/files/upload"
           className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
         >
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
