@@ -101,7 +101,7 @@ const FileCosts = () => {
   }, [files]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
         <div className="space-y-1">
           <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
@@ -137,7 +137,7 @@ const FileCosts = () => {
       ) : null}
 
       {files.length > 0 ? (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="min-w-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
               <CardHeader className="pb-2">
@@ -282,15 +282,15 @@ const FileCosts = () => {
             </CardContent>
           </Card>
 
-          <Card className="rounded-2xl border-border/50 shadow-sm overflow-hidden">
+          <Card className="min-w-0 rounded-2xl border-border/50 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/20 border-b border-border/50 pb-4">
               <CardTitle className="font-heading">Per-file Breakdown</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              <Table className="min-w-[800px]">
+            <CardContent className="min-w-0 p-0">
+              <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-border/50">
-                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">File</TableHead>
+                    <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">File</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Length</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Cost</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Tokens</TableHead>
@@ -300,8 +300,10 @@ const FileCosts = () => {
                 <TableBody>
                   {files.map((file) => (
                     <TableRow key={file.fileId} className="transition-colors hover:bg-muted/20">
-                      <TableCell className="px-6 py-4 whitespace-normal font-medium">
-                        {file.filename}
+                      <TableCell className="max-w-0 px-6 py-4 font-medium">
+                        <span className="block truncate" title={file.filename}>
+                          {file.filename}
+                        </span>
                       </TableCell>
                       <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {formatDuration(file.durationSec)}

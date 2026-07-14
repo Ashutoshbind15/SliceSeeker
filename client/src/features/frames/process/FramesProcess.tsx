@@ -338,7 +338,7 @@ const FramesProcess = () => {
   const fetchError = uploadsQuery.isError ? uploadsQuery.error.message : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
         <div className="space-y-1">
           <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
@@ -397,24 +397,24 @@ const FramesProcess = () => {
       ) : null}
 
       {uploads.length > 0 ? (
-        <div className="space-y-4">
-          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
-            <Table className="min-w-[800px]">
+        <div className="min-w-0 space-y-4">
+          <div className="min-w-0 rounded-2xl border bg-card shadow-sm">
+            <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[30%]">
+                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
                     File
                   </TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
                     Stage
                   </TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[25%]">
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
                     Progress
                   </TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%]">
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
                     Error
                   </TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground w-[15%] text-right">
+                  <TableHead className="w-0 px-6 py-4 font-medium text-muted-foreground text-right">
                     Actions
                   </TableHead>
                 </TableRow>
@@ -425,14 +425,14 @@ const FramesProcess = () => {
                     key={upload.id}
                     className="transition-colors hover:bg-muted/20"
                   >
-                    <TableCell className="px-6 py-4 align-middle">
+                    <TableCell className="max-w-0 px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                           <Images className="h-5 w-5" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div
-                            className="font-medium truncate max-w-[250px]"
+                            className="font-medium truncate"
                             title={upload.filename}
                           >
                             {upload.filename}

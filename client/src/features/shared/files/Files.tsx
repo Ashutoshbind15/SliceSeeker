@@ -204,7 +204,7 @@ const Files = () => {
     : "/files/upload";
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-8">
       <div className="flex flex-col gap-6 border-b border-border/50 pt-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           <h1 className="flex items-center gap-3 font-heading text-3xl font-semibold tracking-tight">
@@ -299,12 +299,12 @@ const Files = () => {
       ) : null}
 
       {draftFiles.length > 0 ? (
-        <div className="space-y-4">
-          <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
-            <Table className="min-w-[720px]">
+        <div className="min-w-0 space-y-4">
+          <div className="min-w-0 rounded-2xl border bg-card shadow-sm">
+            <Table>
               <TableHeader>
                 <TableRow className="border-b-border/50 bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
                     File Details
                   </TableHead>
                   <TableHead className="px-6 py-4 font-medium text-muted-foreground">
@@ -313,7 +313,7 @@ const Files = () => {
                   <TableHead className="px-6 py-4 text-right font-medium text-muted-foreground">
                     Uploaded
                   </TableHead>
-                  <TableHead className="w-[72px] px-4 py-4 text-right font-medium text-muted-foreground">
+                  <TableHead className="w-0 px-4 py-4 text-right font-medium text-muted-foreground">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 </TableRow>
@@ -329,14 +329,14 @@ const Files = () => {
                         dirty ? "bg-accent/5" : ""
                       }`}
                     >
-                      <TableCell className="px-6 py-4 align-middle">
+                      <TableCell className="max-w-0 px-6 py-4 align-middle">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <FileVideo className="h-5 w-5" />
                           </div>
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div
-                              className="max-w-[300px] truncate font-medium"
+                              className="truncate font-medium"
                               title={file.filename}
                             >
                               {file.filename}
