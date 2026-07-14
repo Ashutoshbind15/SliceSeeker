@@ -22,8 +22,23 @@ export {
   type SampleFramesJobPayload,
   type TranscribePartJobPayload,
 } from "./payloads.js";
+export {
+  API_JOB_ATTEMPTS,
+  API_JOB_BACKOFF_MS,
+  API_JOB_MAX_AGE_MS,
+  apiJobOptions,
+  assertJobWithinMaxAge,
+  isFinalJobFailure,
+  PREP_JOB_ATTEMPTS,
+  PREP_JOB_BACKOFF_MS,
+  PREP_JOB_MAX_AGE_MS,
+  prepJobOptions,
+} from "./job-options.js";
 
-export const JOB_QUEUE_NAME = "demo-jobs";
+/** ffmpeg / S3 prep work — safe to run hotter than API jobs. */
+export const PREP_QUEUE_NAME = "demo-prep-jobs";
+/** Embed + ASR — tune concurrency to protect Gateway quotas. */
+export const API_QUEUE_NAME = "demo-api-jobs";
 
 export const CHUNKING_JOB_NAME = "chunk-video";
 export const EMBED_CHUNK_JOB_NAME = "embed-chunk";
@@ -35,9 +50,6 @@ export const EMBED_TRANSCRIPT_JOB_NAME = "embed-transcript";
 export const SAMPLE_FRAMES_JOB_NAME = "sample-frames";
 export const EMBED_FRAME_JOB_NAME = "embed-frame";
 
-export const EMBED_JOB_ATTEMPTS = 3;
-/** Whisper ASR retries per audio part (mirrors embed-level retry). */
-export const TRANSCRIBE_JOB_ATTEMPTS = 3;
 /** Frames per BullMQ embed job — keeps queue chatter low for cheap still embeds. */
 export const EMBED_FRAME_BATCH_SIZE = Number(
   process.env.EMBED_FRAME_BATCH_SIZE ?? "8",

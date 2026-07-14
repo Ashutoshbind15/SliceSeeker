@@ -6,8 +6,9 @@ import cors from "cors";
 import { Queue } from "bullmq";
 import {
   assertValkeyEvictionPolicy,
+  API_QUEUE_NAME,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
+  PREP_QUEUE_NAME,
 } from "queue";
 import { assertS3Access } from "./lib/s3.js";
 import {
@@ -74,19 +75,26 @@ app.get("/ready", async (_req, res) => {
     return;
   }
 
-  let queue: Queue | undefined;
+  let prepQueue: Queue | undefined;
+  let apiQueue: Queue | undefined;
   try {
-    queue = new Queue(JOB_QUEUE_NAME, {
+    prepQueue = new Queue(PREP_QUEUE_NAME, {
       connection: getValkeyConnectionOptions(),
     });
-    await queue.waitUntilReady();
+    apiQueue = new Queue(API_QUEUE_NAME, {
+      connection: getValkeyConnectionOptions(),
+    });
+    await Promise.all([prepQueue.waitUntilReady(), apiQueue.waitUntilReady()]);
     res.json({ ready: true });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Queue connection failed";
     res.status(503).json({ ready: false, error: message });
   } finally {
-    await queue?.close().catch(() => undefined);
+    await Promise.all([
+      prepQueue?.close().catch(() => undefined),
+      apiQueue?.close().catch(() => undefined),
+    ]);
   }
 });
 

@@ -23,13 +23,14 @@ import {
 import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
+  PREP_QUEUE_NAME,
   CHUNKING_JOB_NAME,
+  prepJobOptions,
   type ChunkingJobPayload,
 } from "queue";
 import { enqueueEmbeddingJobsForFile } from "./embedding-queue.js";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(PREP_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -338,9 +339,11 @@ export const startVideoProcessing = async (
     filetype: upload.filetype,
   };
 
-  const bullJob = await jobQueue.add(CHUNKING_JOB_NAME, payload, {
-    jobId: chunkingTaskId,
-  });
+  const bullJob = await jobQueue.add(
+    CHUNKING_JOB_NAME,
+    payload,
+    prepJobOptions(chunkingTaskId),
+  );
 
   const chunkingTask = await setChunkingTaskBullJobId(
     chunkingTaskId,

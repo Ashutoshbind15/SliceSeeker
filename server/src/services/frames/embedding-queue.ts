@@ -13,16 +13,16 @@ import {
   getFrameEmbeddingsForFile,
 } from "db/access/frames/frame-embeddings.js";
 import {
+  API_QUEUE_NAME,
+  apiJobOptions,
   EMBED_FRAME_BATCH_SIZE,
   EMBED_FRAME_JOB_NAME,
-  EMBED_JOB_ATTEMPTS,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
   type EmbedFrameJobItem,
   type EmbedFrameJobPayload,
 } from "queue";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(API_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -62,11 +62,7 @@ const addFrameEmbeddingBatchJob = async (input: {
       fileId: input.fileId,
       items: input.items,
     } satisfies EmbedFrameJobPayload,
-    {
-      jobId,
-      attempts: EMBED_JOB_ATTEMPTS,
-      backoff: { type: "exponential", delay: 5000 },
-    },
+    apiJobOptions(jobId),
   );
 
   await Promise.all(

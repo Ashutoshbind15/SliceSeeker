@@ -12,14 +12,14 @@ import {
   transcriptSegmentHasCurrentEmbedding,
 } from "db/access/transcription/transcript-segments.js";
 import {
-  EMBED_JOB_ATTEMPTS,
+  API_QUEUE_NAME,
+  apiJobOptions,
   EMBED_TRANSCRIPT_JOB_NAME,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
   type EmbedTranscriptJobPayload,
 } from "queue";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(API_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -33,11 +33,7 @@ const addTranscriptEmbeddingJob = async (input: {
       embeddingTaskId: input.embeddingTaskId,
       segmentId: input.segmentId,
     } satisfies EmbedTranscriptJobPayload,
-    {
-      jobId: input.embeddingTaskId,
-      attempts: EMBED_JOB_ATTEMPTS,
-      backoff: { type: "exponential", delay: 5000 },
-    },
+    apiJobOptions(input.embeddingTaskId),
   );
 
   await setTranscriptEmbeddingTaskBullJobId(

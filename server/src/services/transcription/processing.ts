@@ -31,13 +31,14 @@ import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   EXTRACT_AUDIO_JOB_NAME,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
+  PREP_QUEUE_NAME,
+  prepJobOptions,
   type ExtractAudioJobPayload,
 } from "queue";
 import { enqueueTranscriptEmbeddingJobsForFile } from "./embedding-queue.js";
 import { enqueueFailedTranscriptPartJobs } from "./part-queue.js";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(PREP_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -445,9 +446,11 @@ export const startTranscription = async (
     filetype: upload.filetype,
   };
 
-  const bullJob = await jobQueue.add(EXTRACT_AUDIO_JOB_NAME, payload, {
-    jobId: transcriptionTaskId,
-  });
+  const bullJob = await jobQueue.add(
+    EXTRACT_AUDIO_JOB_NAME,
+    payload,
+    prepJobOptions(transcriptionTaskId),
+  );
 
   const transcriptionTask = await setTranscriptionTaskBullJobId(
     transcriptionTaskId,

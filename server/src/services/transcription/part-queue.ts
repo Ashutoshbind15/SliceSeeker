@@ -8,14 +8,14 @@ import {
 } from "db/access/transcription/transcript-part-tasks.js";
 import { updateTranscriptionTaskStatus } from "db/access/transcription/transcription-tasks.js";
 import {
+  API_QUEUE_NAME,
+  apiJobOptions,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
-  TRANSCRIBE_JOB_ATTEMPTS,
   TRANSCRIBE_PART_JOB_NAME,
   type TranscribePartJobPayload,
 } from "queue";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(API_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -43,11 +43,11 @@ const addTranscribePartJob = async (
     }
   }
 
-  const bullJob = await jobQueue.add(TRANSCRIBE_PART_JOB_NAME, payload, {
-    jobId: part.id,
-    attempts: TRANSCRIBE_JOB_ATTEMPTS,
-    backoff: { type: "exponential", delay: 5000 },
-  });
+  const bullJob = await jobQueue.add(
+    TRANSCRIBE_PART_JOB_NAME,
+    payload,
+    apiJobOptions(part.id),
+  );
 
   await setTranscriptPartTaskBullJobId(part.id, bullJob.id!);
 };

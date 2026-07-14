@@ -12,14 +12,14 @@ import {
   setEmbeddingTaskBullJobId,
 } from "db/access/multimodal/embedding-tasks.js";
 import {
+  API_QUEUE_NAME,
+  apiJobOptions,
   EMBED_CHUNK_JOB_NAME,
-  EMBED_JOB_ATTEMPTS,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
   type EmbedChunkJobPayload,
 } from "queue";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(API_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -35,11 +35,7 @@ const addEmbeddingJob = async (input: {
       chunkId: input.chunkId,
       filetype: input.filetype,
     } satisfies EmbedChunkJobPayload,
-    {
-      jobId: input.embeddingTaskId,
-      attempts: EMBED_JOB_ATTEMPTS,
-      backoff: { type: "exponential", delay: 5000 },
-    },
+    apiJobOptions(input.embeddingTaskId),
   );
 
   await setEmbeddingTaskBullJobId(input.embeddingTaskId, bullJob.id!);

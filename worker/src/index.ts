@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Worker } from "bullmq";
+import { Worker, type Job } from "bullmq";
 import { updateChunkingTaskStatus } from "db/access/multimodal/chunking-tasks.js";
 import { markEmbeddingTaskFailed } from "db/access/multimodal/embedding-tasks.js";
 import { updateFrameTaskStatus } from "db/access/frames/frame-tasks.js";
@@ -19,6 +19,9 @@ import {
   processTranscribePartJob,
 } from "./jobs/transcription/transcribe-part-job.js";
 import {
+  API_JOB_MAX_AGE_MS,
+  API_QUEUE_NAME,
+  assertJobWithinMaxAge,
   CHUNKING_JOB_NAME,
   chunkingJobPayloadSchema,
   EMBED_CHUNK_JOB_NAME,
@@ -30,8 +33,10 @@ import {
   EXTRACT_AUDIO_JOB_NAME,
   extractAudioJobPayloadSchema,
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
+  isFinalJobFailure,
   parseJobPayload,
+  PREP_JOB_MAX_AGE_MS,
+  PREP_QUEUE_NAME,
   SAMPLE_FRAMES_JOB_NAME,
   sampleFramesJobPayloadSchema,
   TRANSCRIBE_PART_JOB_NAME,
@@ -45,70 +50,71 @@ import {
   type TranscribePartJobPayload,
 } from "queue";
 
-const worker = new Worker(
-  JOB_QUEUE_NAME,
-  async (job) => {
-    switch (job.name) {
-      case CHUNKING_JOB_NAME:
-        await processChunkingJob(
-          parseJobPayload(chunkingJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case EMBED_CHUNK_JOB_NAME:
-        await processEmbedChunkJob(
-          parseJobPayload(embedChunkJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case EXTRACT_AUDIO_JOB_NAME:
-        await processExtractAudioJob(
-          parseJobPayload(extractAudioJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case TRANSCRIBE_PART_JOB_NAME:
-        await processTranscribePartJob(
-          parseJobPayload(transcribePartJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case EMBED_TRANSCRIPT_JOB_NAME:
-        await processEmbedTranscriptJob(
-          parseJobPayload(embedTranscriptJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case SAMPLE_FRAMES_JOB_NAME:
-        await processSampleFramesJob(
-          parseJobPayload(sampleFramesJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      case EMBED_FRAME_JOB_NAME:
-        await processEmbedFrameJob(
-          parseJobPayload(embedFrameJobPayloadSchema, job.data, job.name),
-        );
-        return;
-      default:
-        console.log(`Skipping unsupported job type: ${job.name}`);
-    }
-  },
-  {
-    connection: getValkeyConnectionOptions(),
-    concurrency: Number(process.env.WORKER_CONCURRENCY ?? "2"),
-  },
-);
+const connection = getValkeyConnectionOptions();
 
-worker.on("completed", (job) => {
+const processPrepJob = async (job: Job) => {
+  assertJobWithinMaxAge(job, PREP_JOB_MAX_AGE_MS);
+
+  switch (job.name) {
+    case CHUNKING_JOB_NAME:
+      await processChunkingJob(
+        parseJobPayload(chunkingJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case EXTRACT_AUDIO_JOB_NAME:
+      await processExtractAudioJob(
+        parseJobPayload(extractAudioJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case SAMPLE_FRAMES_JOB_NAME:
+      await processSampleFramesJob(
+        parseJobPayload(sampleFramesJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    default:
+      console.log(`Skipping unsupported prep job type: ${job.name}`);
+  }
+};
+
+const processApiJob = async (job: Job) => {
+  assertJobWithinMaxAge(job, API_JOB_MAX_AGE_MS);
+
+  switch (job.name) {
+    case EMBED_CHUNK_JOB_NAME:
+      await processEmbedChunkJob(
+        parseJobPayload(embedChunkJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case TRANSCRIBE_PART_JOB_NAME:
+      await processTranscribePartJob(
+        parseJobPayload(transcribePartJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case EMBED_TRANSCRIPT_JOB_NAME:
+      await processEmbedTranscriptJob(
+        parseJobPayload(embedTranscriptJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case EMBED_FRAME_JOB_NAME:
+      await processEmbedFrameJob(
+        parseJobPayload(embedFrameJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    default:
+      console.log(`Skipping unsupported API job type: ${job.name}`);
+  }
+};
+
+const onCompleted = (job: Job) => {
   console.log(`Job ${job.id} (${job.name}) completed`);
-});
+};
 
-worker.on("failed", (job, err) => {
+const onFailed = (job: Job | undefined, err: Error) => {
   console.log(
     `Job ${job?.id ?? "unknown"} (${job?.name}) failed: ${err.message}`,
   );
 
-  if (!job) {
-    return;
-  }
-
-  const attempts = job.opts.attempts ?? 1;
-  if (job.attemptsMade < attempts) {
+  if (!job || !isFinalJobFailure(job, err)) {
     return;
   }
 
@@ -164,6 +170,23 @@ worker.on("failed", (job, err) => {
     const data = job.data as EmbedFrameJobPayload;
     void markEmbedFrameBatchFailed(data, err.message);
   }
+};
+
+const prepWorker = new Worker(PREP_QUEUE_NAME, processPrepJob, {
+  connection,
+  concurrency: Number(process.env.PREP_WORKER_CONCURRENCY ?? "4"),
 });
 
-console.log(`Worker listening on "${JOB_QUEUE_NAME}" queue`);
+const apiWorker = new Worker(API_QUEUE_NAME, processApiJob, {
+  connection,
+  concurrency: Number(process.env.API_WORKER_CONCURRENCY ?? "2"),
+});
+
+prepWorker.on("completed", onCompleted);
+prepWorker.on("failed", onFailed);
+apiWorker.on("completed", onCompleted);
+apiWorker.on("failed", onFailed);
+
+console.log(
+  `Worker listening on "${PREP_QUEUE_NAME}" (concurrency=${process.env.PREP_WORKER_CONCURRENCY ?? "4"}) and "${API_QUEUE_NAME}" (concurrency=${process.env.API_WORKER_CONCURRENCY ?? "2"})`,
+);

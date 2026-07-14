@@ -23,8 +23,9 @@ import {
 import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
 import {
   getValkeyConnectionOptions,
-  JOB_QUEUE_NAME,
+  PREP_QUEUE_NAME,
   SAMPLE_FRAMES_JOB_NAME,
+  prepJobOptions,
   type SampleFramesJobPayload,
 } from "queue";
 import {
@@ -33,7 +34,7 @@ import {
 } from "../../lib/schemas/frames.js";
 import { enqueueFrameEmbeddingJobsForFile } from "./embedding-queue.js";
 
-const jobQueue = new Queue(JOB_QUEUE_NAME, {
+const jobQueue = new Queue(PREP_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
 });
 
@@ -397,9 +398,11 @@ export const startFrameIndexing = async (
     frameIntervalSec,
   };
 
-  const bullJob = await jobQueue.add(SAMPLE_FRAMES_JOB_NAME, payload, {
-    jobId: frameTaskId,
-  });
+  const bullJob = await jobQueue.add(
+    SAMPLE_FRAMES_JOB_NAME,
+    payload,
+    prepJobOptions(frameTaskId),
+  );
 
   const frameTask = await setFrameTaskBullJobId(frameTaskId, bullJob.id!);
 
