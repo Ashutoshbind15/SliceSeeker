@@ -4,6 +4,7 @@ packages:
   - "search"
   - "server"
   - "worker"
+  - "docs"
 minimumReleaseAge: 7200
 saveExact: true
 # strictDepBuilds: true
