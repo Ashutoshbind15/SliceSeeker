@@ -65,6 +65,7 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
       inputPath,
       extension,
       outputDir: chunksDir,
+      chunkDurationSec: payload.chunkDurationSec,
     });
 
     const chunkRecords = await mapWithConcurrency(
@@ -91,6 +92,7 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
           startSec: segment.startSec,
           endSec: segment.endSec,
           durationSec: segment.durationSec,
+          chunkDurationSec: payload.chunkDurationSec,
           storeKey,
         };
       },

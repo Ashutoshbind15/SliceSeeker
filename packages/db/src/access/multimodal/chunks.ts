@@ -12,6 +12,7 @@ export type ChunkMetadataInsert = {
   startSec: number;
   endSec: number;
   durationSec: number;
+  chunkDurationSec: number;
   storeKey: string;
 };
 
@@ -54,6 +55,7 @@ export const commitChunkingResult = async (input: {
           startSec: chunk.startSec,
           endSec: chunk.endSec,
           durationSec: chunk.durationSec,
+          chunkDurationSec: chunk.chunkDurationSec,
           storeKey: chunk.storeKey,
         })),
       );

@@ -24,6 +24,7 @@ export {
   deriveUploadsSummary,
   fetchUploads,
   invalidateUploads,
+  type ChunkDurationSec,
   type ChunkingTask,
   type EmbeddingProgress,
   type PipelineStatus,

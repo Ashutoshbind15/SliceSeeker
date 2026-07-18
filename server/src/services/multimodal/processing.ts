@@ -41,6 +41,7 @@ export type SerializedChunkingTask = {
   fileId: string;
   uploadId: string;
   status: string;
+  chunkDurationSec: number;
   chunkCount: number | null;
   errorMessage: string | null;
   createdAt: string;
@@ -64,6 +65,7 @@ export type PipelineStatus =
 
 export type UploadListChunkingTask = {
   status: string;
+  chunkDurationSec: number;
   chunkCount: number | null;
 };
 
@@ -89,6 +91,7 @@ const serializeChunkingTask = (
   fileId: task.fileId,
   uploadId: task.fileId,
   status: task.status,
+  chunkDurationSec: task.chunkDurationSec,
   chunkCount: task.chunkCount,
   errorMessage: task.errorMessage,
   createdAt: task.createdAt.toISOString(),
@@ -167,6 +170,7 @@ const toUploadListChunkingTask = (
   task: NonNullable<Awaited<ReturnType<typeof getChunkingTaskById>>>,
 ): UploadListChunkingTask => ({
   status: task.status,
+  chunkDurationSec: task.chunkDurationSec,
   chunkCount: task.chunkCount,
 });
 
@@ -264,6 +268,7 @@ export type StartVideoProcessingResult =
 
 export const startVideoProcessing = async (
   uploadId: string,
+  chunkDurationSec: number,
 ): Promise<StartVideoProcessingResult> => {
   const upload = await getUploadById(uploadId);
   if (!upload) {
@@ -331,6 +336,7 @@ export const startVideoProcessing = async (
     await createChunkingTask({
       id: chunkingTaskId,
       fileId: upload.id,
+      chunkDurationSec,
     });
   } catch (err) {
     if (!isUniqueViolation(err)) {
@@ -359,6 +365,7 @@ export const startVideoProcessing = async (
     storageBucket: upload.storageBucket,
     filename: upload.filename,
     filetype: upload.filetype,
+    chunkDurationSec,
   };
 
   const bullJob = await jobQueue.add(

@@ -9,6 +9,7 @@ export const chunkingJobPayloadSchema = z.object({
   storageBucket: nonEmptyString,
   filename: nonEmptyString,
   filetype: nonEmptyString,
+  chunkDurationSec: z.number().positive(),
 });
 
 export const embedChunkJobPayloadSchema = z.object({

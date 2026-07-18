@@ -17,6 +17,7 @@ export const ACTIVE_CHUNKING_STATUSES: ChunkingTaskStatus[] = [
 export const createChunkingTask = async (input: {
   id: string;
   fileId: string;
+  chunkDurationSec: number;
   bullJobId?: string;
 }) => {
   const [task] = await db
@@ -24,6 +25,7 @@ export const createChunkingTask = async (input: {
     .values({
       id: input.id,
       fileId: input.fileId,
+      chunkDurationSec: input.chunkDurationSec,
       bullJobId: input.bullJobId,
       status: "queued",
     })

@@ -30,6 +30,7 @@ export type ChunkingTaskStatus =
 
 export type ChunkingTask = {
   status: ChunkingTaskStatus;
+  chunkDurationSec: number;
   chunkCount: number | null;
 };
 
@@ -89,10 +90,23 @@ export const assignUploadCollection = (input: {
     },
   ).then((response) => response.upload);
 
-export const startUploadProcessing = (uploadId: string) =>
+export type ChunkDurationSec = 5 | 10 | 15 | 30;
+
+export const startUploadProcessing = (input: {
+  uploadId: string;
+  chunkDurationSec?: ChunkDurationSec;
+}) =>
   apiFetch<{ chunkingTask?: ChunkingTask; embedding?: EmbeddingProgress }>(
-    `/uploads/${uploadId}/process`,
-    { method: "POST" },
+    `/uploads/${input.uploadId}/process`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...(input.chunkDurationSec
+          ? { chunkDurationSec: input.chunkDurationSec }
+          : {}),
+      }),
+    },
   );
 
 export const deleteUpload = (uploadId: string) =>

@@ -10,13 +10,15 @@ Use multimodal when you are not sure what end queries will target, or when you w
 ## Pipeline
 
 ```
-POST …/process (or equivalent start)
-  → chunk-video   (ffmpeg, ~15s segments)
+POST …/process { chunkDurationSec? }
+  → chunk-video   (ffmpeg, fixed-length segments)
   → embed-chunk   (per segment, via AI Gateway)
   → store vectors in Postgres
 ```
 
-Chunk duration is currently fixed at **15 seconds** (`CHUNK_DURATION_SEC` in the worker).
+## Chunk duration
+
+`chunkDurationSec` defaults to **15**. The start request accepts `5`, `10`, `15`, or `30`. Shorter chunks cost more embeds and catch finer timing; longer chunks (up to 30s) stay within Gemini Embedding 2’s 1 fps sampling band (max 32 frames per clip).
 
 ## Search
 

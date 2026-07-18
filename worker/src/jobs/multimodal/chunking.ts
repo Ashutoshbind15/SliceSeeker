@@ -5,8 +5,6 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-export const CHUNK_DURATION_SEC = 15;
-
 type SegmentEntry = {
   filename: string;
   startSec: number;
@@ -41,6 +39,7 @@ export const chunkVideoFile = async (input: {
   inputPath: string;
   extension: string;
   outputDir: string;
+  chunkDurationSec: number;
 }) => {
   const segmentPattern = path.join(
     input.outputDir,
@@ -57,7 +56,7 @@ export const chunkVideoFile = async (input: {
     "-f",
     "segment",
     "-segment_time",
-    String(CHUNK_DURATION_SEC),
+    String(input.chunkDurationSec),
     "-reset_timestamps",
     "1",
     "-segment_list",

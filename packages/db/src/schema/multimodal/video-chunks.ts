@@ -23,6 +23,7 @@ export const videoChunksTable = pgTable(
     startSec: doublePrecision("start_sec").notNull(),
     endSec: doublePrecision("end_sec").notNull(),
     durationSec: doublePrecision("duration_sec").notNull(),
+    chunkDurationSec: integer("chunk_duration_sec").notNull().default(15),
     storeKey: text("store_key"),
     embedding: vector("embedding", {
       dimensions: VIDEO_CHUNK_EMBEDDING_DIMENSIONS,

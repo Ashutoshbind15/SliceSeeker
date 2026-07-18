@@ -27,6 +27,7 @@ export const chunkingTasksTable = pgTable(
       .references(() => uploadsTable.id, { onDelete: "cascade" }),
     status: chunkingTaskStatusEnum("status").notNull().default("queued"),
     bullJobId: text("bull_job_id"),
+    chunkDurationSec: integer("chunk_duration_sec").notNull().default(15),
     chunkCount: integer("chunk_count"),
     errorMessage: text("error_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

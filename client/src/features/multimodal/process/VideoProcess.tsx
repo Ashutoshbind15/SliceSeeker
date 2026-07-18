@@ -9,6 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,13 +30,26 @@ import {
 import { toast } from "sonner";
 import {
   deriveUploadsSummary,
+  type ChunkDurationSec,
   type ChunkingTask,
   type PipelineStatus,
   type UploadSummary,
   useStartProcessingMutation,
   useUploadsQuery,
 } from "@/query";
-import { Cpu, Play, RotateCcw, CheckCircle2, AlertCircle, Loader2, FileVideo, HardDrive } from "lucide-react";
+import {
+  Cpu,
+  Play,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  FileVideo,
+  HardDrive,
+} from "lucide-react";
+
+const DEFAULT_DURATION: ChunkDurationSec = 15;
+const DURATION_OPTIONS: ChunkDurationSec[] = [5, 10, 15, 30];
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -108,12 +128,19 @@ const ProgressCell = ({ upload }: { upload: UploadSummary }) => {
     return (
       <div className="flex flex-col gap-1.5 min-w-[8rem]">
         <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-          <span>{formatChunkingStatus(upload.chunkingTask.status)}</span>
+          <span>
+            {formatChunkingStatus(upload.chunkingTask.status)}
+            {" · "}
+            {upload.chunkingTask.chunkDurationSec}s segments
+          </span>
           {upload.chunkingTask.chunkCount !== null && (
             <span>{upload.chunkingTask.chunkCount} segments</span>
           )}
         </div>
-        <Progress value={upload.chunkingTask.status === 'completed' ? 100 : 50} className="h-1.5" />
+        <Progress
+          value={upload.chunkingTask.status === "completed" ? 100 : 50}
+          className="h-1.5"
+        />
       </div>
     );
   }
@@ -161,6 +188,9 @@ const VideoProcess = () => {
   const uploadsQuery = useUploadsQuery({ page, limit });
   const startProcessingMutation = useStartProcessingMutation();
   const { refetch } = uploadsQuery;
+  const [durationByUpload, setDurationByUpload] = useState<
+    Record<string, ChunkDurationSec>
+  >({});
 
   const uploads = uploadsQuery.data?.uploads ?? [];
   const pagination = uploadsQuery.data?.pagination;
@@ -180,22 +210,50 @@ const VideoProcess = () => {
     };
   }, [summary.active, refetch]);
 
-  const startProcessing = (uploadId: string) => {
-    startProcessingMutation.mutate(uploadId, {
-      onError: (error) => {
-        toast.error(error.message);
+  const getDuration = (upload: UploadSummary): ChunkDurationSec => {
+    const selected = durationByUpload[upload.id];
+    if (selected) {
+      return selected;
+    }
+    const fromTask = upload.chunkingTask?.chunkDurationSec;
+    if (
+      fromTask === 5 ||
+      fromTask === 10 ||
+      fromTask === 15 ||
+      fromTask === 30
+    ) {
+      return fromTask;
+    }
+    return DEFAULT_DURATION;
+  };
+
+  const startProcessing = (
+    uploadId: string,
+    chunkDurationSec: ChunkDurationSec,
+  ) => {
+    startProcessingMutation.mutate(
+      { uploadId, chunkDurationSec },
+      {
+        onError: (error) => {
+          toast.error(error.message);
+        },
       },
-    });
+    );
   };
 
   const renderAction = (upload: UploadSummary) => {
     const isSubmitting =
       startProcessingMutation.isPending &&
-      startProcessingMutation.variables === upload.id;
+      startProcessingMutation.variables?.uploadId === upload.id;
+    const duration = getDuration(upload);
 
     if (upload.pipelineStatus === "complete") {
       return (
-        <Button size="sm" variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10 pointer-events-none">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-primary hover:text-primary hover:bg-primary/10 pointer-events-none"
+        >
           <CheckCircle2 className="mr-2 h-4 w-4" /> Done
         </Button>
       );
@@ -206,7 +264,12 @@ const VideoProcess = () => {
       upload.pipelineStatus === "embedding"
     ) {
       return (
-        <Button size="sm" variant="secondary" disabled className="w-full sm:w-auto">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled
+          className="w-full sm:w-auto"
+        >
           <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing
         </Button>
       );
@@ -214,35 +277,87 @@ const VideoProcess = () => {
 
     if (upload.pipelineStatus === "failed") {
       return (
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={isSubmitting}
-          onClick={() => startProcessing(upload.id)}
-        >
-          {isSubmitting ? (
-            <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying</>
-          ) : (
-            <><RotateCcw className="mr-2 h-4 w-4" /> Retry Failed</>
-          )}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Select
+            value={String(duration)}
+            onValueChange={(value) =>
+              setDurationByUpload((current) => ({
+                ...current,
+                [upload.id]: Number(value) as ChunkDurationSec,
+              }))
+            }
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] rounded-lg text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DURATION_OPTIONS.map((value) => (
+                <SelectItem key={value} value={String(value)}>
+                  {value}s chunks
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={isSubmitting}
+            onClick={() => startProcessing(upload.id, duration)}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying
+              </>
+            ) : (
+              <>
+                <RotateCcw className="mr-2 h-4 w-4" /> Retry Failed
+              </>
+            )}
+          </Button>
+        </div>
       );
     }
 
     return (
-      <Button
-        size="sm"
-        className="w-full sm:w-auto rounded-lg"
-        disabled={isSubmitting}
-        onClick={() => startProcessing(upload.id)}
-      >
-        {isSubmitting ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting</>
-        ) : (
-          <><Play className="mr-2 h-4 w-4" /> Start</>
-        )}
-      </Button>
+      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+        <Select
+          value={String(duration)}
+          onValueChange={(value) =>
+            setDurationByUpload((current) => ({
+              ...current,
+              [upload.id]: Number(value) as ChunkDurationSec,
+            }))
+          }
+        >
+          <SelectTrigger className="h-8 w-[7.5rem] rounded-lg text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DURATION_OPTIONS.map((value) => (
+              <SelectItem key={value} value={String(value)}>
+                {value}s chunks
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          className="w-full sm:w-auto rounded-lg"
+          disabled={isSubmitting}
+          onClick={() => startProcessing(upload.id, duration)}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting
+            </>
+          ) : (
+            <>
+              <Play className="mr-2 h-4 w-4" /> Start
+            </>
+          )}
+        </Button>
+      </div>
     );
   };
 
@@ -257,14 +372,17 @@ const VideoProcess = () => {
             Processing
           </h1>
           <p className="text-muted-foreground max-w-2xl">
-            Extract frames, generate transcripts, and build embeddings for semantic search.
+            Split videos into segments and build multimodal embeddings for
+            semantic search. Choose chunk length before starting.
           </p>
         </div>
-        
+
         {summary.total > 0 && (
           <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
             <span className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${summary.active > 0 ? "bg-primary animate-pulse" : "bg-muted-foreground"}`} />
+              <span
+                className={`h-2 w-2 rounded-full ${summary.active > 0 ? "bg-primary animate-pulse" : "bg-muted-foreground"}`}
+              />
               {summary.active} active
             </span>
             <span className="flex items-center gap-2 text-muted-foreground">
@@ -293,7 +411,9 @@ const VideoProcess = () => {
         <TableRowsSkeleton rows={5} columns={5} />
       ) : null}
 
-      {!uploadsQuery.isPending && !uploadsQuery.isError && uploads.length === 0 ? (
+      {!uploadsQuery.isPending &&
+      !uploadsQuery.isError &&
+      uploads.length === 0 ? (
         <QueryEmptyState
           icon={<FileVideo />}
           title="No videos to process"
@@ -308,31 +428,52 @@ const VideoProcess = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
-                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">File</TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">Stage</TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">Progress</TableHead>
-                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">Error</TableHead>
-                  <TableHead className="w-0 px-6 py-4 font-medium text-muted-foreground text-right">Actions</TableHead>
+                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
+                    File
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Stage
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Progress
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Error
+                  </TableHead>
+                  <TableHead className="w-0 px-6 py-4 font-medium text-muted-foreground text-right">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {uploads.map((upload) => (
-                  <TableRow key={upload.id} className="transition-colors hover:bg-muted/20">
+                  <TableRow
+                    key={upload.id}
+                    className="transition-colors hover:bg-muted/20"
+                  >
                     <TableCell className="max-w-0 px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                           <FileVideo className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium truncate" title={upload.filename}>
+                          <div
+                            className="font-medium truncate"
+                            title={upload.filename}
+                          >
                             {upload.filename}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                            <span className="flex items-center gap-1"><HardDrive className="h-3 w-3" /> {formatBytes(upload.sizeBytes)}</span>
+                            <span className="flex items-center gap-1">
+                              <HardDrive className="h-3 w-3" />{" "}
+                              {formatBytes(upload.sizeBytes)}
+                            </span>
                             {upload.collectionName && (
                               <>
                                 <span className="text-border">•</span>
-                                <span className="truncate max-w-[120px]">{upload.collectionName}</span>
+                                <span className="truncate max-w-[120px]">
+                                  {upload.collectionName}
+                                </span>
                               </>
                             )}
                           </div>
@@ -347,7 +488,10 @@ const VideoProcess = () => {
                     </TableCell>
                     <TableCell className="px-6 py-4 align-middle">
                       {upload.primaryError ? (
-                        <div className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2" title={upload.primaryError}>
+                        <div
+                          className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2"
+                          title={upload.primaryError}
+                        >
                           {upload.primaryError}
                         </div>
                       ) : (

@@ -1,9 +1,11 @@
 import type { Request, Response } from "express";
 import { parseListQuery } from "../../lib/pagination.js";
 import {
+  firstZodErrorMessage,
   parseCollectionIdQuery,
   parseRouteParam,
 } from "../../lib/schemas/http.js";
+import { startVideoProcessBodySchema } from "../../lib/schemas/multimodal.js";
 import {
   getVideoJob,
   listUploads,
@@ -38,7 +40,21 @@ export const startVideoProcessingHandler = async (
     return;
   }
 
-  const result = await startVideoProcessing(uploadId);
+  const parsedBody = startVideoProcessBodySchema.safeParse(req.body ?? {});
+  if (!parsedBody.success) {
+    res.status(400).json({
+      message: firstZodErrorMessage(
+        parsedBody.error,
+        "chunkDurationSec must be one of 5, 10, 15, or 30",
+      ),
+    });
+    return;
+  }
+
+  const result = await startVideoProcessing(
+    uploadId,
+    parsedBody.data.chunkDurationSec,
+  );
   if (!result.ok) {
     const status =
       result.reason === "not_found"

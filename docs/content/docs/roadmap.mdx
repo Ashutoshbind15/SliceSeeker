@@ -10,6 +10,7 @@ Honest status for an early project. Use this page to set expectations, not as a 
 - Tus upload → S3, collections, admin UI
 - Three **independent** modalities: multimodal chunks, speech transcripts, still frames
 - Per-modality process / search / costs
+- Tunable multimodal `chunkDurationSec` (5 / 10 / 15 / 30) and vision `frameIntervalSec` (2 / 5 / 10)
 - Phase 2 `search-api` + `search-client`
 - Self-contained and external Compose deploys
 - Prep/API queue split, retries, pool sizing, one-active-pipeline guards
@@ -18,7 +19,6 @@ Honest status for an early project. Use this page to set expectations, not as a 
 
 | Theme | Intent |
 | --- | --- |
-| **Tunable chunk duration** | Make multimodal `chunkDurationSec` a real process param (5 / 10 / 15 / 30) |
 | **Pipeline presets** | JSON config on a collection: which steps run, without a DAG UI |
 | **Hybrid search** | Run multiple retrievals → fuse with RRF (and later query-time weights) |
 | **Thin multi-provider** | Swap embed / ASR backends per pipeline without rewriting jobs |
