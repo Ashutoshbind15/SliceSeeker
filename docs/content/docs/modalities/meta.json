@@ -1,4 +1,4 @@
 {
   "title": "Modalities",
-  "pages": ["index", "multimodal", "speech", "vision"]
+  "pages": ["multimodal", "speech", "vision"]
 }
