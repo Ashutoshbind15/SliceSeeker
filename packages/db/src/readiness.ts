@@ -27,6 +27,8 @@ const INDEXER_REQUIRED_TABLES = [
   "frame_embeddings",
   "frame_embedding_tasks",
   "frame_costs",
+  "hybrid_tasks",
+  "media_segments",
   "todos",
 ] as const;
 

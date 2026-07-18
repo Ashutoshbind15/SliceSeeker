@@ -29,6 +29,11 @@
       "types": "./dist/access/frames/*.d.ts",
       "import": "./dist/access/frames/*.js"
     },
+    "./access/hybrid/*.js": {
+      "@workspace/source": "./src/access/hybrid/*.ts",
+      "types": "./dist/access/hybrid/*.d.ts",
+      "import": "./dist/access/hybrid/*.js"
+    },
     "./schema/shared/*.js": {
       "@workspace/source": "./src/schema/shared/*.ts",
       "types": "./dist/schema/shared/*.d.ts",
@@ -48,6 +53,11 @@
       "@workspace/source": "./src/schema/frames/*.ts",
       "types": "./dist/schema/frames/*.d.ts",
       "import": "./dist/schema/frames/*.js"
+    },
+    "./schema/hybrid/*.js": {
+      "@workspace/source": "./src/schema/hybrid/*.ts",
+      "types": "./dist/schema/hybrid/*.d.ts",
+      "import": "./dist/schema/hybrid/*.js"
     },
     "./readiness.js": {
       "@workspace/source": "./src/readiness.ts",

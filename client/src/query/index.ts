@@ -97,6 +97,16 @@ export {
 } from "@/query/frames/costs";
 
 export {
+  deriveHybridUploadsSummary,
+  type HybridPipelineStatus,
+  type HybridTask,
+  type HybridUploadSummary,
+  type SegmentDurationSec,
+  useHybridUploadsQuery,
+  useStartHybridProcessingMutation,
+} from "@/query/hybrid/hybrid";
+
+export {
   type Todo,
   createTodo,
   fetchTodos,

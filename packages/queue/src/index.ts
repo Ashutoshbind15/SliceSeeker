@@ -10,6 +10,7 @@ export {
   embedFrameJobPayloadSchema,
   embedTranscriptJobPayloadSchema,
   extractAudioJobPayloadSchema,
+  hybridSegmentJobPayloadSchema,
   parseJobPayload,
   sampleFramesJobPayloadSchema,
   transcribePartJobPayloadSchema,
@@ -19,6 +20,7 @@ export {
   type EmbedFrameJobPayload,
   type EmbedTranscriptJobPayload,
   type ExtractAudioJobPayload,
+  type HybridSegmentJobPayload,
   type SampleFramesJobPayload,
   type TranscribePartJobPayload,
 } from "./payloads.js";
@@ -50,6 +52,8 @@ export const EMBED_TRANSCRIPT_JOB_NAME = "embed-transcript";
 
 export const SAMPLE_FRAMES_JOB_NAME = "sample-frames";
 export const EMBED_FRAME_JOB_NAME = "embed-frame";
+
+export const HYBRID_SEGMENT_JOB_NAME = "hybrid-segment";
 
 /** Frames per BullMQ embed job — keeps queue chatter low for cheap still embeds. */
 export const EMBED_FRAME_BATCH_SIZE = Number(

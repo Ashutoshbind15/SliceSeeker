@@ -148,5 +148,9 @@ export const deleteUploadStorageArtifacts = async (input: {
       bucket: input.bucket,
       prefix: `frames/${input.fileId}/`,
     }),
+    deleteObjectsByPrefix({
+      bucket: input.bucket,
+      prefix: `hybrid/${input.fileId}/`,
+    }),
   ]);
 };

@@ -38,6 +38,12 @@ import {
 import { searchFramesHandler } from "./routes/frames/search.js";
 import { listFrameCostsHandler } from "./routes/frames/costs.js";
 import {
+  getHybridJobStatusHandler,
+  getHybridUploadStatusHandler,
+  listHybridUploadsHandler,
+  startHybridProcessingHandler,
+} from "./routes/hybrid/processing.js";
+import {
   assignUploadCollectionHandler,
   createCollectionHandler,
   listCollectionsHandler,
@@ -129,6 +135,11 @@ app.get("/frames/:uploadId/status", getFrameUploadStatusHandler);
 app.get("/frames/jobs/:jobId", getFrameJobStatusHandler);
 app.post("/frames/search", searchFramesHandler);
 app.get("/frames/costs", listFrameCostsHandler);
+
+app.get("/hybrid/uploads", listHybridUploadsHandler);
+app.post("/hybrid/:uploadId/start", startHybridProcessingHandler);
+app.get("/hybrid/:uploadId/status", getHybridUploadStatusHandler);
+app.get("/hybrid/jobs/:jobId", getHybridJobStatusHandler);
 
 app.get("/collections", listCollectionsHandler);
 app.post("/collections", createCollectionHandler);

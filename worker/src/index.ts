@@ -3,6 +3,7 @@ import { Worker, type Job } from "bullmq";
 import { updateChunkingTaskStatus } from "db/access/multimodal/chunking-tasks.js";
 import { markEmbeddingTaskFailed } from "db/access/multimodal/embedding-tasks.js";
 import { updateFrameTaskStatus } from "db/access/frames/frame-tasks.js";
+import { updateHybridTaskStatus } from "db/access/hybrid/hybrid-tasks.js";
 import { markTranscriptEmbeddingTaskFailed } from "db/access/transcription/transcript-embedding-tasks.js";
 import { updateTranscriptionTaskStatus } from "db/access/transcription/transcription-tasks.js";
 import { processChunkingJob } from "./jobs/multimodal/chunking-job.js";
@@ -11,6 +12,7 @@ import {
   markEmbedFrameBatchFailed,
   processEmbedFrameJob,
 } from "./jobs/frames/embed-frame-job.js";
+import { processHybridSegmentJob } from "./jobs/hybrid/segment-job.js";
 import { processEmbedTranscriptJob } from "./jobs/transcription/embed-transcript-job.js";
 import { processExtractAudioJob } from "./jobs/transcription/extract-audio-job.js";
 import { processSampleFramesJob } from "./jobs/frames/sample-frames-job.js";
@@ -33,6 +35,8 @@ import {
   EXTRACT_AUDIO_JOB_NAME,
   extractAudioJobPayloadSchema,
   getValkeyConnectionOptions,
+  HYBRID_SEGMENT_JOB_NAME,
+  hybridSegmentJobPayloadSchema,
   isFinalJobFailure,
   parseJobPayload,
   PREP_JOB_MAX_AGE_MS,
@@ -46,6 +50,7 @@ import {
   type EmbedFrameJobPayload,
   type EmbedTranscriptJobPayload,
   type ExtractAudioJobPayload,
+  type HybridSegmentJobPayload,
   type SampleFramesJobPayload,
   type TranscribePartJobPayload,
 } from "queue";
@@ -69,6 +74,11 @@ const processPrepJob = async (job: Job) => {
     case SAMPLE_FRAMES_JOB_NAME:
       await processSampleFramesJob(
         parseJobPayload(sampleFramesJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case HYBRID_SEGMENT_JOB_NAME:
+      await processHybridSegmentJob(
+        parseJobPayload(hybridSegmentJobPayloadSchema, job.data, job.name),
       );
       return;
     default:
@@ -159,6 +169,16 @@ const onFailed = (job: Job | undefined, err: Error) => {
   if (job.name === SAMPLE_FRAMES_JOB_NAME) {
     const data = job.data as SampleFramesJobPayload;
     void updateFrameTaskStatus(data.frameTaskId, {
+      status: "failed",
+      errorMessage: err.message,
+      completedAt: new Date(),
+    });
+    return;
+  }
+
+  if (job.name === HYBRID_SEGMENT_JOB_NAME) {
+    const data = job.data as HybridSegmentJobPayload;
+    void updateHybridTaskStatus(data.hybridTaskId, {
       status: "failed",
       errorMessage: err.message,
       completedAt: new Date(),

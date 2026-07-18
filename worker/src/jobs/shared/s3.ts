@@ -185,3 +185,47 @@ export const deleteFrameObjectsForFile = async (
       : undefined;
   } while (continuationToken);
 };
+
+export const buildHybridSegmentStorageKey = (input: {
+  fileId: string;
+  segmentIndex: number;
+  extension: string;
+}) =>
+  `hybrid/${input.fileId}/${String(input.segmentIndex).padStart(4, "0")}${input.extension}`;
+
+export const buildHybridSegmentPrefix = (fileId: string) =>
+  `hybrid/${fileId}/`;
+
+export const deleteHybridSegmentObjectsForFile = async (
+  fileId: string,
+  bucket: string,
+) => {
+  const prefix = buildHybridSegmentPrefix(fileId);
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await s3.listObjectsV2({
+      Bucket: bucket,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+
+    const keys =
+      response.Contents?.map((object) => object.Key).filter(
+        (key): key is string => key != null,
+      ) ?? [];
+
+    if (keys.length > 0) {
+      await s3.deleteObjects({
+        Bucket: bucket,
+        Delete: {
+          Objects: keys.map((Key) => ({ Key })),
+        },
+      });
+    }
+
+    continuationToken = response.IsTruncated
+      ? response.NextContinuationToken
+      : undefined;
+  } while (continuationToken);
+};

@@ -11,6 +11,7 @@ import TranscriptCosts from "@/features/transcription/costs/TranscriptCosts";
 import FramesProcess from "@/features/frames/process/FramesProcess";
 import FrameSearch from "@/features/frames/search/FrameSearch";
 import FrameCosts from "@/features/frames/costs/FrameCosts";
+import HybridProcess from "@/features/hybrid/process/HybridProcess";
 import Files from "@/features/shared/files/Files";
 import FileCosts from "@/features/multimodal/costs/FileCosts";
 import Layout from "./Layout";
@@ -40,6 +41,7 @@ root.render(
           <Route path="/frames" element={<FramesProcess />} />
           <Route path="/frames/search" element={<FrameSearch />} />
           <Route path="/frames/costs" element={<FrameCosts />} />
+          <Route path="/hybrid" element={<HybridProcess />} />
           <Route path="/todo" element={<Todo />} />
         </Route>
       </Routes>

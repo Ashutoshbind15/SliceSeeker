@@ -67,6 +67,15 @@ export const queryKeys = {
       list: () => [...queryKeys.frames.costs.all, "list"] as const,
     },
   },
+  hybrid: {
+    all: ["hybrid"] as const,
+    uploads: {
+      all: ["hybrid", "uploads"] as const,
+      lists: () => [...queryKeys.hybrid.uploads.all, "list"] as const,
+      list: (filters: UploadListFilters = {}) =>
+        [...queryKeys.hybrid.uploads.lists(), filters] as const,
+    },
+  },
   todos: {
     all: ["todos"] as const,
     list: () => [...queryKeys.todos.all, "list"] as const,

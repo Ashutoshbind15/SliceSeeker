@@ -8,6 +8,8 @@ import { frameCostsTable } from "./schema/frames/frame-costs.js";
 import { frameEmbeddingTasksTable } from "./schema/frames/frame-embedding-tasks.js";
 import { frameEmbeddingsTable } from "./schema/frames/frame-embeddings.js";
 import { frameTasksTable } from "./schema/frames/frame-tasks.js";
+import { hybridTasksTable } from "./schema/hybrid/hybrid-tasks.js";
+import { mediaSegmentsTable } from "./schema/hybrid/media-segments.js";
 import { todosTable } from "./schema/shared/index.js";
 import { transcriptEmbeddingTasksTable } from "./schema/transcription/transcript-embedding-tasks.js";
 import { transcriptPartTasksTable } from "./schema/transcription/transcript-part-tasks.js";
@@ -56,6 +58,8 @@ const db = drizzle(pool, {
     frameEmbeddings: frameEmbeddingsTable,
     frameEmbeddingTasks: frameEmbeddingTasksTable,
     frameCosts: frameCostsTable,
+    hybridTasks: hybridTasksTable,
+    mediaSegments: mediaSegmentsTable,
   },
 });
 

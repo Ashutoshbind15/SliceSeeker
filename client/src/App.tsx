@@ -9,6 +9,7 @@ import {
   DollarSign,
   Mic,
   Images,
+  Layers,
 } from "lucide-react";
 
 const App = () => {
@@ -178,6 +179,24 @@ const App = () => {
             <h3 className="font-heading text-lg font-medium">Costs</h3>
             <p className="text-sm text-muted-foreground">
               Frame image-embedding spend.
+            </p>
+          </Link>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Hybrid
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-3">
+          <Link
+            to="/hybrid"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Layers className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Process</h3>
+            <p className="text-sm text-muted-foreground">
+              Shared segment grid for fused multimodal search.
             </p>
           </Link>
         </div>

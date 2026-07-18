@@ -106,6 +106,18 @@ const navSegments: NavSegment[] = [
       },
     ],
   },
+  {
+    kind: "menu",
+    label: "Hybrid",
+    items: [
+      {
+        name: "Process",
+        path: "/hybrid",
+        exact: true,
+        description: "Shared segment grid",
+      },
+    ],
+  },
 ];
 
 const isNavItemActive = (pathname: string, item: NavItem) => {

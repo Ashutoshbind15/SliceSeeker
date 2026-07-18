@@ -1,0 +1,468 @@
+import { useEffect, useMemo, useState } from "react";
+import { ListPagination } from "@/components/ListPagination";
+import {
+  QueryEmptyState,
+  QueryErrorAlert,
+  TableRowsSkeleton,
+} from "@/components/query-state";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DEFAULT_LIMIT,
+  type AllowedLimit,
+} from "@/lib/pagination";
+import { toast } from "sonner";
+import {
+  deriveHybridUploadsSummary,
+  type HybridPipelineStatus,
+  type HybridUploadSummary,
+  type SegmentDurationSec,
+  useHybridUploadsQuery,
+  useStartHybridProcessingMutation,
+} from "@/query";
+import {
+  Layers,
+  Play,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  FileVideo,
+  HardDrive,
+} from "lucide-react";
+
+const DEFAULT_DURATION: SegmentDurationSec = 15;
+const DURATION_OPTIONS: SegmentDurationSec[] = [5, 10, 15, 30];
+
+const formatBytes = (bytes: number | null) => {
+  if (!bytes) {
+    return "Unknown size";
+  }
+
+  const gib = bytes / (1024 * 1024 * 1024);
+  if (gib >= 1) {
+    return `${gib.toFixed(2)} GiB`;
+  }
+
+  const mib = bytes / (1024 * 1024);
+  return `${mib.toFixed(1)} MiB`;
+};
+
+const pipelineStatusLabel: Record<HybridPipelineStatus, string> = {
+  not_started: "Not started",
+  segmenting: "Segmenting",
+  complete: "Complete",
+  failed: "Failed",
+};
+
+const pipelineStatusVariant: Record<
+  HybridPipelineStatus,
+  "secondary" | "destructive" | "outline" | "default"
+> = {
+  not_started: "outline",
+  segmenting: "secondary",
+  complete: "default",
+  failed: "destructive",
+};
+
+const pipelineStatusClass: Record<HybridPipelineStatus, string> = {
+  not_started: "bg-muted/50 text-muted-foreground border-border/50",
+  segmenting:
+    "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  complete: "bg-primary/15 text-primary border-primary/20",
+  failed: "bg-destructive/15 text-destructive border-destructive/20",
+};
+
+const StatusBadge = ({ status }: { status: HybridPipelineStatus }) => (
+  <Badge
+    variant={pipelineStatusVariant[status]}
+    className={`${pipelineStatusClass[status]} font-medium px-2.5 py-0.5 rounded-lg`}
+  >
+    {status === "segmenting" ? (
+      <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+    ) : status === "complete" ? (
+      <CheckCircle2 className="mr-1.5 h-3 w-3" />
+    ) : status === "failed" ? (
+      <AlertCircle className="mr-1.5 h-3 w-3" />
+    ) : null}
+    {pipelineStatusLabel[status]}
+  </Badge>
+);
+
+const ProgressCell = ({ upload }: { upload: HybridUploadSummary }) => {
+  if (upload.pipelineStatus === "segmenting" && upload.hybridTask) {
+    return (
+      <div className="flex flex-col gap-1.5 min-w-[8rem]">
+        <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+          <span>{upload.hybridTask.segmentDurationSec}s segments</span>
+          {upload.hybridTask.segmentCount !== null && (
+            <span>{upload.hybridTask.segmentCount} clips</span>
+          )}
+        </div>
+        <Progress value={40} className="h-1.5" />
+      </div>
+    );
+  }
+
+  if (upload.pipelineStatus === "complete" && upload.hybridTask) {
+    return (
+      <div className="text-xs font-medium text-muted-foreground">
+        {upload.hybridTask.segmentCount ?? "—"} segments ·{" "}
+        {upload.hybridTask.segmentDurationSec}s requested
+      </div>
+    );
+  }
+
+  return <span className="text-muted-foreground/50">—</span>;
+};
+
+const PROCESS_POLL_INTERVAL_MS = 2_000;
+
+const HybridProcess = () => {
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState<AllowedLimit>(DEFAULT_LIMIT);
+  const uploadsQuery = useHybridUploadsQuery({ page, limit });
+  const startMutation = useStartHybridProcessingMutation();
+  const { refetch } = uploadsQuery;
+  const [durationByUpload, setDurationByUpload] = useState<
+    Record<string, SegmentDurationSec>
+  >({});
+
+  const uploads = uploadsQuery.data?.uploads ?? [];
+  const pagination = uploadsQuery.data?.pagination;
+  const summary = useMemo(
+    () => deriveHybridUploadsSummary(uploads),
+    [uploads],
+  );
+
+  useEffect(() => {
+    if (summary.active === 0) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void refetch();
+    }, PROCESS_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [summary.active, refetch]);
+
+  const getDuration = (upload: HybridUploadSummary): SegmentDurationSec => {
+    const selected = durationByUpload[upload.id];
+    if (selected) {
+      return selected;
+    }
+    const fromTask = upload.hybridTask?.segmentDurationSec;
+    if (
+      fromTask === 5 ||
+      fromTask === 10 ||
+      fromTask === 15 ||
+      fromTask === 30
+    ) {
+      return fromTask;
+    }
+    return DEFAULT_DURATION;
+  };
+
+  const start = (uploadId: string, segmentDurationSec: SegmentDurationSec) => {
+    startMutation.mutate(
+      { uploadId, segmentDurationSec },
+      {
+        onError: (error) => {
+          toast.error(error.message);
+        },
+      },
+    );
+  };
+
+  const renderAction = (upload: HybridUploadSummary) => {
+    const isSubmitting =
+      startMutation.isPending &&
+      startMutation.variables?.uploadId === upload.id;
+    const duration = getDuration(upload);
+
+    if (upload.pipelineStatus === "segmenting") {
+      return (
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled
+          className="w-full sm:w-auto"
+        >
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Running
+        </Button>
+      );
+    }
+
+    if (upload.pipelineStatus === "failed") {
+      return (
+        <div className="flex flex-col items-end gap-2">
+          <Select
+            value={String(duration)}
+            onValueChange={(value) =>
+              setDurationByUpload((current) => ({
+                ...current,
+                [upload.id]: Number(value) as SegmentDurationSec,
+              }))
+            }
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] rounded-lg text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DURATION_OPTIONS.map((value) => (
+                <SelectItem key={value} value={String(value)}>
+                  {value}s segments
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full sm:w-auto border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            disabled={isSubmitting}
+            onClick={() => start(upload.id, duration)}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Retrying
+              </>
+            ) : (
+              <>
+                <RotateCcw className="mr-2 h-4 w-4" /> Retry Failed
+              </>
+            )}
+          </Button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
+        <Select
+          value={String(duration)}
+          onValueChange={(value) =>
+            setDurationByUpload((current) => ({
+              ...current,
+              [upload.id]: Number(value) as SegmentDurationSec,
+            }))
+          }
+        >
+          <SelectTrigger className="h-8 w-[7.5rem] rounded-lg text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DURATION_OPTIONS.map((value) => (
+              <SelectItem key={value} value={String(value)}>
+                {value}s segments
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          className="w-full sm:w-auto rounded-lg"
+          disabled={isSubmitting}
+          onClick={() => start(upload.id, duration)}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting
+            </>
+          ) : upload.pipelineStatus === "complete" ? (
+            <>
+              <RotateCcw className="mr-2 h-4 w-4" /> Re-segment
+            </>
+          ) : (
+            <>
+              <Play className="mr-2 h-4 w-4" /> Segment
+            </>
+          )}
+        </Button>
+      </div>
+    );
+  };
+
+  const fetchError = uploadsQuery.isError ? uploadsQuery.error.message : null;
+
+  return (
+    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
+            <Layers className="h-8 w-8 text-primary" />
+            Hybrid
+          </h1>
+          <p className="text-muted-foreground max-w-2xl">
+            Build a shared segment grid once with near-exact durations. Video,
+            speech, and vision transforms will run per clip for fused hybrid
+            search.
+          </p>
+        </div>
+
+        {summary.total > 0 && (
+          <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
+            <span className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${summary.active > 0 ? "bg-primary animate-pulse" : "bg-muted-foreground"}`}
+              />
+              {summary.active} active
+            </span>
+            <span className="flex items-center gap-2 text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4" />
+              {summary.complete} done
+            </span>
+            {summary.failed > 0 && (
+              <span className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                {summary.failed} failed
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {fetchError ? (
+        <QueryErrorAlert
+          message={fetchError}
+          onRetry={() => void uploadsQuery.refetch()}
+          className="rounded-2xl"
+        />
+      ) : null}
+
+      {uploadsQuery.isPending && uploads.length === 0 ? (
+        <TableRowsSkeleton rows={5} columns={5} />
+      ) : null}
+
+      {!uploadsQuery.isPending &&
+      !uploadsQuery.isError &&
+      uploads.length === 0 ? (
+        <QueryEmptyState
+          icon={<FileVideo />}
+          title="No videos to segment"
+          description="Upload a video first, then return here to build the hybrid segment grid."
+          className="rounded-3xl border bg-muted/30"
+        />
+      ) : null}
+
+      {uploads.length > 0 ? (
+        <div className="min-w-0 space-y-4">
+          <div className="min-w-0 rounded-2xl border bg-card shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
+                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
+                    File
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Stage
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Progress
+                  </TableHead>
+                  <TableHead className="px-6 py-4 font-medium text-muted-foreground">
+                    Error
+                  </TableHead>
+                  <TableHead className="w-0 px-6 py-4 font-medium text-muted-foreground text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {uploads.map((upload) => (
+                  <TableRow
+                    key={upload.id}
+                    className="transition-colors hover:bg-muted/20"
+                  >
+                    <TableCell className="max-w-0 px-6 py-4 align-middle">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                          <Layers className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className="font-medium truncate"
+                            title={upload.filename}
+                          >
+                            {upload.filename}
+                          </div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+                            <span className="flex items-center gap-1">
+                              <HardDrive className="h-3 w-3" />{" "}
+                              {formatBytes(upload.sizeBytes)}
+                            </span>
+                            {upload.collectionName && (
+                              <>
+                                <span className="text-border">•</span>
+                                <span className="truncate max-w-[120px]">
+                                  {upload.collectionName}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      <StatusBadge status={upload.pipelineStatus} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      <ProgressCell upload={upload} />
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle">
+                      {upload.primaryError ? (
+                        <div
+                          className="text-xs text-destructive bg-destructive/10 px-2 py-1.5 rounded-md max-w-[200px] line-clamp-2"
+                          title={upload.primaryError}
+                        >
+                          {upload.primaryError}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-6 py-4 align-middle text-right">
+                      {renderAction(upload)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          {pagination ? (
+            <ListPagination
+              pagination={pagination}
+              onPageChange={setPage}
+              onLimitChange={(nextLimit) => {
+                setLimit(nextLimit);
+                setPage(1);
+              }}
+              disabled={uploadsQuery.isFetching}
+            />
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
+export default HybridProcess;
