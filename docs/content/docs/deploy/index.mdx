@@ -1,0 +1,37 @@
+---
+title: Deploy
+description: Self-contained vs external Compose layouts
+---
+
+Two deployment layouts. Same application images and phase model; they differ only in where Postgres, Valkey, and object storage run.
+
+| Layout | Use when |
+| --- | --- |
+| [Self-contained](/docs/deploy/self-contained) | You want every dependency as a container on one host (eval, single-node) |
+| [External](/docs/deploy/external) | You already have Postgres, Redis/Valkey, and S3-compatible storage |
+
+Application services always run as containers: `indexer-api`, `indexer-worker`, `admin-ui`, `search-api`, and `tusd`.
+
+## Quick start
+
+**Self-contained:**
+
+```bash
+cp deploy/self-contained/.env.example deploy/self-contained/.env
+# set AI_GATEWAY_API_KEY
+docker compose -f deploy/self-contained/docker-compose.infra.yml --env-file deploy/self-contained/.env up -d
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase1.yml --env-file deploy/self-contained/.env up -d
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase2.yml --env-file deploy/self-contained/.env up -d
+```
+
+**External:**
+
+```bash
+cp deploy/external/.env.example deploy/external/.env
+# set DATABASE_URL, VALKEY_URL, S3_*, AI_GATEWAY_API_KEY
+docker compose -f deploy/external/docker-compose.init.yml --env-file deploy/external/.env up
+docker compose -f deploy/external/docker-compose.phase1.yml --env-file deploy/external/.env up -d
+docker compose -f deploy/external/docker-compose.phase2.yml --env-file deploy/external/.env up -d
+```
+
+Compose files live under [`deploy/`](https://github.com/Ashutoshbind15/demo-search-ai/tree/main/deploy) in the repository. See [Operations](/docs/operations) for Valkey `noeviction`, pool sizing, and readiness.

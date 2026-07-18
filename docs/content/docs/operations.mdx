@@ -1,0 +1,64 @@
+---
+title: Operations
+description: Queues, pools, readiness, and the env knobs that matter in v0.1
+---
+
+A short operator guide for deploys that survive more than one video and one replica.
+
+## Valkey / Redis
+
+BullMQ stores job state in Redis. Set **`maxmemory-policy noeviction`**. LRU eviction can silently drop queue keys and look like random job loss.
+
+- Self-contained Valkey is configured correctly out of the box.
+- Managed Redis often defaults to an eviction policy; change it in the provider console.
+- If the provider blocks `CONFIG GET`, set `VALKEY_SKIP_EVICTION_CHECK=true` only after you have confirmed `noeviction` yourself. Phase 1 `/ready` still fails when the policy is readable and wrong.
+
+## Worker concurrency
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PREP_WORKER_CONCURRENCY` | `4` | ffmpeg / S3 prep jobs |
+| `API_WORKER_CONCURRENCY` | `2` | embed + Whisper jobs |
+| `ENQUEUE_CONCURRENCY` | `16` | Max concurrent BullMQ adds + DB writes when fan-out enqueueing one file |
+
+Raise prep without raising API concurrency one-for-one. If you see gateway `429`s, lower `API_WORKER_CONCURRENCY`.
+
+## Job retries
+
+Prep and API jobs use exponential backoff and a max age from enqueue time. After max attempts or max age, the job fails permanently.
+
+| Prefix | Typical knobs |
+| --- | --- |
+| `PREP_JOB_*` | `ATTEMPTS`, `BACKOFF_MS`, `MAX_AGE_MS` |
+| `API_JOB_*` | same |
+
+Defaults live in the deploy `.env.example` files.
+
+## Database pool
+
+`DB_POOL_MAX` (default `10`) is the max connections per API / worker / search process. Keep:
+
+```
+replicas × DB_POOL_MAX  <  Postgres max_connections
+```
+
+Managed plans are often tight; size pools before scaling workers.
+
+## Readiness
+
+| Service | `/ready` roughly checks |
+| --- | --- |
+| **indexer-api** | Schema, S3, Valkey `noeviction`, both queues |
+| **search-api** | Schema only |
+
+`/health` is liveness. Application containers do not run migrations on boot; use `db-push` / `docker-compose.init.yml`.
+
+## Pipeline safety
+
+- Only **one active** parent task per file per modality. A concurrent second start returns **409**.
+- Workers shut down on `SIGTERM` / `SIGINT` by closing prep and API workers (in-flight jobs finish, then exit).
+- Re-process is a normal action; pipelines are written to tolerate re-runs without unique-index blowups looking like product bugs.
+
+## Costs
+
+Each modality records usage when the gateway returns cost metadata. Missing metadata fails clearly rather than inventing numbers. Use the per-modality costs screens in the admin UI for A/B on the same fixture video.

@@ -1,0 +1,27 @@
+---
+title: Vision
+description: Sample still frames, embed images, search by what's on screen
+---
+
+Vision indexing samples JPEG stills from a video on a fixed interval, embeds each frame as an image, and retrieves by text query in the same embedding space.
+
+## Pipeline
+
+```
+POST /frames/:uploadId/start { frameIntervalSec? }
+  → sample-frames   (ffmpeg: 1 JPEG every N seconds → S3)
+  → embed-frame     (image embed per frame)
+  → store frame_embeddings + vectors
+```
+
+## Interval
+
+`frameIntervalSec` defaults to **5**. The start request accepts common values such as `2`, `5`, and `10`. Denser sampling costs more embeds and storage; sparser sampling may miss short visual events.
+
+## Search
+
+- Admin UI: `/frames/search`
+- Phase 2: `POST /frames/search`
+- SDK: `client.searchFrames({ query, … })`
+
+Hits include `timestampSec`, `frameIntervalSec`, `thumbnailObject`, and `sourceObject` so the UI can show a thumbnail and seek the source video.

@@ -1,6 +1,6 @@
-# Bundled deployment
+# Self-contained deployment
 
-Runs the full stack on one host: application services plus Postgres (pgvector), Valkey, and bundled S3-compatible object storage. Suitable for evaluation, development-like staging, or single-node production.
+Runs the full stack on one host: application services plus Postgres (pgvector), Valkey, and S3-compatible object storage. Suitable for evaluation, development-like staging, or single-node production.
 
 ## Layout
 
@@ -10,7 +10,7 @@ Runs the full stack on one host: application services plus Postgres (pgvector), 
 | `docker-compose.phase1.yml` | `indexer-api`, `indexer-worker`, `admin-ui`, `tusd` |
 | `docker-compose.phase2.yml` | `search-api` |
 
-Phases share the bundled Postgres instance. Phase 2 can be deployed without Phase 1 app services on the same host once data exists in the database.
+Phases share the self-contained Postgres instance. Phase 2 can be deployed without Phase 1 app services on the same host once data exists in the database.
 
 ## Setup
 

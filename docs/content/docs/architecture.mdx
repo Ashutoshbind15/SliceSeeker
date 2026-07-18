@@ -1,0 +1,75 @@
+---
+title: Architecture
+description: Phases, containers, and how data moves through the system
+---
+
+demo-search-ai is a pnpm monorepo. Application code lives in workspace packages; production runs those packages as containers plus shared infrastructure.
+
+## Phase model
+
+```
+┌─────────────────────────────────────────────┐
+│  Phase 1: Indexing                          │
+│  admin-ui → indexer-api → Valkey queues     │
+│                 ↓                           │
+│           indexer-worker                    │
+│                 ↓                           │
+│         Postgres + S3                       │
+└─────────────────────────────────────────────┘
+                      │
+                      ▼  shared schema
+┌─────────────────────────────────────────────┐
+│  Phase 2: Search                            │
+│  search-api  ←→  Postgres                   │
+│  (embeds the query, reads vectors only)     │
+└─────────────────────────────────────────────┘
+```
+
+Phases do not call each other over HTTP. Phase 2 only needs a populated Postgres instance and an embedding provider for query vectors.
+
+## Application containers
+
+| Container | Source | Role |
+| --- | --- | --- |
+| **indexer-api** | `server/` | Phase 1 HTTP API: uploads/hooks, collections, modality pipelines, search + costs used by the admin UI. Exposes `/health` and `/ready`. |
+| **indexer-worker** | `worker/` | BullMQ consumers. Includes ffmpeg. Runs prep jobs (chunk / extract / sample) and API jobs (embed / ASR). |
+| **admin-ui** | `client/` | Operator UI. Proxies API and tusd. |
+| **search-api** | `search/` | Phase 2 read-only search: multimodal, transcript, and frame endpoints. `/ready` checks schema only. |
+| **db-push** | `packages/db/` | One-shot: enable `vector` extension and push Drizzle schema. |
+
+## Infrastructure containers
+
+| Service | Typical image | Role |
+| --- | --- | --- |
+| **db** | `pgvector/pgvector` | Postgres + vectors |
+| **valkey** | Valkey / Redis-compatible | BullMQ job state. Must use `maxmemory-policy noeviction`. |
+| **rustfs** (self-contained layout) | S3-compatible | Object storage for source video, audio extracts, frames |
+| **tusd** | `tusproject/tusd` | Resumable uploads to S3; HTTP hooks notify indexer-api |
+
+## Shared packages
+
+| Package | Purpose |
+| --- | --- |
+| `db` | Drizzle schema and access layer (uploads, collections, chunks, transcripts, frames, costs) |
+| `queue` | Job names, payloads, Valkey connection, concurrency helpers |
+| `search-client` | Typed SDK for search-api |
+
+## Queues
+
+Phase 1 splits work across two BullMQ queues so ffmpeg-heavy prep can scale separately from embedding / Whisper load:
+
+| Queue | Kind of work | Concurrency env |
+| --- | --- | --- |
+| Prep (`demo-prep-jobs`) | `chunk-video`, `extract-audio`, `sample-frames`, … | `PREP_WORKER_CONCURRENCY` |
+| API (`demo-api-jobs`) | `embed-chunk`, `transcribe-part`, `embed-transcript`, `embed-frame`, … | `API_WORKER_CONCURRENCY` |
+
+See [Operations](/docs/operations) for pool sizing, retries, and readiness checks.
+
+## Data flow (one modality)
+
+1. Browser uploads via **tusd** → object lands in S3.
+2. tusd hook → **indexer-api** records the upload.
+3. Operator starts a pipeline → API enqueues a parent task.
+4. **indexer-worker** runs prep then embed/ASR jobs.
+5. Vectors and metadata land in Postgres.
+6. **search-api** (or indexer-api from the admin UI) embeds the query and runs cosine similarity.

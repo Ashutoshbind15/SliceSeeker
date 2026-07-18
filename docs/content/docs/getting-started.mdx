@@ -1,0 +1,60 @@
+---
+title: Getting started
+description: Run the full stack locally and complete a first search
+---
+
+Get from zero to a searchable video on your machine. You need Docker, Node.js, and pnpm.
+
+## Prerequisites
+
+- **pnpm** (see root `packageManager` in `package.json`)
+- **Docker**: Postgres, Valkey, S3-compatible storage, and tusd run via Compose
+- An **AI Gateway API key**: used for embeddings and Whisper transcription
+
+## Install and run
+
+From the repo root:
+
+```bash
+pnpm install
+pnpm dev:all
+```
+
+That script builds shared packages, starts local infra (`docker-compose.dev.yml`), and runs the admin UI, indexer API, worker, and search API in parallel.
+
+Set `AI_GATEWAY_API_KEY` in the environment for the server and worker processes (and search-api, which embeds queries). Model IDs come from your env (see `.env.example`).
+
+End-to-end behavior is validated against the opinionated defaults: Gemini embeddings and Whisper for speech. If you swap in other models, check that model's docs for equivalent capabilities (video/image/text embed shapes, ASR output, size limits) and what the [AI Gateway](https://vercel.com/docs/ai-gateway) exposes for that provider.
+
+## First search
+
+1. Open the **admin UI** (Vite client; typically proxied or on its own port in local mode).
+2. **Upload** a short video via the upload screen (tus → object storage).
+3. Pick one modality and start processing:
+   - **Multimodal**: chunk + embed video segments
+   - **Speech**: extract audio → Whisper → embed transcript segments
+   - **Vision**: sample frames → embed images
+4. Wait until the task shows complete (status polling in the UI).
+5. Open that modality's **search** page and try a natural-language query.
+
+Each modality has its own process, search, and costs screens. Indexing one does not index the others.
+
+## Search from code
+
+Once search-api is up (default publish port **3001** in deploy layouts):
+
+```typescript
+import { SearchClient } from "search-client";
+
+const client = new SearchClient({
+  baseUrl: "http://localhost:3001",
+});
+
+const hits = await client.search({ query: "sunset over water", limit: 10 });
+```
+
+See [Search](/docs/search) for transcript and frame methods.
+
+## Production-shaped deploys
+
+Local `pnpm dev:all` is for development. For container deploys, use [Self-contained](/docs/deploy/self-contained) or [External](/docs/deploy/external).

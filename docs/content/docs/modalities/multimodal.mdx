@@ -1,0 +1,27 @@
+---
+title: Multimodal
+description: Chunk video, embed clips, search by visual-semantic meaning
+---
+
+The baseline path: split a video into fixed-length segments, embed each segment as multimodal video, and retrieve by natural language.
+
+Use multimodal when you are not sure what end queries will target, or when you want deeper clip-level meaning from the video itself (scene, action, and audiovisual context together) rather than speech or a single frame alone.
+
+## Pipeline
+
+```
+POST …/process (or equivalent start)
+  → chunk-video   (ffmpeg, ~15s segments)
+  → embed-chunk   (per segment, via AI Gateway)
+  → store vectors in Postgres
+```
+
+Chunk duration is currently fixed at **15 seconds** (`CHUNK_DURATION_SEC` in the worker).
+
+## Search
+
+- Admin UI: multimodal search screen
+- Phase 2: `POST /search`
+- SDK: `client.search({ query, … })`
+
+Hits include `startSec`, `endSec`, `chunkIndex`, similarity `score`, and `sourceObject` (`bucket` + `key`) for resolving the original file.

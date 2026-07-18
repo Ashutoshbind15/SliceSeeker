@@ -1,0 +1,45 @@
+---
+title: Self-contained
+description: Full stack on one host with Compose-managed infra
+---
+
+Runs application services plus Postgres (pgvector), Valkey, and S3-compatible object storage (rustfs) on a single Compose network. Good for evaluation and single-node deploys.
+
+## Compose files
+
+| File | Contents |
+| --- | --- |
+| `docker-compose.infra.yml` | `db`, `valkey`, `rustfs`, bucket init, schema push |
+| `docker-compose.phase1.yml` | `indexer-api`, `indexer-worker`, `admin-ui`, `tusd` |
+| `docker-compose.phase2.yml` | `search-api` |
+
+## Setup
+
+```bash
+cp deploy/self-contained/.env.example deploy/self-contained/.env
+# set AI_GATEWAY_API_KEY
+
+docker compose -f deploy/self-contained/docker-compose.infra.yml --env-file deploy/self-contained/.env up -d
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase1.yml --env-file deploy/self-contained/.env up -d
+# after you have indexed data:
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase2.yml --env-file deploy/self-contained/.env up -d
+```
+
+Defaults in `.env.example` use Compose service names (`db`, `valkey`, `rustfs`). Leave them unless containers cannot reach each other on the project network.
+
+## Published ports (defaults)
+
+| Service | Host port |
+| --- | --- |
+| indexer-api | 3000 |
+| search-api | 3001 |
+| admin-ui | 8080 |
+| tusd | 8081 |
+| rustfs S3 | 9000 |
+
+## Scaling
+
+- **search-api** / **indexer-api**: horizontal replicas behind a load balancer (stateless).
+- **indexer-worker**: scale replicas; all share `VALKEY_URL`.
+- **tusd**: sticky sessions or distributed locking for multiple instances.
+- **db / valkey / rustfs**: stateful; use HA elsewhere or move to the [external](/docs/deploy/external) layout.

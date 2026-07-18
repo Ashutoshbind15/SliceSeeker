@@ -8,8 +8,8 @@ Phases share one database schema but deploy independently. They do not call each
 
 | Phase | Role | Services | Needs |
 | --- | --- | --- | --- |
-| **Phase 1 — Indexing** | Upload, chunk, embed, admin UI | `indexer-api`, `indexer-worker`, `admin-ui` | Postgres, Valkey, S3, tusd |
-| **Phase 2 — Search** | Read-only vector search API | `search-api` | Postgres, embedding provider |
+| **Phase 1: Indexing** | Upload, chunk, embed, admin UI | `indexer-api`, `indexer-worker`, `admin-ui` | Postgres, Valkey, S3, tusd |
+| **Phase 2: Search** | Read-only vector search API | `search-api` | Postgres, embedding provider |
 
 ```
 Phase 1 (write)  →  DB + storage
@@ -25,8 +25,8 @@ pnpm dev:all
 
 **Production deploy** (see [`deploy/README.md`](deploy/README.md)):
 
-- **Bundled** — all dependencies as containers: [`deploy/bundled/`](deploy/bundled/)
-- **External** — your Postgres, Valkey, and S3 URLs: [`deploy/external/`](deploy/external/)
+- **Self-contained**: all dependencies as containers ([`deploy/self-contained/`](deploy/self-contained/))
+- **External**: your Postgres, Valkey, and S3 URLs ([`deploy/external/`](deploy/external/))
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 

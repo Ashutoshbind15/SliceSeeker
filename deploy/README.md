@@ -4,20 +4,20 @@ Two deployment layouts are supported. Both use the same application images and p
 
 | Layout | Directory | Use when |
 | --- | --- | --- |
-| **Bundled** | [`bundled/`](bundled/) | You want every dependency as a container on one host (evaluation, single-node production). |
+| **Self-contained** | [`self-contained/`](self-contained/) | You want every dependency as a container on one host (evaluation, single-node production). |
 | **External** | [`external/`](external/) | You already have Postgres, Redis/Valkey, and S3-compatible storage and want to supply connection URLs. |
 
 Application services (`indexer-api`, `indexer-worker`, `admin-ui`, `search-api`, and optionally `tusd`) always run as containers in both layouts.
 
 ## Quick start
 
-**Bundled** (all infrastructure included):
+**Self-contained** (infra runs in Compose):
 
 ```bash
-cp deploy/bundled/.env.example deploy/bundled/.env
-docker compose -f deploy/bundled/docker-compose.infra.yml --env-file deploy/bundled/.env up -d
-docker compose -f deploy/bundled/docker-compose.infra.yml -f deploy/bundled/docker-compose.phase1.yml --env-file deploy/bundled/.env up -d
-docker compose -f deploy/bundled/docker-compose.infra.yml -f deploy/bundled/docker-compose.phase2.yml --env-file deploy/bundled/.env up -d
+cp deploy/self-contained/.env.example deploy/self-contained/.env
+docker compose -f deploy/self-contained/docker-compose.infra.yml --env-file deploy/self-contained/.env up -d
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase1.yml --env-file deploy/self-contained/.env up -d
+docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase2.yml --env-file deploy/self-contained/.env up -d
 ```
 
 **External** (bring your own database, queue, and object storage):

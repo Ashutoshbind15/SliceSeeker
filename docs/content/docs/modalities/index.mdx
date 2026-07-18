@@ -1,0 +1,32 @@
+---
+title: Modalities
+description: Three independent indexes for video meaning, speech, and frames
+---
+
+v0.1 ships **three separate indexes**. Each has its own process path, search endpoint, cost tracking, and admin UI routes. Starting one pipeline does not run the others.
+
+| Modality | Good for | Index unit | Timing |
+| --- | --- | --- | --- |
+| [Multimodal](/docs/modalities/multimodal) | Broader clip meaning when query intent is mixed or unknown | Video chunk (~15s) | `startSec`-`endSec` |
+| [Speech](/docs/modalities/speech) | Spoken words and dialogue | Transcript segment | `startSec`-`endSec` |
+| [Vision](/docs/modalities/vision) | What's visible on screen | Still frame | `timestampSec` |
+
+They share uploads and collections. Each builds its own embeddings and ranking.
+
+End-to-end testing so far covers the opinionated defaults (Gemini embeddings and Whisper). For other models, confirm equivalent behavior in that model's docs and via the AI Gateway before you depend on them.
+
+## Practical guidance
+
+- Speech-heavy interview → index **speech**.
+- Silent B-roll or product shots → index **vision**.
+- Mixed or unknown query intent, or deeper scene meaning → index **multimodal**.
+- For demos, index the same file under more than one modality and compare hits.
+
+## Shared product surfaces
+
+All three modalities:
+
+- Operate on the same **uploads** and optional **collections**
+- Block a second concurrent start for the same file with **409** (one active parent task)
+- Record **usage / costs** when the gateway returns cost metadata
+- Support re-run (re-process replaces or rebuilds that modality's index for the file)

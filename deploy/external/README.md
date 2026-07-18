@@ -60,9 +60,9 @@ docker compose -f docker-compose.phase2.yml --env-file .env up -d
 - **Valkey / Redis**: The job queue stores state in Redis. Use `maxmemory-policy noeviction` on whatever instance backs `VALKEY_URL`. Phase 1 `/ready` runs `CONFIG GET maxmemory-policy` when allowed; if your provider blocks it, set `VALKEY_SKIP_EVICTION_CHECK=true` after confirming `noeviction` in the provider console.
 - **Network**: containers must reach your external hosts. Use hostnames resolvable inside the container network (not `localhost` for services on the Docker host unless using `host.docker.internal` or equivalent).
 - **Schema**: run `docker-compose.init.yml` after upgrades or on empty databases. Application `/ready` endpoints verify schema but do not migrate.
-- **Bucket**: the bundled layout auto-creates a bucket; here you must create it beforehand.
+- **Bucket**: the self-contained layout auto-creates a bucket; here you must create it beforehand.
 - **Phase 2 only**: set `DATABASE_URL` and embedding vars; omit Valkey and S3 credentials unless you add optional features later.
 
 ## Scaling
 
-Same as bundled: scale stateless app containers horizontally. External Postgres, Valkey, and object storage scaling is your responsibility.
+Same as self-contained: scale stateless app containers horizontally. External Postgres, Valkey, and object storage scaling is your responsibility.

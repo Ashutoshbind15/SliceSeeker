@@ -1,0 +1,94 @@
+---
+title: Search
+description: Phase 2 search-api and the search-client SDK
+---
+
+Phase 2 is a read-only Express service (`search-api`). It embeds the query with the same gateway/model family used at index time, then runs similarity search against the chosen modality's vectors.
+
+The admin UI can also search through indexer-api. Prefer **search-api** + **search-client** for product integrations so search scales independently of indexing.
+
+## Endpoints
+
+| Method | Path | Modality |
+| --- | --- | --- |
+| `POST` | `/search` | Multimodal chunks |
+| `POST` | `/transcribe/search` | Transcript segments |
+| `POST` | `/frames/search` | Still frames |
+| `GET` | `/health` | Liveness |
+| `GET` | `/ready` | Schema present (503 if not) |
+
+### Common body fields
+
+```json
+{
+  "query": "sunset over water",
+  "collectionId": "col_abc",
+  "collectionIds": ["col_a", "col_b"],
+  "uploadId": "upload_xyz",
+  "limit": 10
+}
+```
+
+All filters are optional. `limit` defaults to 10 (max 50). Empty database → empty `results` array, not an error.
+
+## Install the SDK
+
+In this monorepo:
+
+```bash
+pnpm build:packages
+```
+
+```json
+{
+  "dependencies": {
+    "search-client": "workspace:*"
+  }
+}
+```
+
+## Usage
+
+```typescript
+import { SearchClient, SearchApiError } from "search-client";
+
+const client = new SearchClient({
+  baseUrl: "http://localhost:3001",
+  timeoutMs: 30_000,
+});
+
+const { ready } = await client.ready();
+if (!ready) throw new Error("search-api not ready");
+
+const multimodal = await client.search({
+  query: "sunset over water",
+  collectionId: "col_abc",
+  limit: 10,
+});
+
+const speech = await client.searchTranscripts({
+  query: "quarterly revenue guidance",
+});
+
+const frames = await client.searchFrames({
+  query: "red product box on a table",
+});
+
+try {
+  await client.search({ query: "" });
+} catch (err) {
+  if (err instanceof SearchApiError) {
+    console.error(err.status, err.message);
+  }
+}
+```
+
+## Hit shapes (summary)
+
+| Method | Notable fields |
+| --- | --- |
+| `search` | `segmentId`, `chunkIndex`, `startSec`, `endSec`, `score`, `sourceObject` |
+| `searchTranscripts` | same timing fields + `text` |
+| `searchFrames` | `frameId`, `timestampSec`, `thumbnailObject`, `sourceObject` |
+
+Resolve media with `sourceObject.bucket` + `sourceObject.key` against your S3-compatible store. The SDK returns object refs, not playback URLs. Presigned URL generation stays in the admin UI (and in your product layer) on purpose: the search stack does not opinionate how objects are served, so you can plug in your own authz, DRM, CDN, or private bucket policies.

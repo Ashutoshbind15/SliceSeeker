@@ -1,13 +1,44 @@
 ---
-title: Hello World
-description: Your first document
+title: Overview
+description: What demo-search-ai is and how the pieces fit together
 ---
 
-Welcome to the docs! You can start writing documents in `/content/docs`.
+**demo-search-ai** is a small monorepo for semantic video search. You upload media, index it in the background, then query by natural language. Postgres (pgvector) stores embeddings; object storage holds the source files.
 
-## What is Next?
+This is early software (v0.1). Three indexing modalities work end-to-end today. They are independent indexes; you choose which to run per file.
+
+## What you get
+
+| Capability | What it does |
+| --- | --- |
+| **Upload** | Resumable tus uploads into S3-compatible storage |
+| **Multimodal** | Split video into ~15s chunks, embed each chunk, search by meaning |
+| **Speech** | Extract audio, transcribe with Whisper, embed segments, search spoken content |
+| **Vision** | Sample still frames on an interval, embed images, search what's on screen |
+| **Admin UI** | Operator surface for upload, process, search, and cost views |
+| **Search API** | Read-only Phase 2 HTTP API + typed `search-client` SDK |
+
+## Two phases
+
+Indexing and search deploy as separate phases. They share a database schema but never call each other.
+
+```
+Phase 1 (write)  →  Postgres + Valkey + S3 + tusd
+Phase 2 (read)   →  Postgres + embedding provider
+```
+
+| Phase | Role | Services |
+| --- | --- | --- |
+| **1: Indexing** | Upload, process, admin UI | `indexer-api`, `indexer-worker`, `admin-ui`, `tusd` |
+| **2: Search** | Vector retrieval only | `search-api` |
+
+Phase 2 can run alone once Phase 1 has written data. Point `DATABASE_URL` at that database. An empty DB returns empty results.
+
+## Where to go next
 
 <Cards>
-  <Card title="Learn more about Next.js" href="https://nextjs.org/docs" />
-  <Card title="Learn more about Fumadocs" href="https://fumadocs.dev" />
+  <Card title="Getting started" href="/docs/getting-started" description="Run the stack locally and index your first video" />
+  <Card title="Architecture" href="/docs/architecture" description="Containers, queues, and the phase split" />
+  <Card title="Modalities" href="/docs/modalities" description="Multimodal, speech, and vision pipelines" />
+  <Card title="Deploy" href="/docs/deploy" description="Self-contained and external Compose layouts" />
 </Cards>

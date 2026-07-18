@@ -1,0 +1,34 @@
+---
+title: Roadmap
+description: What ships in v0.1 and what is planned next
+---
+
+Honest status for an early project. Use this page to set expectations, not as a commitment calendar.
+
+## Ships today
+
+- Tus upload → S3, collections, admin UI
+- Three **independent** modalities: multimodal chunks, speech transcripts, still frames
+- Per-modality process / search / costs
+- Phase 2 `search-api` + `search-client`
+- Self-contained and external Compose deploys
+- Prep/API queue split, retries, pool sizing, one-active-pipeline guards
+
+## Next (planned, not built)
+
+| Theme | Intent |
+| --- | --- |
+| **Tunable chunk duration** | Make multimodal `chunkDurationSec` a real process param (5 / 10 / 15 / 30) |
+| **Pipeline presets** | JSON config on a collection: which steps run, without a DAG UI |
+| **Hybrid search** | Run multiple retrievals → fuse with RRF (and later query-time weights) |
+| **Thin multi-provider** | Swap embed / ASR backends per pipeline without rewriting jobs |
+
+## Explicitly deferred
+
+- Visual pipeline / node editor
+- Scene-cut, OCR, object detection
+- Word-level timestamps / speaker diarization
+- LLM answer generation / RAG chat over hits
+- Global gateway RPM semaphore and multi-tenant search rate limits
+
+If you are evaluating the project: the interesting demo today is **upload → pick a modality → search → compare costs**, not fused hybrid ranking.

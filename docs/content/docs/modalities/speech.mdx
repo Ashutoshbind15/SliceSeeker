@@ -1,0 +1,31 @@
+---
+title: Speech
+description: Transcribe audio with Whisper and search transcript segments
+---
+
+Speech indexing turns spoken content into timed, searchable text embeddings. It runs as its own pipeline: separate jobs, tables, routes, and UI from multimodal and vision.
+
+## Pipeline
+
+```
+POST /transcribe/:uploadId/start
+  → extract-audio     (ffmpeg → compressed mono MP3)
+  → split if needed   (Whisper / gateway size limits)
+  → transcribe-part   (openai/whisper-1 via AI Gateway)
+  → embed-transcript  (text embed per segment)
+  → store transcript_segments + vectors
+```
+
+ASR is fixed to **Whisper** (`openai/whisper-1`) for v0.1. Segments use default/segment timestamps.
+
+## Size limits
+
+Gateway speech-to-text sends audio as base64 JSON. Treat roughly **18-20 MB** of raw audio as a safe ceiling (Whisper's upload limit is 25 MB; base64 inflates size). Long videos are extracted at a speech bitrate and time-split when needed; segment timestamps are offset so the merged timeline stays continuous.
+
+## Search
+
+- Admin UI: `/transcribe/search`
+- Phase 2: `POST /transcribe/search`
+- SDK: `client.searchTranscripts({ query, … })`
+
+Hits include segment `text`, `startSec` / `endSec`, and `sourceObject` for playback seek.

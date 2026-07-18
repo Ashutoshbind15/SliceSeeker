@@ -1,0 +1,52 @@
+---
+title: External
+description: Point application containers at your own Postgres, Valkey, and S3
+---
+
+Runs application containers only. You supply reachable URLs and credentials for Postgres (with pgvector), a Redis-compatible queue, and S3-compatible storage.
+
+## Compose files
+
+| File | Contents |
+| --- | --- |
+| `docker-compose.init.yml` | One-shot pgvector bootstrap + schema push against your `DATABASE_URL` |
+| `docker-compose.phase1.yml` | `indexer-api`, `indexer-worker`, `admin-ui`, `tusd` |
+| `docker-compose.phase2.yml` | `search-api` |
+
+## Setup
+
+1. Create a Postgres database that can use the `vector` extension (some hosts require enabling pgvector in a dashboard first).
+2. Create the S3 bucket yourself; credentials must read/write objects.
+3. Configure env and apply schema once:
+
+```bash
+cp deploy/external/.env.example deploy/external/.env
+# edit DATABASE_URL, VALKEY_URL, S3_*, AI_GATEWAY_API_KEY
+
+docker compose -f deploy/external/docker-compose.init.yml --env-file deploy/external/.env up
+docker compose -f deploy/external/docker-compose.phase1.yml --env-file deploy/external/.env up -d
+docker compose -f deploy/external/docker-compose.phase2.yml --env-file deploy/external/.env up -d
+```
+
+## Required environment
+
+| Variable | Phase | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | 1, 2 | Postgres with pgvector |
+| `DB_POOL_MAX` | 1, 2 | Per-process pool (default `10`). Keep `replicas × DB_POOL_MAX` under `max_connections`. |
+| `VALKEY_URL` | 1 | `redis://` or `rediss://`. **`maxmemory-policy` must be `noeviction`.** |
+| `VALKEY_SKIP_EVICTION_CHECK` | 1 | `true` only if the provider blocks `CONFIG GET` but you confirmed `noeviction`. |
+| `S3_ENDPOINT` | 1 | API endpoint reachable from containers |
+| `S3_PUBLIC_ENDPOINT` | 1 | Browser-reachable endpoint for presigned playback |
+| `S3_BUCKET` + credentials | 1 | Bucket you created |
+| `EMBEDDING_MODEL`, `AI_GATEWAY_API_KEY` | 1, 2 | Embedding (and Phase 1 ASR) provider |
+| `TUSD_HOOKS_URL` | 1 | Full URL tusd calls after upload (must reach indexer-api) |
+| `API_UPSTREAM`, `TUSD_UPSTREAM` | 1 | `host:port` targets for admin-ui proxies |
+
+Worker tuning vars (`PREP_WORKER_CONCURRENCY`, `API_WORKER_CONCURRENCY`, `ENQUEUE_CONCURRENCY`, `PREP_JOB_*`, `API_JOB_*`) are documented under [Operations](/docs/operations).
+
+## Operator notes
+
+- Containers must resolve your external hostnames (not `localhost` for services on the Docker host unless you use `host.docker.internal` or equivalent).
+- `/ready` verifies schema; it does **not** migrate. Re-run init after upgrades or on empty databases.
+- Phase 2 alone needs `DATABASE_URL` + embedding vars. Omit Valkey and S3 if you are not running Phase 1 on that host.
