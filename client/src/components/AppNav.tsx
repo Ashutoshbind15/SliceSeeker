@@ -121,6 +121,11 @@ const navSegments: NavSegment[] = [
         path: "/hybrid/search",
         description: "Weighted RRF fusion",
       },
+      {
+        name: "Costs",
+        path: "/hybrid/costs",
+        description: "Usage & spend",
+      },
     ],
   },
 ];

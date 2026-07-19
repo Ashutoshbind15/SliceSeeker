@@ -13,6 +13,7 @@ import FrameSearch from "@/features/frames/search/FrameSearch";
 import FrameCosts from "@/features/frames/costs/FrameCosts";
 import HybridProcess from "@/features/hybrid/process/HybridProcess";
 import HybridSearch from "@/features/hybrid/search/HybridSearch";
+import HybridCosts from "@/features/hybrid/costs/HybridCosts";
 import Files from "@/features/shared/files/Files";
 import FileCosts from "@/features/multimodal/costs/FileCosts";
 import Layout from "./Layout";
@@ -44,6 +45,7 @@ root.render(
           <Route path="/frames/costs" element={<FrameCosts />} />
           <Route path="/hybrid" element={<HybridProcess />} />
           <Route path="/hybrid/search" element={<HybridSearch />} />
+          <Route path="/hybrid/costs" element={<HybridCosts />} />
           <Route path="/todo" element={<Todo />} />
         </Route>
       </Routes>

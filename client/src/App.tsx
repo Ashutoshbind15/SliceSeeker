@@ -209,6 +209,16 @@ const App = () => {
               Fuse video, speech, and vision with tunable RRF weights.
             </p>
           </Link>
+          <Link
+            to="/hybrid/costs"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <DollarSign className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Costs</h3>
+            <p className="text-sm text-muted-foreground">
+              Per-modality hybrid indexing spend.
+            </p>
+          </Link>
         </div>
       </div>
     </div>

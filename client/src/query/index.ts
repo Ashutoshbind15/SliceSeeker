@@ -116,6 +116,12 @@ export {
 } from "@/query/hybrid/hybrid-search";
 
 export {
+  type HybridCostSummary,
+  fetchHybridCosts,
+  useHybridCostsQuery,
+} from "@/query/hybrid/hybrid-costs";
+
+export {
   type Todo,
   createTodo,
   fetchTodos,

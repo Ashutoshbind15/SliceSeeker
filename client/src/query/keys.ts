@@ -81,6 +81,10 @@ export const queryKeys = {
       results: (input: SearchHybridInput) =>
         [...queryKeys.hybrid.search.all, "results", input] as const,
     },
+    costs: {
+      all: ["hybrid", "costs"] as const,
+      list: () => [...queryKeys.hybrid.costs.all, "list"] as const,
+    },
   },
   todos: {
     all: ["todos"] as const,
