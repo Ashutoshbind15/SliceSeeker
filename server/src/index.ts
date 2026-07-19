@@ -43,6 +43,7 @@ import {
   listHybridUploadsHandler,
   startHybridProcessingHandler,
 } from "./routes/hybrid/processing.js";
+import { searchHybridHandler } from "./routes/hybrid/search.js";
 import {
   assignUploadCollectionHandler,
   createCollectionHandler,
@@ -140,6 +141,7 @@ app.get("/hybrid/uploads", listHybridUploadsHandler);
 app.post("/hybrid/:uploadId/start", startHybridProcessingHandler);
 app.get("/hybrid/:uploadId/status", getHybridUploadStatusHandler);
 app.get("/hybrid/jobs/:jobId", getHybridJobStatusHandler);
+app.post("/hybrid/search", searchHybridHandler);
 
 app.get("/collections", listCollectionsHandler);
 app.post("/collections", createCollectionHandler);

@@ -4,6 +4,7 @@ import cors from "cors";
 import { assertSearchSchema } from "db/readiness.js";
 import {
   searchFramesHandler,
+  searchHybridHandler,
   searchTranscriptsHandler,
   searchVideosHandler,
 } from "./routes/search.js";
@@ -34,6 +35,7 @@ app.get("/ready", async (_req, res) => {
 app.post("/search", searchVideosHandler);
 app.post("/transcribe/search", searchTranscriptsHandler);
 app.post("/frames/search", searchFramesHandler);
+app.post("/hybrid/search", searchHybridHandler);
 
 const PORT = process.env.PORT ?? "3001";
 

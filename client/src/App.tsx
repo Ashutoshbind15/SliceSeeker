@@ -199,6 +199,16 @@ const App = () => {
               Shared segment grid for fused multimodal search.
             </p>
           </Link>
+          <Link
+            to="/hybrid/search"
+            className="group flex flex-col gap-3 rounded-2xl border bg-card p-6 transition-all hover:shadow-md hover:border-primary/50"
+          >
+            <Search className="h-6 w-6 text-primary" />
+            <h3 className="font-heading text-lg font-medium">Search</h3>
+            <p className="text-sm text-muted-foreground">
+              Fuse video, speech, and vision with tunable RRF weights.
+            </p>
+          </Link>
         </div>
       </div>
     </div>

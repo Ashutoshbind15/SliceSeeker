@@ -2,6 +2,9 @@ import { SearchApiError } from "./errors.js";
 import type {
   FrameSearchHit,
   FrameSearchResponse,
+  HybridSearchHit,
+  HybridSearchParams,
+  HybridSearchResponse,
   ReadyResult,
   SearchClientOptions,
   SearchHit,
@@ -28,6 +31,15 @@ const toSearchBody = (params: SearchParams) => {
     ...(params.limit !== undefined ? { limit: params.limit } : {}),
   };
 };
+
+const toHybridSearchBody = (params: HybridSearchParams) => ({
+  ...toSearchBody(params),
+  ...(params.perModalityLimit !== undefined
+    ? { perModalityLimit: params.perModalityLimit }
+    : {}),
+  ...(params.weights ? { weights: params.weights } : {}),
+  ...(params.rrfK !== undefined ? { rrfK: params.rrfK } : {}),
+});
 
 export class SearchClient {
   private readonly baseUrl: string;
@@ -73,6 +85,17 @@ export class SearchClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(toSearchBody(params)),
+    });
+
+    return response.results;
+  }
+
+  /** Hybrid weighted-RRF search (`POST /hybrid/search`) */
+  async searchHybrid(params: HybridSearchParams): Promise<HybridSearchHit[]> {
+    const response = await this.request<HybridSearchResponse>("/hybrid/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(toHybridSearchBody(params)),
     });
 
     return response.results;

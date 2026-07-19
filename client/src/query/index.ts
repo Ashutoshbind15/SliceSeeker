@@ -108,6 +108,14 @@ export {
 } from "@/query/hybrid/hybrid";
 
 export {
+  type HybridModality,
+  type HybridSearchResult,
+  type SearchHybridInput,
+  searchHybrid,
+  useHybridSearchResultsQuery,
+} from "@/query/hybrid/hybrid-search";
+
+export {
   type Todo,
   createTodo,
   fetchTodos,

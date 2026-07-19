@@ -15,6 +15,18 @@ export type SearchParams = {
   limit?: number;
 };
 
+export type HybridModality = "video" | "speech" | "vision";
+
+export type HybridSearchParams = SearchParams & {
+  perModalityLimit?: number;
+  weights?: {
+    video?: number;
+    speech?: number;
+    vision?: number;
+  };
+  rrfK?: number;
+};
+
 export type SourceObject = {
   bucket: string;
   key: string;
@@ -72,6 +84,33 @@ export type TranscriptSearchResponse = {
 
 export type FrameSearchResponse = {
   results: FrameSearchHit[];
+};
+
+/** Hybrid weighted-RRF hit (`POST /hybrid/search`) */
+export type HybridSearchHit = {
+  segmentId: string;
+  fileId: string;
+  uploadId: string;
+  filename: string;
+  segmentIndex: number;
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  rrfScore: number;
+  ranks: {
+    video?: number;
+    speech?: number;
+    vision?: number;
+  };
+  sources: HybridModality[];
+  text: string | null;
+  visionTimestampSec: number | null;
+  sourceObject: SourceObject;
+  thumbnailObject: SourceObject | null;
+};
+
+export type HybridSearchResponse = {
+  results: HybridSearchHit[];
 };
 
 export type ReadyResult =

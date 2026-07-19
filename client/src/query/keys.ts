@@ -1,6 +1,7 @@
 import type { SearchVideosInput } from "./multimodal/search";
 import type { SearchTranscriptsInput } from "./transcription/transcript-search";
 import type { SearchFramesInput } from "./frames/frame-search";
+import type { SearchHybridInput } from "./hybrid/hybrid-search";
 import type { AllowedLimit } from "@/lib/pagination";
 
 export type UploadListFilters = {
@@ -74,6 +75,11 @@ export const queryKeys = {
       lists: () => [...queryKeys.hybrid.uploads.all, "list"] as const,
       list: (filters: UploadListFilters = {}) =>
         [...queryKeys.hybrid.uploads.lists(), filters] as const,
+    },
+    search: {
+      all: ["hybrid", "search"] as const,
+      results: (input: SearchHybridInput) =>
+        [...queryKeys.hybrid.search.all, "results", input] as const,
     },
   },
   todos: {

@@ -116,6 +116,11 @@ const navSegments: NavSegment[] = [
         exact: true,
         description: "Shared segment grid",
       },
+      {
+        name: "Search",
+        path: "/hybrid/search",
+        description: "Weighted RRF fusion",
+      },
     ],
   },
 ];

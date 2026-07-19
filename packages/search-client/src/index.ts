@@ -3,6 +3,10 @@ export { SearchApiError } from "./errors.js";
 export type {
   FrameSearchHit,
   FrameSearchResponse,
+  HybridModality,
+  HybridSearchHit,
+  HybridSearchParams,
+  HybridSearchResponse,
   ReadyResult,
   SearchClientOptions,
   SearchHit,

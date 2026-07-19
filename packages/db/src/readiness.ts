@@ -12,6 +12,8 @@ const SEARCH_REQUIRED_TABLES = [
   "video_chunks",
   "transcript_segments",
   "frame_embeddings",
+  "media_segments",
+  "hybrid_embeddings",
 ] as const;
 
 const INDEXER_REQUIRED_TABLES = [
