@@ -60,7 +60,8 @@ export const startHybridProcessingHandler = async (
     const status =
       result.reason === "not_found"
         ? 404
-        : result.reason === "already_running"
+        : result.reason === "already_running" ||
+            result.reason === "already_complete"
           ? 409
           : 400;
 
@@ -75,6 +76,7 @@ export const startHybridProcessingHandler = async (
 
   res.status(202).json({
     ...(result.hybridTask ? { hybridTask: result.hybridTask } : {}),
+    embedding: result.embedding,
   });
 };
 

@@ -3,6 +3,7 @@ import { Worker, type Job } from "bullmq";
 import { updateChunkingTaskStatus } from "db/access/multimodal/chunking-tasks.js";
 import { markEmbeddingTaskFailed } from "db/access/multimodal/embedding-tasks.js";
 import { updateFrameTaskStatus } from "db/access/frames/frame-tasks.js";
+import { markHybridEmbedSegmentTaskFailed } from "db/access/hybrid/hybrid-embed-segment-tasks.js";
 import { updateHybridTaskStatus } from "db/access/hybrid/hybrid-tasks.js";
 import { markTranscriptEmbeddingTaskFailed } from "db/access/transcription/transcript-embedding-tasks.js";
 import { updateTranscriptionTaskStatus } from "db/access/transcription/transcription-tasks.js";
@@ -12,6 +13,7 @@ import {
   markEmbedFrameBatchFailed,
   processEmbedFrameJob,
 } from "./jobs/frames/embed-frame-job.js";
+import { processHybridEmbedSegmentJob } from "./jobs/hybrid/embed-segment-job.js";
 import { processHybridSegmentJob } from "./jobs/hybrid/segment-job.js";
 import { processEmbedTranscriptJob } from "./jobs/transcription/embed-transcript-job.js";
 import { processExtractAudioJob } from "./jobs/transcription/extract-audio-job.js";
@@ -35,6 +37,8 @@ import {
   EXTRACT_AUDIO_JOB_NAME,
   extractAudioJobPayloadSchema,
   getValkeyConnectionOptions,
+  HYBRID_EMBED_SEGMENT_JOB_NAME,
+  hybridEmbedSegmentJobPayloadSchema,
   HYBRID_SEGMENT_JOB_NAME,
   hybridSegmentJobPayloadSchema,
   isFinalJobFailure,
@@ -50,6 +54,7 @@ import {
   type EmbedFrameJobPayload,
   type EmbedTranscriptJobPayload,
   type ExtractAudioJobPayload,
+  type HybridEmbedSegmentJobPayload,
   type HybridSegmentJobPayload,
   type SampleFramesJobPayload,
   type TranscribePartJobPayload,
@@ -108,6 +113,15 @@ const processApiJob = async (job: Job) => {
     case EMBED_FRAME_JOB_NAME:
       await processEmbedFrameJob(
         parseJobPayload(embedFrameJobPayloadSchema, job.data, job.name),
+      );
+      return;
+    case HYBRID_EMBED_SEGMENT_JOB_NAME:
+      await processHybridEmbedSegmentJob(
+        parseJobPayload(
+          hybridEmbedSegmentJobPayloadSchema,
+          job.data,
+          job.name,
+        ),
       );
       return;
     default:
@@ -189,6 +203,12 @@ const onFailed = (job: Job | undefined, err: Error) => {
   if (job.name === EMBED_FRAME_JOB_NAME) {
     const data = job.data as EmbedFrameJobPayload;
     void markEmbedFrameBatchFailed(data, err.message);
+    return;
+  }
+
+  if (job.name === HYBRID_EMBED_SEGMENT_JOB_NAME) {
+    const data = job.data as HybridEmbedSegmentJobPayload;
+    void markHybridEmbedSegmentTaskFailed(data.embeddingTaskId, err.message);
   }
 };
 

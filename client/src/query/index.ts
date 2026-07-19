@@ -98,6 +98,7 @@ export {
 
 export {
   deriveHybridUploadsSummary,
+  type HybridEmbeddingProgress,
   type HybridPipelineStatus,
   type HybridTask,
   type HybridUploadSummary,

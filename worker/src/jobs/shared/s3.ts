@@ -193,6 +193,12 @@ export const buildHybridSegmentStorageKey = (input: {
 }) =>
   `hybrid/${input.fileId}/${String(input.segmentIndex).padStart(4, "0")}${input.extension}`;
 
+export const buildHybridVisionFrameStorageKey = (input: {
+  fileId: string;
+  segmentIndex: number;
+}) =>
+  `hybrid/${input.fileId}/vision/${String(input.segmentIndex).padStart(4, "0")}.jpg`;
+
 export const buildHybridSegmentPrefix = (fileId: string) =>
   `hybrid/${fileId}/`;
 

@@ -62,6 +62,12 @@ export const hybridSegmentJobPayloadSchema = z.object({
   segmentDurationSec: z.number().positive(),
 });
 
+export const hybridEmbedSegmentJobPayloadSchema = z.object({
+  embeddingTaskId: nonEmptyString,
+  segmentId: nonEmptyString,
+  filetype: nonEmptyString,
+});
+
 export const embedFrameJobItemSchema = z.object({
   embeddingTaskId: nonEmptyString,
   frameId: nonEmptyString,
@@ -90,6 +96,9 @@ export type EmbedFrameJobItem = z.infer<typeof embedFrameJobItemSchema>;
 export type EmbedFrameJobPayload = z.infer<typeof embedFrameJobPayloadSchema>;
 export type HybridSegmentJobPayload = z.infer<
   typeof hybridSegmentJobPayloadSchema
+>;
+export type HybridEmbedSegmentJobPayload = z.infer<
+  typeof hybridEmbedSegmentJobPayloadSchema
 >;
 
 export const parseJobPayload = <T extends z.ZodType>(

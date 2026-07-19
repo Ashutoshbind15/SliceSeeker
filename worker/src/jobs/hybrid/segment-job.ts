@@ -104,6 +104,7 @@ export const processHybridSegmentJob = async (
     await commitHybridSegments({
       hybridTaskId: payload.hybridTaskId,
       fileId: payload.fileId,
+      segmentDurationSec: payload.segmentDurationSec,
       segments: segmentRecords,
     });
 

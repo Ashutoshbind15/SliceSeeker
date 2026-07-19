@@ -1,5 +1,8 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import db from "../../client.js";
+import { hybridCostsTable } from "../../schema/hybrid/hybrid-costs.js";
+import { hybridEmbedSegmentTasksTable } from "../../schema/hybrid/hybrid-embed-segment-tasks.js";
+import { hybridEmbeddingsTable } from "../../schema/hybrid/hybrid-embeddings.js";
 import { hybridTasksTable } from "../../schema/hybrid/hybrid-tasks.js";
 import { mediaSegmentsTable } from "../../schema/hybrid/media-segments.js";
 
@@ -49,18 +52,25 @@ export const deleteMediaSegmentsForFile = async (fileId: string) => {
 };
 
 /**
- * Atomically replace hybrid segments for a file. Deletes prior rows first so
- * re-segment (retries or intentional re-process) cannot hit
- * `media_segments_file_id_segment_index_idx`.
- *
- * Phase 1 will also clear hybrid_* embedding tables here before insert.
+ * Atomically replace hybrid segments for a file. Clears prior segments plus
+ * hybrid embeddings / child embed tasks (true re-segment wipe). Prep parent
+ * completes here — embed progress is derived from children, not parent status.
  */
 export const commitHybridSegments = async (input: {
   hybridTaskId: string;
   fileId: string;
+  segmentDurationSec: number;
   segments: MediaSegmentInsert[];
 }) => {
   await db.transaction(async (tx) => {
+    // Wipe soft children before replacing the segment grid (true re-segment).
+    await tx
+      .delete(hybridEmbedSegmentTasksTable)
+      .where(eq(hybridEmbedSegmentTasksTable.fileId, input.fileId));
+    await tx
+      .delete(hybridEmbeddingsTable)
+      .where(eq(hybridEmbeddingsTable.fileId, input.fileId));
+
     await tx
       .delete(mediaSegmentsTable)
       .where(eq(mediaSegmentsTable.fileId, input.fileId));
@@ -90,6 +100,22 @@ export const commitHybridSegments = async (input: {
         updatedAt: new Date(),
       })
       .where(eq(hybridTasksTable.id, input.hybridTaskId));
+
+    await tx
+      .insert(hybridCostsTable)
+      .values({
+        fileId: input.fileId,
+        segmentCount: input.segments.length,
+        segmentDurationSec: input.segmentDurationSec,
+      })
+      .onConflictDoUpdate({
+        target: hybridCostsTable.fileId,
+        set: {
+          segmentCount: input.segments.length,
+          segmentDurationSec: input.segmentDurationSec,
+          updatedAt: new Date(),
+        },
+      });
   });
 };
 

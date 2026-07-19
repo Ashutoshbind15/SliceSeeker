@@ -16,6 +16,7 @@ import { queryKeys, type UploadListFilters } from "@/query/keys";
 export type HybridPipelineStatus =
   | "not_started"
   | "segmenting"
+  | "embedding"
   | "complete"
   | "failed";
 
@@ -32,6 +33,18 @@ export type HybridTask = {
   segmentCount: number | null;
 };
 
+export type HybridEmbeddingProgress = {
+  total: number;
+  embedded: number;
+  failed: number;
+  pending: number;
+  modalities: {
+    video: number;
+    speech: number;
+    vision: number;
+  };
+};
+
 export type HybridUploadSummary = {
   id: string;
   filename: string;
@@ -43,6 +56,7 @@ export type HybridUploadSummary = {
   createdAt: string;
   hybridTask: HybridTask | null;
   hasSegments: boolean;
+  embedding: HybridEmbeddingProgress;
   pipelineStatus: HybridPipelineStatus;
   primaryError: string | null;
 };
@@ -74,6 +88,7 @@ export const startHybridProcessing = (input: {
 }) =>
   apiFetch<{
     hybridTask?: HybridTask;
+    embedding: HybridEmbeddingProgress;
   }>(`/hybrid/${input.uploadId}/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -86,8 +101,11 @@ export const startHybridProcessing = (input: {
 
 export const deriveHybridUploadsSummary = (uploads: HybridUploadSummary[]) => ({
   total: uploads.length,
-  active: uploads.filter((upload) => upload.pipelineStatus === "segmenting")
-    .length,
+  active: uploads.filter(
+    (upload) =>
+      upload.pipelineStatus === "segmenting" ||
+      upload.pipelineStatus === "embedding",
+  ).length,
   failed: uploads.filter((upload) => upload.pipelineStatus === "failed")
     .length,
   complete: uploads.filter((upload) => upload.pipelineStatus === "complete")
@@ -108,7 +126,7 @@ export const useStartHybridProcessingMutation = () => {
   return useMutation({
     mutationFn: startHybridProcessing,
     onSuccess: () => {
-      toast.success("Hybrid segmentation started");
+      toast.success("Hybrid processing started");
       void queryClient.invalidateQueries({
         queryKey: queryKeys.hybrid.uploads.all,
       });

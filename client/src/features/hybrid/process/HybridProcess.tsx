@@ -67,6 +67,7 @@ const formatBytes = (bytes: number | null) => {
 const pipelineStatusLabel: Record<HybridPipelineStatus, string> = {
   not_started: "Not started",
   segmenting: "Segmenting",
+  embedding: "Embedding",
   complete: "Complete",
   failed: "Failed",
 };
@@ -77,6 +78,7 @@ const pipelineStatusVariant: Record<
 > = {
   not_started: "outline",
   segmenting: "secondary",
+  embedding: "secondary",
   complete: "default",
   failed: "destructive",
 };
@@ -85,6 +87,8 @@ const pipelineStatusClass: Record<HybridPipelineStatus, string> = {
   not_started: "bg-muted/50 text-muted-foreground border-border/50",
   segmenting:
     "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/20",
+  embedding:
+    "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/20",
   complete: "bg-primary/15 text-primary border-primary/20",
   failed: "bg-destructive/15 text-destructive border-destructive/20",
 };
@@ -94,7 +98,7 @@ const StatusBadge = ({ status }: { status: HybridPipelineStatus }) => (
     variant={pipelineStatusVariant[status]}
     className={`${pipelineStatusClass[status]} font-medium px-2.5 py-0.5 rounded-lg`}
   >
-    {status === "segmenting" ? (
+    {status === "segmenting" || status === "embedding" ? (
       <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
     ) : status === "complete" ? (
       <CheckCircle2 className="mr-1.5 h-3 w-3" />
@@ -120,16 +124,43 @@ const ProgressCell = ({ upload }: { upload: HybridUploadSummary }) => {
     );
   }
 
-  if (upload.pipelineStatus === "complete" && upload.hybridTask) {
-    return (
-      <div className="text-xs font-medium text-muted-foreground">
-        {upload.hybridTask.segmentCount ?? "—"} segments ·{" "}
-        {upload.hybridTask.segmentDurationSec}s requested
-      </div>
-    );
+  if (upload.embedding.total === 0) {
+    return <span className="text-muted-foreground/50">—</span>;
   }
 
-  return <span className="text-muted-foreground/50">—</span>;
+  const pct = Math.round(
+    (upload.embedding.embedded / upload.embedding.total) * 100,
+  );
+  const { video, speech, vision } = upload.embedding.modalities;
+
+  return (
+    <div className="flex min-w-[11rem] flex-col gap-1.5">
+      <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+        <span>
+          {upload.embedding.embedded} / {upload.embedding.total} segments
+        </span>
+        <span className={pct === 100 ? "text-primary" : ""}>{pct}%</span>
+      </div>
+      <Progress value={pct} className="h-1.5" />
+      <div className="text-[11px] text-muted-foreground">
+        V {video} · S {speech} · I {vision}
+      </div>
+      <div className="flex items-center gap-3 text-[11px]">
+        {upload.embedding.pending > 0 ? (
+          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+            {upload.embedding.pending} pending
+          </span>
+        ) : null}
+        {upload.embedding.failed > 0 ? (
+          <span className="text-destructive flex items-center gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+            {upload.embedding.failed} failed
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
 };
 
 const PROCESS_POLL_INTERVAL_MS = 2_000;
@@ -199,7 +230,22 @@ const HybridProcess = () => {
       startMutation.variables?.uploadId === upload.id;
     const duration = getDuration(upload);
 
-    if (upload.pipelineStatus === "segmenting") {
+    if (upload.pipelineStatus === "complete") {
+      return (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-primary hover:text-primary hover:bg-primary/10 pointer-events-none"
+        >
+          <CheckCircle2 className="mr-2 h-4 w-4" /> Done
+        </Button>
+      );
+    }
+
+    if (
+      upload.pipelineStatus === "segmenting" ||
+      upload.pipelineStatus === "embedding"
+    ) {
       return (
         <Button
           size="sm"
@@ -288,13 +334,9 @@ const HybridProcess = () => {
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting
             </>
-          ) : upload.pipelineStatus === "complete" ? (
-            <>
-              <RotateCcw className="mr-2 h-4 w-4" /> Re-segment
-            </>
           ) : (
             <>
-              <Play className="mr-2 h-4 w-4" /> Segment
+              <Play className="mr-2 h-4 w-4" /> Process
             </>
           )}
         </Button>
@@ -313,9 +355,8 @@ const HybridProcess = () => {
             Hybrid
           </h1>
           <p className="text-muted-foreground max-w-2xl">
-            Build a shared segment grid once with near-exact durations. Video,
-            speech, and vision transforms will run per clip for fused hybrid
-            search.
+            Segment once, then embed video, speech, and vision per clip into a
+            shared hybrid index for fused search.
           </p>
         </div>
 
@@ -358,8 +399,8 @@ const HybridProcess = () => {
       uploads.length === 0 ? (
         <QueryEmptyState
           icon={<FileVideo />}
-          title="No videos to segment"
-          description="Upload a video first, then return here to build the hybrid segment grid."
+          title="No videos to process"
+          description="Upload a video first, then return here to build the hybrid segment grid and embeddings."
           className="rounded-3xl border bg-muted/30"
         />
       ) : null}

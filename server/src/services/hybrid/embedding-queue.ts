@@ -48,11 +48,7 @@ const addHybridEmbedSegmentJob = async (input: {
   );
 };
 
-/**
- * Fan out one `hybrid-embed-segment` job per media_segments row.
- * Skips segments that already have all three modality rows or an active child.
- * Partial / failed children are reset and re-enqueued (job skips present modalities).
- */
+/** Server-side mirror of worker `enqueueHybridModalityJobsForFile` for retry starts. */
 export const enqueueHybridModalityJobsForFile = async (input: {
   fileId: string;
   filetype: string;

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { Queue } from "bullmq";
 import {
+  fileHybridEmbeddingIsComplete,
+  getHybridEmbeddingStatsForFile,
+  getHybridEmbeddingStatsForFiles,
+  type HybridEmbeddingProgress,
+} from "db/access/hybrid/hybrid-embed-segment-tasks.js";
+import {
   ACTIVE_HYBRID_TASK_STATUSES,
   createHybridTask,
   getActiveHybridTaskForFile,
@@ -32,6 +38,7 @@ import {
   type SegmentDurationSec,
 } from "../../lib/schemas/hybrid.js";
 import { isUniqueViolation } from "../../lib/pg-errors.js";
+import { enqueueHybridModalityJobsForFile } from "./embedding-queue.js";
 
 const jobQueue = new Queue(PREP_QUEUE_NAME, {
   connection: getValkeyConnectionOptions(),
@@ -56,9 +63,12 @@ export type SerializedHybridTask = {
   completedAt: string | null;
 };
 
+export type SerializedHybridEmbeddingProgress = HybridEmbeddingProgress;
+
 export type HybridPipelineStatus =
   | "not_started"
   | "segmenting"
+  | "embedding"
   | "complete"
   | "failed";
 
@@ -81,6 +91,7 @@ export type HybridUploadListItem = {
   primaryError: string | null;
   hybridTask: UploadListHybridTask | null;
   hasSegments: boolean;
+  embedding: SerializedHybridEmbeddingProgress;
 };
 
 export type HybridStatusResponse = {
@@ -89,6 +100,7 @@ export type HybridStatusResponse = {
   primaryError: string | null;
   hybridTask: SerializedHybridTask | null;
   hasSegments: boolean;
+  embedding: SerializedHybridEmbeddingProgress;
 };
 
 const serializeHybridTask = (
@@ -106,11 +118,20 @@ const serializeHybridTask = (
   completedAt: task.completedAt?.toISOString() ?? null,
 });
 
+const emptyEmbeddingProgress = (): SerializedHybridEmbeddingProgress => ({
+  total: 0,
+  embedded: 0,
+  failed: 0,
+  pending: 0,
+  modalities: { video: 0, speech: 0, vision: 0 },
+});
+
 export const deriveHybridPipelineStatus = (input: {
   hybridTask: SerializedHybridTask | null;
+  embedding: SerializedHybridEmbeddingProgress;
   hasSegments: boolean;
 }): HybridPipelineStatus => {
-  const { hybridTask, hasSegments } = input;
+  const { hybridTask, embedding, hasSegments } = input;
 
   if (
     hybridTask &&
@@ -121,12 +142,24 @@ export const deriveHybridPipelineStatus = (input: {
     return "segmenting";
   }
 
+  if (fileHybridEmbeddingIsComplete(embedding)) {
+    return "complete";
+  }
+
   if (hybridTask?.status === "failed") {
     return "failed";
   }
 
-  if (hybridTask?.status === "completed" || hasSegments) {
-    return "complete";
+  if (hasSegments && embedding.pending > 0) {
+    return "embedding";
+  }
+
+  if (hasSegments && embedding.failed > 0 && embedding.pending === 0) {
+    return "failed";
+  }
+
+  if (hasSegments && embedding.total > 0) {
+    return "embedding";
   }
 
   return "not_started";
@@ -134,13 +167,23 @@ export const deriveHybridPipelineStatus = (input: {
 
 export const deriveHybridPrimaryError = (input: {
   hybridTask: SerializedHybridTask | null;
+  embedding: SerializedHybridEmbeddingProgress;
   pipelineStatus: HybridPipelineStatus;
 }): string | null => {
   if (input.pipelineStatus !== "failed") {
     return null;
   }
 
-  return input.hybridTask?.errorMessage ?? null;
+  if (input.hybridTask?.errorMessage) {
+    return input.hybridTask.errorMessage;
+  }
+
+  if (input.embedding.failed > 0) {
+    const label = input.embedding.failed === 1 ? "segment" : "segments";
+    return `${input.embedding.failed} ${label} failed to embed`;
+  }
+
+  return null;
 };
 
 const toUploadListHybridTask = (
@@ -155,9 +198,10 @@ const buildHybridUploadListItems = async (
   uploads: CompletedUploadRow[],
 ): Promise<HybridUploadListItem[]> => {
   const fileIds = uploads.map((upload) => upload.id);
-  const [hybridTasks, segmentCounts] = await Promise.all([
+  const [hybridTasks, segmentCounts, embeddingStats] = await Promise.all([
     getLatestHybridTasksForFiles(fileIds),
     getMediaSegmentCountsForFiles(fileIds),
+    getHybridEmbeddingStatsForFiles(fileIds),
   ]);
 
   return uploads.map((upload) => {
@@ -167,12 +211,16 @@ const buildHybridUploadListItems = async (
       : null;
     const listTask = hybridTask ? toUploadListHybridTask(hybridTask) : null;
     const hasSegments = (segmentCounts.get(upload.id) ?? 0) > 0;
+    const embedding =
+      embeddingStats.get(upload.id) ?? emptyEmbeddingProgress();
     const pipelineStatus = deriveHybridPipelineStatus({
       hybridTask: serializedTask,
+      embedding,
       hasSegments,
     });
     const primaryError = deriveHybridPrimaryError({
       hybridTask: serializedTask,
+      embedding,
       pipelineStatus,
     });
 
@@ -187,6 +235,7 @@ const buildHybridUploadListItems = async (
       createdAt: upload.createdAt.toISOString(),
       hybridTask: listTask,
       hasSegments,
+      embedding,
       pipelineStatus,
       primaryError,
     };
@@ -222,14 +271,16 @@ export const getHybridUploadStatus = async (
     return null;
   }
 
-  const [hybridTask, hasSegments] = await Promise.all([
+  const [hybridTask, hasSegments, embedding] = await Promise.all([
     getLatestHybridTaskForFile(upload.id),
     fileHasMediaSegments(upload.id),
+    getHybridEmbeddingStatsForFile(upload.id),
   ]);
 
   const serializedTask = hybridTask ? serializeHybridTask(hybridTask) : null;
   const pipelineStatus = deriveHybridPipelineStatus({
     hybridTask: serializedTask,
+    embedding,
     hasSegments,
   });
 
@@ -238,10 +289,12 @@ export const getHybridUploadStatus = async (
     pipelineStatus,
     primaryError: deriveHybridPrimaryError({
       hybridTask: serializedTask,
+      embedding,
       pipelineStatus,
     }),
     hybridTask: serializedTask,
     hasSegments,
+    embedding,
   };
 };
 
@@ -249,10 +302,15 @@ export type StartHybridResult =
   | {
       ok: true;
       hybridTask?: SerializedHybridTask;
+      embedding: SerializedHybridEmbeddingProgress;
     }
   | {
       ok: false;
-      reason: "not_found" | "not_ready" | "missing_storage";
+      reason:
+        | "not_found"
+        | "not_ready"
+        | "missing_storage"
+        | "already_complete";
       message: string;
     }
   | {
@@ -287,7 +345,11 @@ export const startHybridProcessing = async (
     };
   }
 
-  const latestTask = await getLatestHybridTaskForFile(upload.id);
+  const [latestTask, hasSegments, embedding] = await Promise.all([
+    getLatestHybridTaskForFile(upload.id),
+    fileHasMediaSegments(upload.id),
+    getHybridEmbeddingStatsForFile(upload.id),
+  ]);
 
   if (
     latestTask &&
@@ -303,7 +365,31 @@ export const startHybridProcessing = async (
     };
   }
 
-  // Always allow re-run when idle — commitHybridSegments replaces prior rows.
+  if (hasSegments) {
+    const sameDuration =
+      latestTask?.segmentDurationSec === segmentDurationSec;
+
+    if (sameDuration && fileHybridEmbeddingIsComplete(embedding)) {
+      return {
+        ok: false,
+        reason: "already_complete",
+        message: "All hybrid segments are already embedded for this upload",
+      };
+    }
+
+    if (sameDuration) {
+      await enqueueHybridModalityJobsForFile({
+        fileId: upload.id,
+        filetype: upload.filetype,
+      });
+
+      return {
+        ok: true,
+        embedding,
+      };
+    }
+  }
+
   const hybridTaskId = randomUUID();
   try {
     await createHybridTask({
@@ -352,6 +438,7 @@ export const startHybridProcessing = async (
   return {
     ok: true,
     ...(hybridTask ? { hybridTask: serializeHybridTask(hybridTask) } : {}),
+    embedding,
   };
 };
 
