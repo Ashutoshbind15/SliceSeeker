@@ -30,14 +30,15 @@ End-to-end behavior is validated against the opinionated defaults: Gemini embedd
 
 1. Open the **admin UI** (Vite client; typically proxied or on its own port in local mode).
 2. **Upload** a short video via the upload screen (tus → object storage).
-3. Pick one modality and start processing:
+3. Pick a path and start processing:
    - **Multimodal**: chunk + embed video segments
    - **Speech**: extract audio → Whisper → embed transcript segments
    - **Vision**: sample frames → embed images
+   - **Hybrid**: one shared segment grid → video + speech + vision embeds (fused RRF search)
 4. Wait until the task shows complete (status polling in the UI).
-5. Open that modality's **search** page and try a natural-language query.
+5. Open that path's **search** page and try a natural-language query.
 
-Each modality has its own process, search, and costs screens. Indexing one does not index the others.
+Each independent modality has its own process, search, and costs screens. Hybrid is a separate fourth path. Indexing one does not index the others.
 
 ## Search from code
 
@@ -51,9 +52,10 @@ const client = new SearchClient({
 });
 
 const hits = await client.search({ query: "sunset over water", limit: 10 });
+// or: client.searchHybrid({ query: "…", weights: { speech: 1.5 } })
 ```
 
-See [Search](/docs/search) for transcript and frame methods.
+See [Search](/docs/search) for transcript, frame, and hybrid methods.
 
 ## Production-shaped deploys
 

@@ -29,6 +29,8 @@ Defaults in `.env.example` use Compose service names (`db`, `valkey`, `rustfs`).
 
 ## Published ports (defaults)
 
+Lab defaults. For how to bind these in a real deploy, see [Network trust](/docs/deploy#network-trust).
+
 | Service | Host port |
 | --- | --- |
 | indexer-api | 3000 |
@@ -36,6 +38,8 @@ Defaults in `.env.example` use Compose service names (`db`, `valkey`, `rustfs`).
 | admin-ui | 8080 |
 | tusd | 8081 |
 | rustfs S3 | 9000 |
+
+`S3_PUBLIC_ENDPOINT` (default `http://127.0.0.1:9000` in `.env.example`) must be reachable from the operator's browser for admin UI playback.
 
 ## Scaling
 

@@ -22,8 +22,9 @@ const App = () => {
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground leading-relaxed">
           Upload large video files with resumable tus uploads backed by
-          S3-compatible object storage. Index and search your library three
-          ways — multimodal chunks, speech, or still frames.
+          S3-compatible object storage. Index and search with multimodal
+          chunks, speech, still frames, or a hybrid segment grid fused with
+          RRF.
         </p>
         <div className="flex flex-wrap justify-center gap-4 pt-4">
           <Button asChild size="lg" className="rounded-full px-8">

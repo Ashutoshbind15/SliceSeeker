@@ -1,6 +1,6 @@
 # Deployment
 
-Two deployment layouts are supported. Both use the same application images and phase model (indexing vs search); they differ only in where Postgres, Valkey, and object storage run.
+Two deployment layouts are supported. Both use the same application images and phase model (indexing vs search); they differ only in where Postgres, Valkey, and object storage run. Network trust (no app login, private access only) is documented under [docs/deploy](../docs/content/docs/deploy/index.mdx).
 
 | Layout | Directory | Use when |
 | --- | --- | --- |

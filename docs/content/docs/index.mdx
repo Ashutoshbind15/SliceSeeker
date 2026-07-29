@@ -3,9 +3,18 @@ title: Overview
 description: What demo-search-ai is and how the pieces fit together
 ---
 
-**demo-search-ai** is a small monorepo for semantic video search. You upload media, index it in the background, then query by natural language. Postgres (pgvector) stores embeddings; object storage holds the source files.
+**demo-search-ai** is a self-hostable **internal** tool for semantic video search. Other backend services call Phase 2 (`search-api` / `search-client`) to seek and search video slices. Operators use the admin UI. There is no built-in login — see [Deploy](/docs/deploy) for the network-trust model.
 
-This is early software (v0.1). Three indexing modalities work end-to-end today. They are independent indexes; you choose which to run per file.
+You upload media, index it in the background, then query by natural language. Postgres (pgvector) stores embeddings; object storage holds the source files.
+
+This is early software (v0.1). Four indexing paths work end-to-end today: three independent modalities plus a **hybrid** pipeline that segments once and fuses video, speech, and vision with weighted RRF at search time.
+
+## Intended use
+
+| Surface | Who uses it | Role |
+| --- | --- | --- |
+| **search-api** | Your backend services | Primary product surface: seek / search slices via HTTP or `search-client` |
+| **Admin UI** | Human operators | Upload, process, search, and cost views |
 
 ## What you get
 
@@ -15,7 +24,8 @@ This is early software (v0.1). Three indexing modalities work end-to-end today. 
 | **Multimodal** | Split video into ~15s chunks, embed each chunk, search by meaning |
 | **Speech** | Extract audio, transcribe with Whisper, embed segments, search spoken content |
 | **Vision** | Sample still frames on an interval, embed images, search what's on screen |
-| **Admin UI** | Operator surface for upload, process, search, and cost views |
+| **Hybrid** | One shared segment grid → per-clip video/speech/vision embeds → weighted RRF search |
+| **Admin UI** | Operator console for upload, process, search, and cost views |
 | **Search API** | Read-only Phase 2 HTTP API + typed `search-client` SDK |
 
 ## Two phases
@@ -39,6 +49,6 @@ Phase 2 can run alone once Phase 1 has written data. Point `DATABASE_URL` at tha
 <Cards>
   <Card title="Getting started" href="/docs/getting-started" description="Run the stack locally and index your first video" />
   <Card title="Architecture" href="/docs/architecture" description="Containers, queues, and the phase split" />
-  <Card title="Modalities" href="/docs/modalities" description="Multimodal, speech, and vision pipelines" />
+  <Card title="Modalities" href="/docs/modalities" description="Multimodal, speech, vision, and hybrid" />
   <Card title="Deploy" href="/docs/deploy" description="Self-contained and external Compose layouts" />
 </Cards>

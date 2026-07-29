@@ -34,7 +34,7 @@ Phases do not call each other over HTTP. Phase 2 only needs a populated Postgres
 | **indexer-api** | `server/` | Phase 1 HTTP API: uploads/hooks, collections, modality pipelines, search + costs used by the admin UI. Exposes `/health` and `/ready`. |
 | **indexer-worker** | `worker/` | BullMQ consumers. Includes ffmpeg. Runs prep jobs (chunk / extract / sample) and API jobs (embed / ASR). |
 | **admin-ui** | `client/` | Operator UI. Proxies API and tusd. |
-| **search-api** | `search/` | Phase 2 read-only search: multimodal, transcript, and frame endpoints. `/ready` checks schema only. |
+| **search-api** | `search/` | Phase 2 read-only search: multimodal, transcript, frame, and hybrid RRF endpoints. `/ready` checks schema only. |
 | **db-push** | `packages/db/` | One-shot: enable `vector` extension and push Drizzle schema. |
 
 ## Infrastructure containers

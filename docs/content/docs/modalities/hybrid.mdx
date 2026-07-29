@@ -1,0 +1,48 @@
+---
+title: Hybrid
+description: Shared segment grid, per-modality embeds, weighted RRF search
+---
+
+Hybrid segments a video **once**, then embeds each clip for video, speech, and vision into a shared index. At query time it runs three retrievals and fuses ranks with **weighted Reciprocal Rank Fusion (RRF)**.
+
+Use hybrid when you want one index that can answer mixed queries without picking a single modality up front. The three independent modalities remain available when you only need one signal.
+
+## Pipeline
+
+```
+POST …/hybrid/process { segmentDurationSec? }
+  → hybrid-segment   (ffmpeg, fixed-length clips on a shared grid)
+  → hybrid-embed-segment × N  (video + speech ASR/embed + vision frame per clip)
+  → store per-modality vectors in Postgres
+```
+
+Search:
+
+```
+POST /hybrid/search { query, weights?, rrfK?, … }
+  → embed query
+  → top-K per modality
+  → weighted RRF → ranked segments
+```
+
+## Segment duration
+
+`segmentDurationSec` defaults to **15**. Same allowed values as multimodal chunking: `5`, `10`, `15`, or `30`. Changing duration (or a full UI retry) **re-segments** and replaces the prior segment grid and embeddings.
+
+## Costs
+
+Hybrid records spend per modality on the shared grid: video embeds, speech ASR + embeds, and vision embeds. Use the hybrid costs screen in the admin UI to compare against single-modality runs on the same fixture.
+
+## Retry behavior
+
+Operator **Retry** / re-process creates a new hybrid parent task and **re-runs segmentation** (wiping the previous segment grid and embeddings). That is intentional for v0.1: UI retry is a full re-segment, not partial fail-resume like speech ASR parts.
+
+If segments already exist at the same duration and only embeds are incomplete, a fresh start can resume embedding without re-cutting — but a duration change or explicit full retry always re-segments.
+
+## Search
+
+- Admin UI: hybrid search screen (tunable video / speech / vision weights and RRF `k`)
+- Phase 2: `POST /hybrid/search`
+- SDK: `client.searchHybrid({ query, weights, rrfK, … })`
+
+Hits include `startSec` / `endSec`, `rrfScore`, per-modality `ranks`, contributing `sources`, optional transcript `text`, and `sourceObject` for the original file.

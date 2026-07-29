@@ -1,17 +1,18 @@
 ---
 title: Modalities
-description: Three independent indexes for video meaning, speech, and frames
+description: Independent indexes plus a hybrid fused path
 ---
 
-v0.1 ships **three separate indexes**. Each has its own process path, search endpoint, cost tracking, and admin UI routes. Starting one pipeline does not run the others.
+v0.1 ships **three separate indexes** and a **hybrid** path. Each independent modality has its own process path, search endpoint, cost tracking, and admin UI routes. Starting one pipeline does not run the others. Hybrid is a fourth path: one shared segment grid, then fused search.
 
-| Modality | Good for | Index unit | Timing |
+| Path | Good for | Index unit | Timing |
 | --- | --- | --- | --- |
 | [Multimodal](/docs/modalities/multimodal) | Broader clip meaning when query intent is mixed or unknown | Video chunk (5–30s) | `startSec`-`endSec` |
 | [Speech](/docs/modalities/speech) | Spoken words and dialogue | Transcript segment | `startSec`-`endSec` |
 | [Vision](/docs/modalities/vision) | What's visible on screen | Still frame | `timestampSec` |
+| [Hybrid](/docs/modalities/hybrid) | One index for mixed queries; fuse video + speech + vision with RRF | Shared segment (5–30s) | `startSec`-`endSec` |
 
-They share uploads and collections. Each builds its own embeddings and ranking.
+Independent modalities share uploads and collections but each builds its own embeddings and ranking. Hybrid builds a separate shared-grid index; it does not replace the three single-modality indexes.
 
 End-to-end testing so far covers the opinionated defaults (Gemini embeddings and Whisper). For other models, confirm equivalent behavior in that model's docs and via the AI Gateway before you depend on them.
 
@@ -20,13 +21,16 @@ End-to-end testing so far covers the opinionated defaults (Gemini embeddings and
 - Speech-heavy interview → index **speech**.
 - Silent B-roll or product shots → index **vision**.
 - Mixed or unknown query intent, or deeper scene meaning → index **multimodal**.
-- For demos, index the same file under more than one modality and compare hits.
+- Want one process that covers all three signals with fused ranking → index **hybrid**.
+- For demos, index the same file under more than one path and compare hits / costs.
 
 ## Shared product surfaces
 
-All three modalities:
+Independent modalities:
 
 - Operate on the same **uploads** and optional **collections**
 - Block a second concurrent start for the same file with **409** (one active parent task)
 - Record **usage / costs** when the gateway returns cost metadata
 - Support re-run (re-process replaces or rebuilds that modality's index for the file)
+
+Hybrid shares uploads/collections and the one-active-parent guard, but operator retry is a **full re-segment** (see [Hybrid](/docs/modalities/hybrid)).

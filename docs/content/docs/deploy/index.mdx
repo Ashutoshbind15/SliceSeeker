@@ -1,7 +1,9 @@
 ---
 title: Deploy
-description: Self-contained vs external Compose layouts
+description: Self-contained vs external Compose layouts, plus network trust
 ---
+
+demo-search-ai is an **internal** stack. Do **not** publish admin-ui, indexer-api, tusd, or search-api to the public internet. There is no app-level login; network isolation is the security model.
 
 Two deployment layouts. Same application images and phase model; they differ only in where Postgres, Valkey, and object storage run.
 
@@ -12,9 +14,20 @@ Two deployment layouts. Same application images and phase model; they differ onl
 
 Application services always run as containers: `indexer-api`, `indexer-worker`, `admin-ui`, `search-api`, and `tusd`.
 
+## Network trust
+
+| Who | How they should reach the stack |
+| --- | --- |
+| **Operators (admin UI)** | Private path only — Docker private network, bastion, VPC, or an overlay VPN such as Tailscale or WireGuard. None of those are required by the project; pick what you already run. |
+| **Backend services (search-api)** | Internal Compose / cluster hostname only (e.g. `http://search-api:3001`) |
+
+Compose `ports:` in the examples are for **lab / single-host convenience**. In production, bind to a private interface, omit host publish and reach services over an overlay/VPN, or put the stack behind a private reverse proxy. Do not map `:8080` / `:3000` / tusd / `:3001` to `0.0.0.0` on a public host.
+
+`S3_PUBLIC_ENDPOINT` must be browser-reachable for admin UI playback — but only on that same private/VPN path, not on the open web.
+
 ## Quick start
 
-**Self-contained:**
+**Self-contained** (merge `infra` + phase files):
 
 ```bash
 cp deploy/self-contained/.env.example deploy/self-contained/.env
@@ -24,7 +37,7 @@ docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-
 docker compose -f deploy/self-contained/docker-compose.infra.yml -f deploy/self-contained/docker-compose.phase2.yml --env-file deploy/self-contained/.env up -d
 ```
 
-**External:**
+**External** (run `init` once first):
 
 ```bash
 cp deploy/external/.env.example deploy/external/.env

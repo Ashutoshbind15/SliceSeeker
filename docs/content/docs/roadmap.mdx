@@ -9,9 +9,10 @@ Honest status for an early project. Use this page to set expectations, not as a 
 
 - Tus upload → S3, collections, admin UI
 - Three **independent** modalities: multimodal chunks, speech transcripts, still frames
-- Per-modality process / search / costs
-- Tunable multimodal `chunkDurationSec` (5 / 10 / 15 / 30) and vision `frameIntervalSec` (2 / 5 / 10)
-- Phase 2 `search-api` + `search-client`
+- **Hybrid**: shared segment grid → video / speech / vision embeds → weighted RRF search (query-time weights)
+- Per-path process / search / costs
+- Tunable multimodal `chunkDurationSec` / hybrid `segmentDurationSec` (5 / 10 / 15 / 30) and vision `frameIntervalSec` (2 / 5 / 10)
+- Phase 2 `search-api` + `search-client` (including `searchHybrid`)
 - Self-contained and external Compose deploys
 - Prep/API queue split, retries, pool sizing, one-active-pipeline guards
 
@@ -20,15 +21,17 @@ Honest status for an early project. Use this page to set expectations, not as a 
 | Theme | Intent |
 | --- | --- |
 | **Pipeline presets** | JSON config on a collection: which steps run, without a DAG UI |
-| **Hybrid search** | Run multiple retrievals → fuse with RRF (and later query-time weights) |
+| **Hybrid fail-resume** | Partial retry parity with speech (today UI retry = full re-segment) |
+| **Optional search API key** | Single shared Bearer for defense in depth on busy private nets |
 | **Thin multi-provider** | Swap embed / ASR backends per pipeline without rewriting jobs |
 
 ## Explicitly deferred
 
+- App-level admin login / public internet expose
 - Visual pipeline / node editor
 - Scene-cut, OCR, object detection
 - Word-level timestamps / speaker diarization
 - LLM answer generation / RAG chat over hits
 - Global gateway RPM semaphore and multi-tenant search rate limits
 
-If you are evaluating the project: the interesting demo today is **upload → pick a modality → search → compare costs**, not fused hybrid ranking.
+If you are evaluating the project: interesting demos today are **upload → pick a modality (or hybrid) → search → compare costs**, and wiring a sibling backend to `search-api` on an internal URL.
