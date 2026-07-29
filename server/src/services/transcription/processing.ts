@@ -36,6 +36,7 @@ import {
   prepJobOptions,
   type ExtractAudioJobPayload,
 } from "queue";
+import { validateVideoFormat } from "../../lib/video-formats.js";
 import { isUniqueViolation } from "../../lib/pg-errors.js";
 import { enqueueTranscriptEmbeddingJobsForFile } from "./embedding-queue.js";
 import { enqueueFailedTranscriptPartJobs } from "./part-queue.js";
@@ -326,6 +327,7 @@ export type StartTranscriptionResult =
         | "not_found"
         | "not_ready"
         | "missing_storage"
+        | "unsupported_format"
         | "already_complete";
       message: string;
     }
@@ -357,6 +359,15 @@ export const startTranscription = async (
       ok: false,
       reason: "missing_storage",
       message: "Upload is missing storage location",
+    };
+  }
+
+  const format = validateVideoFormat(upload);
+  if (!format.ok) {
+    return {
+      ok: false,
+      reason: "unsupported_format",
+      message: format.message,
     };
   }
 

@@ -1,6 +1,6 @@
 services:
   valkey:
-    image: valkey/valkey:8-alpine
+    image: valkey/valkey:8.1.9-alpine
     restart: unless-stopped
     ports:
       - "${VALKEY_PUBLISH_PORT:-6379}:6379"
@@ -12,7 +12,7 @@ services:
       retries: 5
 
   db:
-    image: pgvector/pgvector:pg18-trixie
+    image: pgvector/pgvector:0.8.5-pg18-trixie
     restart: unless-stopped
     ports:
       - "${POSTGRES_PUBLISH_PORT:-5432}:5432"
@@ -33,7 +33,7 @@ services:
       retries: 5
 
   rustfs-perms:
-    image: alpine
+    image: alpine:3.24
     user: root
     volumes:
       - rustfs_data:/data
@@ -41,7 +41,7 @@ services:
     restart: "no"
 
   rustfs:
-    image: rustfs/rustfs:latest
+    image: rustfs/rustfs:1.0.0-beta.11
     restart: unless-stopped
     depends_on:
       rustfs-perms:
@@ -65,7 +65,7 @@ services:
       start_period: 30s
 
   create-bucket:
-    image: rustfs/rc:latest
+    image: rustfs/rc:v0.1.30
     depends_on:
       rustfs:
         condition: service_healthy

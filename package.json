@@ -10,6 +10,8 @@
     "worker:dev": "pnpm --filter worker dev",
     "db:push": "pnpm --filter db db:push",
     "db:studio": "pnpm --filter db db:studio",
+    "licenses:check": "node scripts/check-allowed-licenses.mjs",
+    "licenses:notices": "node scripts/generate-third-party-notices.mjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

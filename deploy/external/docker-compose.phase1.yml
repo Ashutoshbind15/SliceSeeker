@@ -80,7 +80,7 @@ services:
       TUSD_UPSTREAM: ${TUSD_UPSTREAM:-tusd:8080}
 
   tusd:
-    image: tusproject/tusd:latest
+    image: tusproject/tusd:v2.10.0
     restart: unless-stopped
     depends_on:
       indexer-api:

@@ -2,7 +2,12 @@
 
 Self-hostable **internal** tool for semantic video search: upload media, index it in the background, then query by natural language. Other backends call Phase 2 (`search-api` / `search-client`) to seek slices; operators use the admin UI. Postgres stores vectors; object storage holds the source files.
 
-License: [MIT](LICENSE). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
+License: [MIT](LICENSE) — but the published container images are not MIT-only, see [Licensing](#licensing). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
+
+> **Media leaves your network.** Indexing sends video segments, audio, frames,
+> transcript text, and search queries through a third-party AI gateway. The
+> private-network deployment model protects the admin UI and APIs, not the
+> material you process. See [Data flow](#data-flow).
 
 ## Two phases
 
@@ -31,6 +36,9 @@ pnpm dev:all
 - **External**: your Postgres, Valkey, and S3 URLs ([`deploy/external/`](deploy/external/))
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
+
+Supported uploads are **MP4, MOV, WebM, and AVI**. The API enforces the same
+allowlist as the admin UI before tusd stores a file.
 
 ---
 
@@ -109,3 +117,34 @@ pnpm --filter search-client run build
 ```
 
 Output: `packages/search-client/dist/`.
+
+---
+
+## Licensing
+
+SliceSeeker's source code is [MIT](LICENSE). Published images also contain their
+base OS and other third-party software, so each image includes notices under
+`/licenses` and has CycloneDX and SPDX SBOMs.
+
+The worker ships a pinned **LGPL-2.1-or-later** FFmpeg build for MP4, MOV, WebM,
+and AVI processing. It is built without GPL, nonfree, version3, network, DVD,
+x264, or x265 components. The exact FFmpeg source archive and build
+configuration are included at `/licenses/ffmpeg`.
+
+Production npm trees are gated against a license allowlist. Strong copyleft
+(GPL/AGPL/SSPL) is not accepted for application dependencies.
+
+```bash
+pnpm licenses:check                      # all five images
+pnpm licenses:check --filter worker...   # one image
+```
+
+See the [licensing documentation](docs/content/docs/licensing.mdx) if you
+redistribute the images.
+
+## Data flow
+
+Indexing sends media and text through a third-party AI gateway using your own
+API key. If you cannot send that material to a third-party processor,
+SliceSeeker in its current form is not suitable for it. See
+[Data handling](docs/content/docs/data-handling.mdx) for the exact flow.

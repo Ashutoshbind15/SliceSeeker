@@ -29,6 +29,11 @@ import {
 
 import { endpoints } from "@/lib/endpoints";
 import { cn } from "@/lib/utils";
+import {
+  SUPPORTED_VIDEO_ACCEPT,
+  SUPPORTED_VIDEO_EXTENSIONS,
+  SUPPORTED_VIDEO_FORMAT_LABEL,
+} from "@/lib/video-formats";
 import { CollectionPicker } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
 import { Badge } from "@/components/ui/badge";
@@ -213,7 +218,7 @@ const UploadDropzone = ({
       <input
         id={inputId}
         type="file"
-        accept="video/*"
+        accept={SUPPORTED_VIDEO_ACCEPT}
         multiple
         disabled={atLimit}
         className="sr-only"
@@ -235,8 +240,8 @@ const UploadDropzone = ({
         </p>
       </div>
       <p className="max-w-sm text-xs text-muted-foreground">
-        Video files only · up to {MAX_FILES} at a time · uploads resume if your
-        connection drops
+        {SUPPORTED_VIDEO_FORMAT_LABEL} · up to {MAX_FILES} at a time · uploads
+        resume if your connection drops
       </p>
     </div>
   );
@@ -472,7 +477,7 @@ const VideoUpload = () => {
       id: "video-upload",
       restrictions: {
         maxNumberOfFiles: MAX_FILES,
-        allowedFileTypes: ["video/*"],
+        allowedFileTypes: [...SUPPORTED_VIDEO_EXTENSIONS],
       },
       autoProceed: false,
     });

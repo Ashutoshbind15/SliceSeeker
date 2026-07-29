@@ -1,0 +1,180 @@
+name: Container images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: indexer-api
+            dockerfile: server/Dockerfile
+            package_json: server/package.json
+            image_suffix: sliceseeker-indexer-api
+            pnpm_filter: server...
+          - name: indexer-worker
+            dockerfile: worker/Dockerfile
+            package_json: worker/package.json
+            image_suffix: sliceseeker-indexer-worker
+            pnpm_filter: worker...
+          - name: admin-ui
+            dockerfile: client/Dockerfile
+            package_json: client/package.json
+            image_suffix: sliceseeker-admin-ui
+            pnpm_filter: client...
+          - name: search-api
+            dockerfile: search/Dockerfile
+            package_json: search/package.json
+            image_suffix: sliceseeker-search-api
+            pnpm_filter: search...
+          - name: db-migrate
+            dockerfile: packages/db/Dockerfile
+            package_json: packages/db/package.json
+            image_suffix: sliceseeker-db-migrate
+            pnpm_filter: db...
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter "${{ matrix.pnpm_filter }}"
+
+      - name: Check allowed production licenses
+        run: node scripts/check-allowed-licenses.mjs --filter "${{ matrix.pnpm_filter }}"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        env:
+          IMAGE: ghcr.io/ashutoshbind15/${{ matrix.image_suffix }}
+        run: |
+          set -euo pipefail
+
+          SHORT_SHA="$(echo "${{ github.sha }}" | cut -c1-7)"
+          VERSION="$(node -p "require('./${{ matrix.package_json }}').version")"
+          REVISION="${{ github.sha }}"
+
+          TAGS=(
+            "${IMAGE}:sha-${SHORT_SHA}"
+            "${IMAGE}:${VERSION}"
+            "${IMAGE}:latest"
+          )
+
+          docker build \
+            -f "${{ matrix.dockerfile }}" \
+            -t "${TAGS[0]}" \
+            -t "${TAGS[1]}" \
+            -t "${TAGS[2]}" \
+            --build-arg "VERSION=${VERSION}" \
+            --build-arg "REVISION=${REVISION}" \
+            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
+            .
+
+          for tag in "${TAGS[@]}"; do
+            docker push "$tag"
+          done
+
+          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${TAGS[0]}" | awk -F@ '{print $2}')"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "local_tag=${TAGS[0]}" >> "$GITHUB_OUTPUT"
+
+      # The SBOM records exact Alpine package versions and native components.
+      # Keep it attached to every published image alongside the in-image source
+      # and notices.
+      - name: Generate CycloneDX SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.build.outputs.local_tag }}
+          format: cyclonedx-json
+          artifact-name: sliceseeker-${{ matrix.name }}.cdx.json
+          output-file: sliceseeker-${{ matrix.name }}.cdx.json
+          upload-artifact: true
+          upload-release-assets: false
+
+      - name: Generate SPDX SBOM (Syft)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.build.outputs.local_tag }}
+          format: spdx-json
+          artifact-name: sliceseeker-${{ matrix.name }}.spdx.json
+          output-file: sliceseeker-${{ matrix.name }}.spdx.json
+          upload-artifact: true
+          upload-release-assets: false
+
+      - name: Extract in-image license notices
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE='${{ steps.build.outputs.local_tag }}'
+          CID="$(docker create "$IMAGE")"
+          mkdir -p "licenses-${{ matrix.name }}"
+          docker cp "${CID}:/licenses/." "licenses-${{ matrix.name }}/"
+          docker rm "${CID}"
+          ls -la "licenses-${{ matrix.name }}/"
+          test -f "licenses-${{ matrix.name }}/LICENSE"
+          test -f "licenses-${{ matrix.name }}/THIRD_PARTY_NOTICES"
+          test -f "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
+          test -f "licenses-${{ matrix.name }}/GPL-2.0.txt"
+          test -f "licenses-${{ matrix.name }}/GPL-3.0.txt"
+          grep -q "UPSTREAM SOURCE INFORMATION" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
+
+          if [[ '${{ matrix.name }}' == 'indexer-worker' ]]; then
+            test -f "licenses-${{ matrix.name }}/ffmpeg/ffmpeg-8.0.1.tar.xz"
+            test -f "licenses-${{ matrix.name }}/ffmpeg/BUILD-CONFIGURATION.txt"
+            test -f "licenses-${{ matrix.name }}/ffmpeg/build-ffmpeg-lgpl.sh"
+            grep -q "FFmpeg 8.0.1 (LGPL-2.1-or-later)" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
+            ! grep -qi "libdvdcss" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
+
+            docker run --rm --entrypoint ffmpeg "$IMAGE" -hide_banner -version \
+              | tee /tmp/ffmpeg-version.txt
+            grep -q -- "--disable-gpl" /tmp/ffmpeg-version.txt
+            ! grep -Eq -- "--enable-(gpl|nonfree|version3)" /tmp/ffmpeg-version.txt
+
+            apk_packages="$(docker run --rm --entrypoint apk "$IMAGE" info)"
+            ! grep -Eqi '^(ffmpeg|libdvd|x264|x265)' <<<"$apk_packages"
+          fi
+
+      - name: Upload license notices
+        uses: actions/upload-artifact@v4
+        with:
+          name: sliceseeker-${{ matrix.name }}-licenses
+          path: licenses-${{ matrix.name }}/
+
+      - name: Attest CycloneDX SBOM
+        if: steps.build.outputs.digest != ''
+        uses: actions/attest-sbom@v2
+        with:
+          subject-name: ${{ steps.build.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          sbom-path: sliceseeker-${{ matrix.name }}.cdx.json
+          push-to-registry: false

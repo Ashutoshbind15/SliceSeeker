@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { TusdHookRequest } from "../../lib/schemas/uploads.js";
 import { deleteUploadStorageArtifacts } from "../../lib/s3.js";
+import { validateVideoFormat } from "../../lib/video-formats.js";
 import { resolveUploadCollectionId } from "./collections.js";
 import {
   completeUploadRecord,
@@ -14,6 +15,12 @@ import {
 const getUploadStorageBucket = () => process.env.S3_BUCKET ?? "uploads";
 
 export type TusdHookResponse = {
+  RejectUpload?: boolean;
+  HTTPResponse?: {
+    StatusCode: number;
+    Body: string;
+    Header: Record<string, string>;
+  };
   ChangeFileInfo?: {
     ID?: string;
     MetaData?: Record<string, string>;
@@ -23,29 +30,52 @@ export type TusdHookResponse = {
 const metadataValue = (value: string | undefined) =>
   value && value !== "undefined" ? value : undefined;
 
-const getUploadMetadata = (metadata: Record<string, string>) => ({
+const getRawUploadMetadata = (metadata: Record<string, string>) => ({
   filename:
     metadataValue(metadata.filename) ??
-    metadataValue(metadata.name) ??
-    "video",
+    metadataValue(metadata.name),
   filetype:
     metadataValue(metadata.filetype) ??
-    metadataValue(metadata.type) ??
-    "video/mp4",
+    metadataValue(metadata.type),
   collectionId: metadataValue(metadata.collectionId),
 });
 
+const getUploadMetadata = (metadata: Record<string, string>) => {
+  const raw = getRawUploadMetadata(metadata);
+  const validated = validateVideoFormat(raw);
+  if (!validated.ok) {
+    throw new Error(`Invalid tusd upload metadata: ${validated.message}`);
+  }
+
+  return {
+    filename: validated.filename,
+    filetype: validated.filetype,
+    collectionId: raw.collectionId,
+  };
+};
+
 const handlePreCreate = (hook: TusdHookRequest): TusdHookResponse => {
-  const metadata = getUploadMetadata(hook.Event.Upload.MetaData);
+  const raw = getRawUploadMetadata(hook.Event.Upload.MetaData);
+  const validated = validateVideoFormat(raw);
+  if (!validated.ok) {
+    return {
+      RejectUpload: true,
+      HTTPResponse: {
+        StatusCode: 415,
+        Body: JSON.stringify({ message: validated.message }),
+        Header: { "Content-Type": "application/json" },
+      },
+    };
+  }
 
   return {
     ChangeFileInfo: {
       ID: randomUUID(),
       MetaData: {
-        filename: metadata.filename,
-        filetype: metadata.filetype,
-        ...(metadata.collectionId
-          ? { collectionId: metadata.collectionId }
+        filename: validated.filename,
+        filetype: validated.filetype,
+        ...(raw.collectionId
+          ? { collectionId: raw.collectionId }
           : {}),
       },
     },

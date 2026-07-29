@@ -1,0 +1,55 @@
+---
+title: Licensing
+description: SliceSeeker's license and container redistribution notes
+---
+
+SliceSeeker's own source code is [MIT licensed](https://github.com/Ashutoshbind15/demo-search-ai/blob/main/LICENSE). Published container images also contain their base operating system and other third-party software.
+
+None of this is legal advice.
+
+## Running the images
+
+If you only pull and run SliceSeeker internally, the license notices are already included in each image under `/licenses`. You do not need to rebuild FFmpeg or replace the notices.
+
+The worker supports MP4, MOV, WebM, and AVI. It ships a pinned FFmpeg build under LGPL-2.1-or-later, compiled without GPL, nonfree, version3, network, DVD, x264, or x265 components. SliceSeeker invokes `ffmpeg` and `ffprobe` as separate programs; its application code remains MIT licensed.
+
+See [Data handling](/docs/data-handling) before indexing confidential media.
+
+## Redistributing the images
+
+Publishing or mirroring a container image redistributes the software inside it. Preserve its `/licenses` directory and the image's accompanying SBOM.
+
+Each image includes:
+
+| File | Contents |
+| --- | --- |
+| `LICENSE` | SliceSeeker's MIT license |
+| `THIRD_PARTY_NOTICES` | Production npm dependency attributions and license texts |
+| `OS-PACKAGES-NOTICE` | Installed Alpine package inventory and upstream source indexes |
+| `GPL-*.txt`, `LGPL-*.txt` | Copyleft license texts used by bundled components |
+| `ffmpeg/` (worker only) | Exact FFmpeg source archive, build script, and configuration |
+
+```bash
+docker run --rm --entrypoint sh \
+  ghcr.io/ashutoshbind15/sliceseeker-indexer-worker:latest \
+  -c 'cat /licenses/OS-PACKAGES-NOTICE'
+```
+
+`OS-PACKAGES-NOTICE` is generated from the final image's apk database. It records upstream source locations but does not make a separate three-year source-supply offer from the SliceSeeker maintainers. The FFmpeg source is included directly because the custom binary is not an apk package. CycloneDX and SPDX SBOMs are published for every image.
+
+The OCI `MIT` label describes SliceSeeker's own code. Bundled dependencies retain their respective licenses as documented under `/licenses`.
+
+## Dependency policy
+
+Production npm trees are gated against an allowlist before any image is built. Strong copyleft — GPL, AGPL, SSPL — is deliberately absent from that allowlist, so a stray GPL npm dependency fails the build even though the base image already contains GPL software. The two categories are kept separate on purpose.
+
+```bash
+pnpm licenses:check                      # all five images
+pnpm licenses:check --filter worker...   # one image
+```
+
+Packages whose upstream `package.json` omits a license field are waived individually by name, never by allowing `Unknown` globally.
+
+## Third-party services
+
+The Compose examples reference Postgres with pgvector, Valkey, tusd, and RustFS. You pull those images from their own registries. SliceSeeker does not redistribute them and makes no claim about their licenses.

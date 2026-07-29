@@ -1,0 +1,30 @@
+---
+title: Data handling
+description: What stays in your deployment and what is sent to AI providers
+---
+
+SliceSeeker is self-hosted, but indexing is not fully local.
+
+## Stored in your deployment
+
+- Original uploads and generated artifacts are stored in your S3-compatible storage.
+- Metadata, transcripts, and embeddings are stored in your Postgres database.
+- Valkey carries background-job state.
+- Temporary worker files are removed after each job.
+
+## Sent through your AI gateway
+
+Depending on the modality you run, SliceSeeker sends:
+
+- video segments for multimodal embeddings;
+- extracted JPEG frames for vision embeddings;
+- compressed audio for Whisper transcription;
+- transcript text and search queries for text embeddings.
+
+Requests use the operator-provided `AI_GATEWAY_API_KEY`. Provider processing,
+retention, region, and training policies are governed by the gateway and model
+provider you configure, not by SliceSeeker.
+
+Do not index material that your organization cannot send to those third-party
+processors. Network isolation protects the admin UI and APIs; it does not keep
+indexed media inside your network.

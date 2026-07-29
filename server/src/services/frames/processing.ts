@@ -29,6 +29,7 @@ import {
   prepJobOptions,
   type SampleFramesJobPayload,
 } from "queue";
+import { validateVideoFormat } from "../../lib/video-formats.js";
 import {
   DEFAULT_FRAME_INTERVAL_SEC,
   type FrameIntervalSec,
@@ -304,6 +305,7 @@ export type StartFramesResult =
         | "not_found"
         | "not_ready"
         | "missing_storage"
+        | "unsupported_format"
         | "already_complete";
       message: string;
     }
@@ -336,6 +338,15 @@ export const startFrameIndexing = async (
       ok: false,
       reason: "missing_storage",
       message: "Upload is missing storage location",
+    };
+  }
+
+  const format = validateVideoFormat(upload);
+  if (!format.ok) {
+    return {
+      ok: false,
+      reason: "unsupported_format",
+      message: format.message,
     };
   }
 

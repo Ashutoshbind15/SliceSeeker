@@ -5,6 +5,8 @@ description: Self-contained vs external Compose layouts, plus network trust
 
 SliceSeeker is an **internal** stack. Do **not** publish admin-ui, indexer-api, tusd, or search-api to the public internet. There is no app-level login; network isolation is the security model.
 
+Network isolation covers the admin UI and the APIs. It does **not** cover your media: indexing sends media and text to a third-party AI gateway. Review [Data handling](/docs/data-handling) before indexing confidential material.
+
 Two deployment layouts. Same application images and phase model; they differ only in where Postgres, Valkey, and object storage run.
 
 | Layout | Use when |
@@ -48,3 +50,5 @@ docker compose -f deploy/external/docker-compose.phase2.yml --env-file deploy/ex
 ```
 
 Compose files live under [`deploy/`](https://github.com/Ashutoshbind15/demo-search-ai/tree/main/deploy) in the repository. See [Operations](/docs/operations) for Valkey `noeviction`, pool sizing, and readiness.
+
+Third-party images in these examples (Postgres/pgvector, Valkey, tusd, RustFS) are pinned to explicit tags and pulled from their own registries. SliceSeeker does not redistribute them.

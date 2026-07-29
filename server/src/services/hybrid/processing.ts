@@ -33,6 +33,7 @@ import {
   prepJobOptions,
   type HybridSegmentJobPayload,
 } from "queue";
+import { validateVideoFormat } from "../../lib/video-formats.js";
 import {
   DEFAULT_SEGMENT_DURATION_SEC,
   type SegmentDurationSec,
@@ -310,6 +311,7 @@ export type StartHybridResult =
         | "not_found"
         | "not_ready"
         | "missing_storage"
+        | "unsupported_format"
         | "already_complete";
       message: string;
     }
@@ -342,6 +344,15 @@ export const startHybridProcessing = async (
       ok: false,
       reason: "missing_storage",
       message: "Upload is missing storage location",
+    };
+  }
+
+  const format = validateVideoFormat(upload);
+  if (!format.ok) {
+    return {
+      ok: false,
+      reason: "unsupported_format",
+      message: format.message,
     };
   }
 
