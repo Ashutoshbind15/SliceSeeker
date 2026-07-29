@@ -4,7 +4,7 @@ services:
       context: ../..
       dockerfile: server/Dockerfile
       target: prod
-    image: ${INDEXER_API_IMAGE:-demo-search-ai/indexer-api:latest}
+    image: ${INDEXER_API_IMAGE:-sliceseeker/indexer-api:latest}
     restart: unless-stopped
     depends_on:
       db-push:
@@ -46,7 +46,7 @@ services:
       context: ../..
       dockerfile: worker/Dockerfile
       target: prod
-    image: ${INDEXER_WORKER_IMAGE:-demo-search-ai/indexer-worker:latest}
+    image: ${INDEXER_WORKER_IMAGE:-sliceseeker/indexer-worker:latest}
     restart: unless-stopped
     depends_on:
       db-push:
@@ -83,7 +83,7 @@ services:
     build:
       context: ../..
       dockerfile: client/Dockerfile
-    image: ${ADMIN_UI_IMAGE:-demo-search-ai/admin-ui:latest}
+    image: ${ADMIN_UI_IMAGE:-sliceseeker/admin-ui:latest}
     restart: unless-stopped
     depends_on:
       indexer-api:

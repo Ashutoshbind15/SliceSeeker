@@ -86,8 +86,4 @@ export const queryKeys = {
       list: () => [...queryKeys.hybrid.costs.all, "list"] as const,
     },
   },
-  todos: {
-    all: ["todos"] as const,
-    list: () => [...queryKeys.todos.all, "list"] as const,
-  },
 } as const;

@@ -2,6 +2,7 @@
   "name": "queue",
   "version": "1.0.0",
   "description": "Shared job queue names, payloads, and connection config",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {

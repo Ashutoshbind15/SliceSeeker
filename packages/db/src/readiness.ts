@@ -34,7 +34,6 @@ const INDEXER_REQUIRED_TABLES = [
   "hybrid_embeddings",
   "hybrid_embed_segment_tasks",
   "hybrid_costs",
-  "todos",
 ] as const;
 
 const connect = async (databaseUrl: string) => {

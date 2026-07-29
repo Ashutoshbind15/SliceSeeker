@@ -1,8 +1,8 @@
-# demo-search-ai
+# SliceSeeker
 
 Self-hostable **internal** tool for semantic video search: upload media, index it in the background, then query by natural language. Other backends call Phase 2 (`search-api` / `search-client`) to seek slices; operators use the admin UI. Postgres stores vectors; object storage holds the source files.
 
-No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
+License: [MIT](LICENSE). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
 
 ## Two phases
 

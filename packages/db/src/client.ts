@@ -13,7 +13,6 @@ import { hybridEmbedSegmentTasksTable } from "./schema/hybrid/hybrid-embed-segme
 import { hybridEmbeddingsTable } from "./schema/hybrid/hybrid-embeddings.js";
 import { hybridTasksTable } from "./schema/hybrid/hybrid-tasks.js";
 import { mediaSegmentsTable } from "./schema/hybrid/media-segments.js";
-import { todosTable } from "./schema/shared/index.js";
 import { transcriptEmbeddingTasksTable } from "./schema/transcription/transcript-embedding-tasks.js";
 import { transcriptPartTasksTable } from "./schema/transcription/transcript-part-tasks.js";
 import { transcriptSegmentsTable } from "./schema/transcription/transcript-segments.js";
@@ -45,7 +44,6 @@ const pool = new pg.Pool({
 
 const db = drizzle(pool, {
   schema: {
-    todos: todosTable,
     collections: collectionsTable,
     uploads: uploadsTable,
     chunkingTasks: chunkingTasksTable,

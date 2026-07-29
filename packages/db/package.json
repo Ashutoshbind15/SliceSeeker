@@ -2,6 +2,7 @@
   "name": "db",
   "version": "1.0.0",
   "description": "Shared database schema and access layer",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {

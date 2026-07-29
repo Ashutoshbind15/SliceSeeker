@@ -1,6 +1,6 @@
 # docs
 
-Fumadocs site for **demo-search-ai**.
+Fumadocs site for **SliceSeeker**.
 
 ```bash
 pnpm --filter docs dev

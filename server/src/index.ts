@@ -1,6 +1,5 @@
 import express from "express";
 import "dotenv/config";
-import { createTodo, getTodos } from "db/access/shared/index.js";
 import { assertIndexerSchema } from "db/readiness.js";
 import cors from "cors";
 import { Queue } from "bullmq";
@@ -104,17 +103,6 @@ app.get("/ready", async (_req, res) => {
       apiQueue?.close().catch(() => undefined),
     ]);
   }
-});
-
-app.get("/todos", async (req, res) => {
-  const todos = await getTodos();
-  res.json(todos);
-});
-
-app.post("/todos", async (req, res) => {
-  const { title, description } = req.body;
-  await createTodo(title, description);
-  res.status(201).send("Todo created");
 });
 
 app.get("/uploads", listUploadsHandler);

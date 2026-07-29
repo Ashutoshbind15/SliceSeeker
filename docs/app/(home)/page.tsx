@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="flex flex-col justify-center flex-1 px-6 py-16 max-w-2xl mx-auto">
       <p className="text-sm text-fd-muted-foreground mb-3">v0.1</p>
       <h1 className="text-3xl font-semibold tracking-tight mb-3">
-        demo-search-ai
+        SliceSeeker
       </h1>
       <p className="text-fd-muted-foreground text-lg mb-8 leading-relaxed">
         Semantic video search across multimodal chunks, speech transcripts, and

@@ -1,7 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
-import Todo from "./Todo";
 import VideoUpload from "@/features/shared/upload/VideoUpload";
 import VideoProcess from "@/features/multimodal/process/VideoProcess";
 import VideoSearch from "@/features/multimodal/search/VideoSearch";
@@ -46,7 +45,6 @@ root.render(
           <Route path="/hybrid" element={<HybridProcess />} />
           <Route path="/hybrid/search" element={<HybridSearch />} />
           <Route path="/hybrid/costs" element={<HybridCosts />} />
-          <Route path="/todo" element={<Todo />} />
         </Route>
       </Routes>
       </BrowserRouter>

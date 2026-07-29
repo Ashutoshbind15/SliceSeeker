@@ -1,9 +1,9 @@
 ---
 title: Overview
-description: What demo-search-ai is and how the pieces fit together
+description: What SliceSeeker is and how the pieces fit together
 ---
 
-**demo-search-ai** is a self-hostable **internal** tool for semantic video search. Other backend services call Phase 2 (`search-api` / `search-client`) to seek and search video slices. Operators use the admin UI. There is no built-in login — see [Deploy](/docs/deploy) for the network-trust model.
+**SliceSeeker** is a self-hostable **internal** tool for semantic video search. Other backend services call Phase 2 (`search-api` / `search-client`) to seek and search video slices. Operators use the admin UI. There is no built-in login — see [Deploy](/docs/deploy) for the network-trust model.
 
 You upload media, index it in the background, then query by natural language. Postgres (pgvector) stores embeddings; object storage holds the source files.
 

@@ -2,6 +2,7 @@
   "name": "search-client",
   "version": "1.0.0",
   "description": "Type-safe client for the search-api",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": {
