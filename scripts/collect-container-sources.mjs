@@ -356,18 +356,41 @@ function fetchAndVerifySources(root, collectorImage) {
   const script = [
     "set -eu",
     "apk add --no-cache alpine-sdk",
-    // gcc.gnu.org regularly stalls on multi-hundred-MB release tarballs.
-    // sourceware hosts the same GNU GCC release archives. Keep this find/sed
-    // on one shell line so -exec still receives its args. Do not broadly rewrite
-    // ftp.gnu.org — some ftpmirror backends return 403 for Alpine fetchers.
+    // abuild uses wget with no useful retry defaults. GH runners often hit
+    // transient resets/timeouts on upstream distfiles; wrap wget so every
+    // abuild fetch gets connection retries (common CI pattern).
+    "mkdir -p /usr/local/bin",
+    "printf '%s\\n' " +
+      "'#!/bin/sh' " +
+      "'exec /usr/bin/wget --tries=10 --timeout=60 --retry-connrefused \"$@\"' " +
+      ">/usr/local/bin/wget",
+    "chmod +x /usr/local/bin/wget",
+    "export PATH=\"/usr/local/bin:$PATH\"",
+    // Host-specific rewrites (same checksummed archives; APKBUILD still verifies):
+    // - gcc.gnu.org stalls on huge tarballs from Actions; sourceware is reliable.
+    // - musl.libc.org has been timing out from Actions while other hosts in the
+    //   same job succeed; Void serves the identical release tarball.
+    // Keep find/sed on one shell line so -exec still receives its args. Do not
+    // broadly rewrite ftp.gnu.org — some ftpmirror backends 403 Alpine fetchers.
     "find /source -type f -name APKBUILD -exec sed -i " +
       "-e 's|https://gcc.gnu.org/pub/gcc/releases/|https://sourceware.org/pub/gcc/releases/|g' " +
+      "-e 's|https://musl.libc.org/releases/musl-\\([^\"[:space:]]*\\)\\.tar\\.gz|https://sources.voidlinux.org/musl-\\1/musl-\\1.tar.gz|g' " +
       "{} +",
     "tab=\"$(printf '\\t')\"",
     "while IFS=\"$tab\" read -r recipe distfiles; do",
     '  [ -n "$recipe" ] || continue',
     '  mkdir -p "/source/$distfiles"',
-    '  (cd "/source/$recipe" && SRCDEST="/source/$distfiles" abuild -F verify)',
+    // Outer retry: covers verify failures after wget exhausted its own tries.
+    "  ok=0",
+    "  for attempt in 1 2 3 4 5; do",
+    '    if (cd "/source/$recipe" && SRCDEST="/source/$distfiles" abuild -F verify); then',
+    "      ok=1",
+    "      break",
+    "    fi",
+    '    echo "abuild verify failed for $recipe (attempt $attempt); retrying..." >&2',
+    "    sleep $((attempt * 15))",
+    "  done",
+    '  [ "$ok" -eq 1 ]',
     '  rm -rf "/source/$recipe/src"',
     "done </source/.fetch-list",
     "chmod -R a+rX /source",

@@ -19,7 +19,8 @@ SOURCE_URL="https://ffmpeg.org/releases/${ARCHIVE}"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR" "$PREFIX" "$SOURCE_OUT"
 
-curl -fsSLo "${WORK_DIR}/${ARCHIVE}" "$SOURCE_URL"
+curl --retry 5 --retry-all-errors --retry-delay 3 -fsSLo \
+  "${WORK_DIR}/${ARCHIVE}" "$SOURCE_URL"
 echo "${FFMPEG_SHA256}  ${WORK_DIR}/${ARCHIVE}" | sha256sum -c -
 cp "${WORK_DIR}/${ARCHIVE}" "${SOURCE_OUT}/${ARCHIVE}"
 
