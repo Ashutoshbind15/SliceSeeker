@@ -1,6 +1,6 @@
 {
   "name": "sliceseeker",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Self-hostable internal semantic video search",
   "main": "index.js",
   "scripts": {

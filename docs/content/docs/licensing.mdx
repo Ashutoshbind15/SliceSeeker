@@ -59,6 +59,8 @@ Pushing an exact `vX.Y.Z` Git tag is the supported public image-release path. Th
 5. creates one combined corresponding-source archive and digest manifest; and
 6. creates a GitHub Release containing all source, SBOM, and notice assets.
 
+Operator-facing build and pull commands for the five images are in [Container images](/docs/deploy/images).
+
 If source cannot be fetched, matched to its aports commit, or checksum-verified, the image job fails before publishing that image. A manual workflow run performs the build and complete compliance packaging as a dry run but does not push images or create a release.
 
 ## Dependency policy

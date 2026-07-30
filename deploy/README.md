@@ -9,6 +9,8 @@ Two deployment layouts are supported. Both use the same application images and p
 
 Application services (`indexer-api`, `indexer-worker`, `admin-ui`, `search-api`, and optionally `tusd`) always run as containers in both layouts.
 
+**Images:** build the five SliceSeeker images from the repo Dockerfiles, or pull a tagged release from GHCR. See [Container images](../docs/content/docs/deploy/images.mdx).
+
 ## Quick start
 
 **Self-contained** (infra runs in Compose):

@@ -1,0 +1,110 @@
+---
+title: Container images
+description: Build the five SliceSeeker images locally or pull a tagged release from GHCR
+---
+
+SliceSeeker ships **five** application images. Third-party infra (Postgres/pgvector, Valkey, tusd, RustFS) is pulled from upstream registries and is not listed here.
+
+| Role | Compose service | Local tag (default) | GHCR image |
+| --- | --- | --- | --- |
+| Indexer API | `indexer-api` | `sliceseeker/indexer-api` | `ghcr.io/ashutoshbind15/sliceseeker-indexer-api` |
+| Indexer worker | `indexer-worker` | `sliceseeker/indexer-worker` | `ghcr.io/ashutoshbind15/sliceseeker-indexer-worker` |
+| Admin UI | `admin-ui` | `sliceseeker/admin-ui` | `ghcr.io/ashutoshbind15/sliceseeker-admin-ui` |
+| Search API | `search-api` | `sliceseeker/search-api` | `ghcr.io/ashutoshbind15/sliceseeker-search-api` |
+| Schema push | `db-push` | `sliceseeker/db-push` | `ghcr.io/ashutoshbind15/sliceseeker-db-migrate` |
+
+Release tags on GHCR match the root `package.json` version (for example `0.1.0`). Each release also publishes `:latest` and `:sha-<short>` tags. Prefer the version tag in production.
+
+## Build from source
+
+From the repository root (Docker BuildKit recommended):
+
+```bash
+VERSION=0.1.0
+REVISION="$(git rev-parse HEAD)"
+
+docker build -f server/Dockerfile \
+  -t sliceseeker/indexer-api:${VERSION} \
+  --build-arg "VERSION=${VERSION}" \
+  --build-arg "REVISION=${REVISION}" \
+  .
+
+docker build -f worker/Dockerfile \
+  -t sliceseeker/indexer-worker:${VERSION} \
+  --build-arg "VERSION=${VERSION}" \
+  --build-arg "REVISION=${REVISION}" \
+  .
+
+docker build -f client/Dockerfile \
+  -t sliceseeker/admin-ui:${VERSION} \
+  --build-arg "VERSION=${VERSION}" \
+  --build-arg "REVISION=${REVISION}" \
+  .
+
+docker build -f search/Dockerfile \
+  -t sliceseeker/search-api:${VERSION} \
+  --build-arg "VERSION=${VERSION}" \
+  --build-arg "REVISION=${REVISION}" \
+  .
+
+docker build -f packages/db/Dockerfile \
+  -t sliceseeker/db-push:${VERSION} \
+  --build-arg "VERSION=${VERSION}" \
+  --build-arg "REVISION=${REVISION}" \
+  .
+```
+
+Or let Compose build and tag the defaults used by the deploy layouts:
+
+```bash
+docker compose \
+  -f deploy/self-contained/docker-compose.infra.yml \
+  -f deploy/self-contained/docker-compose.phase1.yml \
+  -f deploy/self-contained/docker-compose.phase2.yml \
+  --env-file deploy/self-contained/.env \
+  build
+```
+
+That produces `sliceseeker/*:latest` (and `sliceseeker/db-push:latest`) matching the Compose `image:` defaults.
+
+## Pull a release (GHCR)
+
+After a `vX.Y.Z` Git tag is pushed, CI publishes the five images to GHCR and attaches corresponding-source, SBOMs, and notice archives to the GitHub Release. See [Licensing](/docs/licensing#publishing-a-release).
+
+Pin versioned images in your `.env` (self-contained or external):
+
+```bash
+INDEXER_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-api:0.1.0
+INDEXER_WORKER_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-worker:0.1.0
+ADMIN_UI_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-admin-ui:0.1.0
+SEARCH_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-search-api:0.1.0
+DB_PUSH_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-db-migrate:0.1.0
+```
+
+Then pull and start without rebuilding:
+
+```bash
+docker compose \
+  -f deploy/self-contained/docker-compose.infra.yml \
+  -f deploy/self-contained/docker-compose.phase1.yml \
+  -f deploy/self-contained/docker-compose.phase2.yml \
+  --env-file deploy/self-contained/.env \
+  pull
+
+docker compose \
+  -f deploy/self-contained/docker-compose.infra.yml \
+  -f deploy/self-contained/docker-compose.phase1.yml \
+  -f deploy/self-contained/docker-compose.phase2.yml \
+  --env-file deploy/self-contained/.env \
+  up -d --no-build
+```
+
+GHCR packages may be private until the repository owner marks them public. If pulls fail with `denied`, authenticate (`docker login ghcr.io`) or wait until the packages are public.
+
+## Tag a release
+
+1. Set root `package.json` `"version"` to the release (for example `0.1.0`).
+2. Commit on the branch you intend to ship.
+3. Create and push an annotated tag that matches that version: `git tag -a v0.1.0 -m "SliceSeeker v0.1.0" && git push origin v0.1.0`.
+
+CI refuses tags that do not match `package.json`. A manual workflow dispatch builds and packages compliance assets as a dry run but does not push images.

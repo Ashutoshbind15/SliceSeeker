@@ -84,6 +84,7 @@ services:
     build:
       context: ../..
       dockerfile: packages/db/Dockerfile
+    image: ${DB_PUSH_IMAGE:-sliceseeker/db-push:latest}
     depends_on:
       db:
         condition: service_healthy

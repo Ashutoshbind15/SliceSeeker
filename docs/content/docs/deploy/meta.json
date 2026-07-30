@@ -1,4 +1,4 @@
 {
   "title": "Deploy",
-  "pages": ["self-contained", "external"]
+  "pages": ["self-contained", "external", "images"]
 }
