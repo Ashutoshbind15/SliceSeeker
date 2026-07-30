@@ -356,13 +356,22 @@ function fetchAndVerifySources(root, collectorImage) {
   const script = [
     "set -eu",
     "apk add --no-cache alpine-sdk",
-    // abuild uses wget with no useful retry defaults. GH runners often hit
-    // transient resets/timeouts on upstream distfiles; wrap wget so every
-    // abuild fetch gets connection retries (common CI pattern).
+    // abuild uses BusyBox wget (no GNU --tries/--retry-connrefused). Wrap
+    // with a shell retry loop; -T is the BusyBox read-timeout flag. CI runners
+    // often hit transient resets/timeouts on upstream distfiles.
     "mkdir -p /usr/local/bin",
     "printf '%s\\n' " +
       "'#!/bin/sh' " +
-      "'exec /usr/bin/wget --tries=10 --timeout=60 --retry-connrefused \"$@\"' " +
+      "'n=0' " +
+      "'while [ \"$n\" -lt 10 ]; do' " +
+      "'  n=\$((n + 1))' " +
+      "'  if /usr/bin/wget -T 60 \"$@\"; then' " +
+      "'    exit 0' " +
+      "'  fi' " +
+      "'  echo \"wget failed (attempt $n); retrying...\" >&2' " +
+      "'  sleep \$((n * 2))' " +
+      "'done' " +
+      "'exit 1' " +
       ">/usr/local/bin/wget",
     "chmod +x /usr/local/bin/wget",
     "export PATH=\"/usr/local/bin:$PATH\"",
@@ -380,7 +389,7 @@ function fetchAndVerifySources(root, collectorImage) {
     "while IFS=\"$tab\" read -r recipe distfiles; do",
     '  [ -n "$recipe" ] || continue',
     '  mkdir -p "/source/$distfiles"',
-    // Outer retry: covers verify failures after wget exhausted its own tries.
+    // Outer retry: covers verify failures after the wget wrapper's tries.
     "  ok=0",
     "  for attempt in 1 2 3 4 5; do",
     '    if (cd "/source/$recipe" && SRCDEST="/source/$distfiles" abuild -F verify); then',
