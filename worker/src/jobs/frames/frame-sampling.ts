@@ -1,10 +1,7 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
+import { runFfmpeg } from "../shared/exec-media.js";
 import { getMediaDurationSec } from "../transcription/audio-extract.js";
-
-const execFileAsync = promisify(execFile);
 
 export type SampledFrame = {
   frameIndex: number;
@@ -33,7 +30,7 @@ export const sampleVideoFrames = async (input: {
   const durationSec = await getMediaDurationSec(input.inputPath);
   const pattern = path.join(input.outputDir, "frame_%06d.jpg");
 
-  await execFileAsync("ffmpeg", [
+  await runFfmpeg([
     "-y",
     "-i",
     input.inputPath,

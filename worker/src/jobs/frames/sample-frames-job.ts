@@ -15,6 +15,7 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
+import { assertSupportedVideoCodec } from "../shared/video-codec.js";
 import {
   mapWithConcurrency,
   PREP_UPLOAD_CONCURRENCY,
@@ -53,6 +54,8 @@ export const processSampleFramesJob = async (
       storageKey: payload.storageKey,
       destinationPath: inputPath,
     });
+
+    await assertSupportedVideoCodec(inputPath);
 
     const framesDir = path.join(workDir, "frames");
     await fs.mkdir(framesDir);

@@ -26,6 +26,7 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
+import { assertSupportedVideoCodec } from "../shared/video-codec.js";
 
 /**
  * All-or-nothing audio extraction: download → ffmpeg speech MP3 → size-split →
@@ -64,6 +65,8 @@ export const processExtractAudioJob = async (
       storageKey: payload.storageKey,
       destinationPath: inputPath,
     });
+
+    await assertSupportedVideoCodec(inputPath);
 
     const audioPath = path.join(workDir, "speech.mp3");
     await extractSpeechAudio({

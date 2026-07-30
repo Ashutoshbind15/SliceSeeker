@@ -1,9 +1,6 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { runFfmpeg, runFfprobe } from "../shared/exec-media.js";
 
 /** Keep under OpenAI's 25 MB limit with headroom for Gateway base64 JSON. */
 export const SAFE_AUDIO_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -12,7 +9,7 @@ export const SAFE_AUDIO_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const AUDIO_PART_TARGET_DURATION_SEC = 600;
 
 export const getMediaDurationSec = async (inputPath: string) => {
-  const { stdout } = await execFileAsync("ffprobe", [
+  const { stdout } = await runFfprobe([
     "-v",
     "error",
     "-show_entries",
@@ -38,7 +35,7 @@ export const extractSpeechAudio = async (input: {
   inputPath: string;
   outputPath: string;
 }) => {
-  await execFileAsync("ffmpeg", [
+  await runFfmpeg([
     "-y",
     "-i",
     input.inputPath,
@@ -105,7 +102,7 @@ export const splitAudioForTranscription = async (input: {
       `part_${String(partIndex).padStart(3, "0")}.mp3`,
     );
 
-    await execFileAsync("ffmpeg", [
+    await runFfmpeg([
       "-y",
       "-ss",
       startSec.toFixed(3),

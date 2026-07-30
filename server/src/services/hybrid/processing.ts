@@ -26,6 +26,7 @@ import {
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
 import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
+import { truncateErrorMessage } from "../../lib/error-message.js";
 import {
   getValkeyConnectionOptions,
   HYBRID_SEGMENT_JOB_NAME,
@@ -176,7 +177,7 @@ export const deriveHybridPrimaryError = (input: {
   }
 
   if (input.hybridTask?.errorMessage) {
-    return input.hybridTask.errorMessage;
+    return truncateErrorMessage(input.hybridTask.errorMessage);
   }
 
   if (input.embedding.failed > 0) {

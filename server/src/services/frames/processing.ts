@@ -22,6 +22,7 @@ import {
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
 import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
+import { truncateErrorMessage } from "../../lib/error-message.js";
 import {
   getValkeyConnectionOptions,
   PREP_QUEUE_NAME,
@@ -174,7 +175,7 @@ export const deriveFramePrimaryError = (input: {
   }
 
   if (input.frameTask?.errorMessage) {
-    return input.frameTask.errorMessage;
+    return truncateErrorMessage(input.frameTask.errorMessage);
   }
 
   if (input.embedding.failed > 0) {

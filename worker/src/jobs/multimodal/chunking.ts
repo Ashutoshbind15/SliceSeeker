@@ -1,9 +1,6 @@
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { runFfmpeg } from "../shared/exec-media.js";
 
 type SegmentEntry = {
   filename: string;
@@ -47,7 +44,7 @@ export const chunkVideoFile = async (input: {
   );
   const segmentListPath = path.join(input.outputDir, "segments.csv");
 
-  await execFileAsync("ffmpeg", [
+  await runFfmpeg([
     "-y",
     "-i",
     input.inputPath,

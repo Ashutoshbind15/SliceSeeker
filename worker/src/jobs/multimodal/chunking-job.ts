@@ -17,6 +17,7 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
+import { assertSupportedVideoCodec } from "../shared/video-codec.js";
 import {
   mapWithConcurrency,
   PREP_UPLOAD_CONCURRENCY,
@@ -53,6 +54,8 @@ export const processChunkingJob = async (payload: ChunkingJobPayload) => {
       storageKey: payload.storageKey,
       destinationPath: inputPath,
     });
+
+    await assertSupportedVideoCodec(inputPath);
 
     await updateChunkingTaskStatus(payload.chunkingTaskId, {
       status: "chunking",

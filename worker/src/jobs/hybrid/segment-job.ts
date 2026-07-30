@@ -15,6 +15,7 @@ import {
   downloadObject,
   uploadObject,
 } from "../shared/s3.js";
+import { assertSupportedVideoCodec } from "../shared/video-codec.js";
 import {
   mapWithConcurrency,
   PREP_UPLOAD_CONCURRENCY,
@@ -56,6 +57,8 @@ export const processHybridSegmentJob = async (
       storageKey: payload.storageKey,
       destinationPath: inputPath,
     });
+
+    await assertSupportedVideoCodec(inputPath);
 
     await updateHybridTaskStatus(payload.hybridTaskId, {
       status: "segmenting",

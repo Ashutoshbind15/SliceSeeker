@@ -29,6 +29,7 @@ import {
   type CompletedUploadRow,
 } from "db/access/shared/uploads.js";
 import type { ListPageQuery, PaginatedRows } from "db/pagination.js";
+import { truncateErrorMessage } from "../../lib/error-message.js";
 import {
   EXTRACT_AUDIO_JOB_NAME,
   getValkeyConnectionOptions,
@@ -205,7 +206,7 @@ export const deriveTranscriptPrimaryError = (input: {
   }
 
   if (input.transcriptionTask?.errorMessage) {
-    return input.transcriptionTask.errorMessage;
+    return truncateErrorMessage(input.transcriptionTask.errorMessage);
   }
 
   if (input.parts.failed > 0) {

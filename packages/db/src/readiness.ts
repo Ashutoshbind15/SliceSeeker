@@ -1,4 +1,5 @@
 import pg from "pg";
+import { DEFAULT_COLLECTION_ID } from "./constants.js";
 
 /** Validates DB bootstrap state after `db:push` (pgvector extension + tables). */
 
@@ -91,9 +92,46 @@ const assertTables = async (
   return { ok: true };
 };
 
+/** Idempotent seed used by indexer `/ready` so compose healthchecks heal missing bootstrap rows. */
+const ensureDefaultCollection = async (
+  client: pg.Client,
+): Promise<ReadinessResult> => {
+  try {
+    await client.query(
+      `INSERT INTO collections (id, name, is_default)
+       VALUES ($1, $2, true)
+       ON CONFLICT (id) DO NOTHING`,
+      [DEFAULT_COLLECTION_ID, "Default"],
+    );
+
+    const result = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM collections WHERE id = $1
+       ) AS exists`,
+      [DEFAULT_COLLECTION_ID],
+    );
+
+    if (!result.rows[0]?.exists) {
+      return {
+        ok: false,
+        error: `Default collection "${DEFAULT_COLLECTION_ID}" is missing`,
+      };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to ensure default collection";
+    return { ok: false, error: message };
+  }
+};
+
 const runChecks = async (
   databaseUrl: string,
   tables: readonly string[],
+  options?: { ensureDefaultCollection?: boolean },
 ): Promise<ReadinessResult> => {
   let client: pg.Client | undefined;
 
@@ -105,7 +143,16 @@ const runChecks = async (
       return vectorCheck;
     }
 
-    return await assertTables(client, tables);
+    const tablesCheck = await assertTables(client, tables);
+    if (!tablesCheck.ok) {
+      return tablesCheck;
+    }
+
+    if (options?.ensureDefaultCollection) {
+      return await ensureDefaultCollection(client);
+    }
+
+    return { ok: true };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Database connection failed";
@@ -132,5 +179,7 @@ export const assertIndexerSchema = async (
     return { ok: false, error: "DATABASE_URL is not set" };
   }
 
-  return runChecks(databaseUrl, INDEXER_REQUIRED_TABLES);
+  return runChecks(databaseUrl, INDEXER_REQUIRED_TABLES, {
+    ensureDefaultCollection: true,
+  });
 };

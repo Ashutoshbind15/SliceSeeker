@@ -1,7 +1,4 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
+import { runFfmpeg } from "../shared/exec-media.js";
 
 /** Extract one JPEG still from a segment clip at a relative offset. */
 export const extractVisionJpegFromClip = async (input: {
@@ -11,7 +8,7 @@ export const extractVisionJpegFromClip = async (input: {
 }) => {
   const offsetSec = Math.max(0, input.offsetSec);
 
-  await execFileAsync("ffmpeg", [
+  await runFfmpeg([
     "-y",
     "-ss",
     offsetSec.toFixed(3),
