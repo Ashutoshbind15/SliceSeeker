@@ -18,3 +18,4 @@ docs/.source
 
 test-videos
 *.log
+*.md

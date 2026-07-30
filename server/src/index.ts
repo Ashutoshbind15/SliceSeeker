@@ -1,6 +1,9 @@
 import express from "express";
 import "dotenv/config";
-import { assertIndexerSchema } from "db/readiness.js";
+import {
+  assertAiGatewayApiKey,
+  assertIndexerSchema,
+} from "db/readiness.js";
 import cors from "cors";
 import { Queue } from "bullmq";
 import {
@@ -64,6 +67,12 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/ready", async (_req, res) => {
+  const gateway = assertAiGatewayApiKey();
+  if (!gateway.ok) {
+    res.status(503).json({ ready: false, error: gateway.error });
+    return;
+  }
+
   const schema = await assertIndexerSchema();
   if (!schema.ok) {
     res.status(503).json({ ready: false, error: schema.error });

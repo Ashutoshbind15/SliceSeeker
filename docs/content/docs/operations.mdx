@@ -48,8 +48,10 @@ Managed plans are often tight; size pools before scaling workers.
 
 | Service | `/ready` roughly checks |
 | --- | --- |
-| **indexer-api** | Schema, S3, Valkey `noeviction`, both queues |
-| **search-api** | Schema only |
+| **indexer-api** | `AI_GATEWAY_API_KEY`, schema, S3, Valkey `noeviction`, both queues |
+| **search-api** | `AI_GATEWAY_API_KEY`, schema |
+
+`indexer-worker` has no `/ready`; it exits on startup if `AI_GATEWAY_API_KEY` is missing.
 
 `/health` is liveness. Application containers do not run migrations on boot; use `db-push` / `docker-compose.init.yml`.
 

@@ -6,6 +6,16 @@ export type ReadinessResult =
   | { ok: true }
   | { ok: false; error: string };
 
+/** Fails closed when the AI Gateway key is missing (indexing + query embed). */
+export const assertAiGatewayApiKey = (): ReadinessResult => {
+  const key = process.env.AI_GATEWAY_API_KEY?.trim();
+  if (!key) {
+    return { ok: false, error: "AI_GATEWAY_API_KEY is not set" };
+  }
+
+  return { ok: true };
+};
+
 const SEARCH_REQUIRED_TABLES = [
   "collections",
   "uploads",

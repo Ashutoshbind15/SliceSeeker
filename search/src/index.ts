@@ -1,7 +1,10 @@
 import express from "express";
 import "dotenv/config";
 import cors from "cors";
-import { assertSearchSchema } from "db/readiness.js";
+import {
+  assertAiGatewayApiKey,
+  assertSearchSchema,
+} from "db/readiness.js";
 import {
   searchFramesHandler,
   searchHybridHandler,
@@ -23,6 +26,12 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/ready", async (_req, res) => {
+  const gateway = assertAiGatewayApiKey();
+  if (!gateway.ok) {
+    res.status(503).json({ ready: false, error: gateway.error });
+    return;
+  }
+
   const result = await assertSearchSchema();
   if (!result.ok) {
     res.status(503).json({ ready: false, error: result.error });

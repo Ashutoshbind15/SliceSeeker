@@ -32,9 +32,9 @@ Phases do not call each other over HTTP. Phase 2 only needs a populated Postgres
 | Container | Source | Role |
 | --- | --- | --- |
 | **indexer-api** | `server/` | Phase 1 HTTP API: uploads/hooks, collections, modality pipelines, search + costs used by the admin UI. Exposes `/health` and `/ready`. |
-| **indexer-worker** | `worker/` | BullMQ consumers. Includes ffmpeg. Runs prep jobs (chunk / extract / sample) and API jobs (embed / ASR). |
+| **indexer-worker** | `worker/` | BullMQ consumers. Includes ffmpeg. Runs prep jobs (chunk / extract / sample) and API jobs (embed / ASR). Exits on startup if `AI_GATEWAY_API_KEY` is missing. |
 | **admin-ui** | `client/` | Operator UI. Proxies API and tusd. |
-| **search-api** | `search/` | Phase 2 read-only search: multimodal, transcript, frame, and hybrid RRF endpoints. `/ready` checks schema only. |
+| **search-api** | `search/` | Phase 2 read-only search: multimodal, transcript, frame, and hybrid RRF endpoints. `/ready` checks gateway key + schema. |
 | **db-push** | `packages/db/` | One-shot: enable `vector` extension and push Drizzle schema. |
 
 ## Infrastructure containers

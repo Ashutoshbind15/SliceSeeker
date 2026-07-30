@@ -48,5 +48,5 @@ Worker tuning vars (`PREP_WORKER_CONCURRENCY`, `API_WORKER_CONCURRENCY`, `ENQUEU
 ## Operator notes
 
 - Containers must resolve your external hostnames (not `localhost` for services on the Docker host unless you use `host.docker.internal` or equivalent).
-- `/ready` verifies schema; it does **not** migrate. Re-run init after upgrades or on empty databases.
+- `/ready` verifies `AI_GATEWAY_API_KEY` and schema; it does **not** migrate. Re-run init after upgrades or on empty databases.
 - Phase 2 alone needs `DATABASE_URL` + embedding vars. Omit Valkey and S3 if you are not running Phase 1 on that host.

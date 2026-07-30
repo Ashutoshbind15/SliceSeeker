@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { Worker, type Job } from "bullmq";
+import { assertAiGatewayApiKey } from "db/readiness.js";
 import { updateChunkingTaskStatus } from "db/access/multimodal/chunking-tasks.js";
 import { markEmbeddingTaskFailed } from "db/access/multimodal/embedding-tasks.js";
 import { updateFrameTaskStatus } from "db/access/frames/frame-tasks.js";
@@ -211,6 +212,12 @@ const onFailed = (job: Job | undefined, err: Error) => {
     void markHybridEmbedSegmentTaskFailed(data.embeddingTaskId, err.message);
   }
 };
+
+const gateway = assertAiGatewayApiKey();
+if (!gateway.ok) {
+  console.error(gateway.error);
+  process.exit(1);
+}
 
 const prepWorker = new Worker(PREP_QUEUE_NAME, processPrepJob, {
   connection,
