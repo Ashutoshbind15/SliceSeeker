@@ -353,21 +353,43 @@ function locateAport(repo, commit, origin) {
 }
 
 function fetchAndVerifySources(root, collectorImage) {
+  // abuild tries DISTFILES_MIRROR/<basename> before each upstream URL. Prefer
+  // Alpine's own distfiles cache for the image branch — same bytes Alpine
+  // builders use, checksummed by APKBUILD. Avoid one-off third-party mirrors
+  // that might lag behind Alpine pkgver bumps and 404.
+  const alpineSeries = collectorImage.replace(/^alpine:/, "");
+  if (!/^\d+\.\d+$/.test(alpineSeries)) {
+    fail(`Unexpected collector image for source fetch: ${collectorImage}`);
+  }
+  const distfilesMirror =
+    `https://distfiles.alpinelinux.org/distfiles/v${alpineSeries}`;
+
   const script = [
     "set -eu",
     "apk add --no-cache alpine-sdk",
     // abuild uses BusyBox wget (no GNU --tries/--retry-connrefused). Wrap
     // with a shell retry loop; -T is the BusyBox read-timeout flag. CI runners
-    // often hit transient resets/timeouts on upstream distfiles.
+    // often hit transient resets/timeouts on upstream distfiles. Do not retry
+    // HTTP 4xx — those are permanent and burn the outer abuild retry budget.
     "mkdir -p /usr/local/bin",
     "printf '%s\\n' " +
       "'#!/bin/sh' " +
       "'n=0' " +
-      "'while [ \"$n\" -lt 10 ]; do' " +
+      "'while [ \"$n\" -lt 3 ]; do' " +
       "'  n=\$((n + 1))' " +
-      "'  if /usr/bin/wget -T 60 \"$@\"; then' " +
+      "'  err=\$(mktemp)' " +
+      "'  if /usr/bin/wget -T 60 \"$@\" 2>\"$err\"; then' " +
+      "'    cat \"$err\" >&2' " +
+      "'    rm -f \"$err\"' " +
       "'    exit 0' " +
       "'  fi' " +
+      "'  cat \"$err\" >&2' " +
+      "'  if grep -q \"HTTP/[0-9.]* 4[0-9][0-9]\" \"$err\"; then' " +
+      "'    rm -f \"$err\"' " +
+      "'    exit 1' " +
+      "'  fi' " +
+      "'  rm -f \"$err\"' " +
+      "'  [ \"$n\" -lt 3 ] || break' " +
       "'  echo \"wget failed (attempt $n); retrying...\" >&2' " +
       "'  sleep \$((n * 2))' " +
       "'done' " +
@@ -375,27 +397,19 @@ function fetchAndVerifySources(root, collectorImage) {
       ">/usr/local/bin/wget",
     "chmod +x /usr/local/bin/wget",
     "export PATH=\"/usr/local/bin:$PATH\"",
-    // Host-specific rewrites (same checksummed archives; APKBUILD still verifies):
-    // - gcc.gnu.org stalls on huge tarballs from Actions; sourceware is reliable.
-    // - musl.libc.org has been timing out from Actions while other hosts in the
-    //   same job succeed; Void serves the identical release tarball.
-    // Keep find/sed on one shell line so -exec still receives its args. Do not
-    // broadly rewrite ftp.gnu.org — some ftpmirror backends 403 Alpine fetchers.
-    "find /source -type f -name APKBUILD -exec sed -i " +
-      "-e 's|https://gcc.gnu.org/pub/gcc/releases/|https://sourceware.org/pub/gcc/releases/|g' " +
-      "-e 's|https://musl.libc.org/releases/musl-\\([^\"[:space:]]*\\)\\.tar\\.gz|https://sources.voidlinux.org/musl-\\1/musl-\\1.tar.gz|g' " +
-      "{} +",
+    `export DISTFILES_MIRROR="${distfilesMirror}"`,
     "tab=\"$(printf '\\t')\"",
     "while IFS=\"$tab\" read -r recipe distfiles; do",
     '  [ -n "$recipe" ] || continue',
     '  mkdir -p "/source/$distfiles"',
     // Outer retry: covers verify failures after the wget wrapper's tries.
     "  ok=0",
-    "  for attempt in 1 2 3 4 5; do",
+    "  for attempt in 1 2; do",
     '    if (cd "/source/$recipe" && SRCDEST="/source/$distfiles" abuild -F verify); then',
     "      ok=1",
     "      break",
     "    fi",
+    '    [ "$attempt" -lt 2 ] || break',
     '    echo "abuild verify failed for $recipe (attempt $attempt); retrying..." >&2',
     "    sleep $((attempt * 15))",
     "  done",
