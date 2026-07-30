@@ -55,9 +55,10 @@ FROM node:lts-alpine3.24 AS prod
 ARG VERSION=1.0.0
 ARG REVISION=unknown
 ARG FFMPEG_VERSION=8.0.1
+ARG SOURCE_ARCHIVE_URL
+ARG SOURCE_MANIFEST_URL
 LABEL org.opencontainers.image.title="SliceSeeker Indexer Worker" \
   org.opencontainers.image.description="SliceSeeker indexing worker (segments, transcribes and embeds video)" \
-  org.opencontainers.image.licenses="MIT" \
   org.opencontainers.image.source="https://github.com/Ashutoshbind15/demo-search-ai" \
   org.opencontainers.image.url="https://github.com/Ashutoshbind15/demo-search-ai" \
   org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/demo-search-ai" \
@@ -101,11 +102,15 @@ COPY licenses/ /licenses/
 COPY --from=base /tmp/THIRD_PARTY_NOTICES /licenses/THIRD_PARTY_NOTICES
 
 # Runs after every apk operation above so the inventory matches the shipped layers.
+COPY scripts/copy-node-runtime-notices.sh /tmp/copy-node-runtime-notices.sh
 COPY scripts/write-os-package-notice.sh /tmp/write-os-package-notice.sh
-RUN SLICESEEKER_COMPONENT=indexer-worker \
+RUN sh /tmp/copy-node-runtime-notices.sh \
+  && SLICESEEKER_COMPONENT=indexer-worker \
+  SLICESEEKER_SOURCE_ARCHIVE_URL="${SOURCE_ARCHIVE_URL}" \
+  SLICESEEKER_SOURCE_MANIFEST_URL="${SOURCE_MANIFEST_URL}" \
   SLICESEEKER_EXTRA_NOTICE="  FFmpeg ${FFMPEG_VERSION} (LGPL-2.1-or-later) - https://ffmpeg.org/\n  Built without GPL, nonfree, version3, network, or DVD components.\n  Exact source and build configuration: /licenses/ffmpeg/" \
   sh /tmp/write-os-package-notice.sh /licenses/OS-PACKAGES-NOTICE \
-  && rm /tmp/write-os-package-notice.sh
+  && rm /tmp/copy-node-runtime-notices.sh /tmp/write-os-package-notice.sh
 
 WORKDIR /app/worker
 

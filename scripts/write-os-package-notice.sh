@@ -13,6 +13,8 @@ set -eu
 
 OUT="${1:-/licenses/OS-PACKAGES-NOTICE}"
 COMPONENT="${SLICESEEKER_COMPONENT:-unknown}"
+SOURCE_ARCHIVE_URL="${SLICESEEKER_SOURCE_ARCHIVE_URL:-}"
+SOURCE_MANIFEST_URL="${SLICESEEKER_SOURCE_MANIFEST_URL:-}"
 # Software baked into the base image outside apk (e.g. the Caddy binary), which
 # therefore never appears in the apk database below. Rendered with printf %b so
 # callers can pass \n from a single-line Dockerfile ENV.
@@ -56,6 +58,12 @@ fi
     printf '%b\n' "$EXTRA_NOTICE"
     echo
   fi
+  if [ -f /licenses/runtime/NOTICE ]; then
+    echo "Bundled runtime notices (not installed via apk):"
+    echo
+    cat /licenses/runtime/NOTICE
+    echo
+  fi
   printf '%s\n\n' "========================================================================"
 } >"$OUT"
 
@@ -68,19 +76,26 @@ if [ ! -f "$APK_DB" ]; then
   exit 0
 fi
 
-# Records are blank-line separated; P: name, V: version, L: license.
+# Records are blank-line separated. In addition to the familiar package fields,
+# o: is the source-package origin and c: is the exact aports build commit.
 awk '
   BEGIN { RS = ""; FS = "\n" }
   {
-    name = ""; version = ""; license = ""
+    name = ""; version = ""; arch = ""; origin = ""; license = ""; commit = ""
     for (i = 1; i <= NF; i++) {
       if (substr($i, 1, 2) == "P:") name = substr($i, 3)
       else if (substr($i, 1, 2) == "V:") version = substr($i, 3)
+      else if (substr($i, 1, 2) == "A:") arch = substr($i, 3)
       else if (substr($i, 1, 2) == "L:") license = substr($i, 3)
+      else if (substr($i, 1, 2) == "o:") origin = substr($i, 3)
+      else if (substr($i, 1, 2) == "c:") commit = substr($i, 3)
     }
     if (name == "") next
+    if (arch == "") arch = "(unknown)"
+    if (origin == "") origin = name
     if (license == "") license = "(not declared in apk metadata)"
-    printf "%s\t%s\t%s\n", name, version, license
+    if (commit == "") commit = "(not recorded)"
+    printf "%s\t%s\t%s\t%s\t%s\t%s\n", name, version, arch, origin, license, commit
   }
 ' "$APK_DB" | sort >/tmp/os-packages.tsv
 
@@ -89,11 +104,13 @@ TOTAL="$(wc -l </tmp/os-packages.tsv | tr -d ' ')"
 {
   echo "Installed OS packages (${TOTAL}):"
   echo
-  awk -F '\t' '{ printf "  %-28s %-22s %s\n", $1, $2, $3 }' /tmp/os-packages.tsv
+  echo "  name | version | architecture | source origin | declared license | aports commit"
+  awk -F '\t' '{ printf "  %s | %s | %s | %s | %s | %s\n", $1, $2, $3, $4, $5, $6 }' /tmp/os-packages.tsv
   echo
 } >>"$OUT"
 
-grep -i 'GPL' /tmp/os-packages.tsv >/tmp/os-copyleft.tsv || true
+awk -F '\t' 'toupper($5) ~ /(AGPL|GPL|LGPL)/' /tmp/os-packages.tsv \
+  >/tmp/os-copyleft.tsv
 COPYLEFT="$(wc -l </tmp/os-copyleft.tsv | tr -d ' ')"
 
 {
@@ -105,14 +122,34 @@ COPYLEFT="$(wc -l </tmp/os-copyleft.tsv | tr -d ' ')"
     echo "The following ${COPYLEFT} package(s) in this image are covered by the GPL"
     echo "and/or LGPL:"
     echo
-    awk -F '\t' '{ printf "  %-28s %-22s %s\n", $1, $2, $3 }' /tmp/os-copyleft.tsv
+    echo "  package | version | source origin | declared license | aports commit"
+    awk -F '\t' '{ printf "  %s | %s | %s | %s | %s\n", $1, $2, $4, $5, $6 }' /tmp/os-copyleft.tsv
     echo
   else
     echo "No GPL/LGPL packages were detected in this image's apk database."
     echo
   fi
 
+  if [ -n "$SOURCE_ARCHIVE_URL" ] && [ -n "$SOURCE_MANIFEST_URL" ]; then
+    cat <<EOF
+DIRECT CORRESPONDING SOURCE
+
+The exact source and Alpine build recipes corresponding to this released image
+are available at no charge:
+
+  ${SOURCE_ARCHIVE_URL}
+  ${SOURCE_MANIFEST_URL}
+
+The manifest maps immutable image digests and installed package versions to
+paths in the source archive. This is direct source distribution, not a written
+offer to provide source later.
+
+EOF
+  fi
+
   cat <<EOF
+UPSTREAM REFERENCE INFORMATION
+
 The inventory above records the exact Alpine package names and versions in this
 image. Upstream source and build recipes are indexed by the Alpine Linux
 project:
@@ -120,9 +157,11 @@ project:
   https://pkgs.alpinelinux.org/packages?branch=v${ALPINE_VERSION%.*}
   https://gitlab.alpinelinux.org/alpine/aports
 
-Use the package name and version from the inventory when locating source. This
-section identifies the upstream source locations; it is not a separate written
-offer by the SliceSeeker maintainers.
+The upstream indexes are useful references but do not replace the direct
+corresponding-source archive for an official SliceSeeker release. For custom
+images that do not identify a direct archive above, the image distributor is
+responsible for satisfying the licenses of the software it conveys. This
+section is not a written source offer by the SliceSeeker maintainers.
 EOF
 } >>"$OUT"
 

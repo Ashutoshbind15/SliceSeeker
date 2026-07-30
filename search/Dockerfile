@@ -31,9 +31,10 @@ FROM node:lts-alpine3.24 AS prod
 
 ARG VERSION=1.0.0
 ARG REVISION=unknown
+ARG SOURCE_ARCHIVE_URL
+ARG SOURCE_MANIFEST_URL
 LABEL org.opencontainers.image.title="SliceSeeker Search API" \
   org.opencontainers.image.description="SliceSeeker Phase 2 slice seek and search API" \
-  org.opencontainers.image.licenses="MIT" \
   org.opencontainers.image.source="https://github.com/Ashutoshbind15/demo-search-ai" \
   org.opencontainers.image.url="https://github.com/Ashutoshbind15/demo-search-ai" \
   org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/demo-search-ai" \
@@ -63,10 +64,14 @@ COPY LICENSE /licenses/LICENSE
 COPY licenses/ /licenses/
 COPY --from=base /tmp/THIRD_PARTY_NOTICES /licenses/THIRD_PARTY_NOTICES
 
+COPY scripts/copy-node-runtime-notices.sh /tmp/copy-node-runtime-notices.sh
 COPY scripts/write-os-package-notice.sh /tmp/write-os-package-notice.sh
-RUN SLICESEEKER_COMPONENT=search-api \
+RUN sh /tmp/copy-node-runtime-notices.sh \
+  && SLICESEEKER_COMPONENT=search-api \
+  SLICESEEKER_SOURCE_ARCHIVE_URL="${SOURCE_ARCHIVE_URL}" \
+  SLICESEEKER_SOURCE_MANIFEST_URL="${SOURCE_MANIFEST_URL}" \
   sh /tmp/write-os-package-notice.sh /licenses/OS-PACKAGES-NOTICE \
-  && rm /tmp/write-os-package-notice.sh
+  && rm /tmp/copy-node-runtime-notices.sh /tmp/write-os-package-notice.sh
 
 WORKDIR /app/search
 

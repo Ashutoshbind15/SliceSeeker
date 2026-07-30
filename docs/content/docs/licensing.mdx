@@ -27,6 +27,8 @@ Each image includes:
 | `THIRD_PARTY_NOTICES` | Production npm dependency attributions and license texts |
 | `OS-PACKAGES-NOTICE` | Installed Alpine package inventory and upstream source indexes |
 | `GPL-*.txt`, `LGPL-*.txt` | Copyleft license texts used by bundled components |
+| `runtime/` (Node images) | Exact bundled license files for Node.js, npm, Yarn, Corepack, and pnpm |
+| `Apache-2.0.txt` (admin UI) | License text for the Caddy web server inherited from its base image |
 | `ffmpeg/` (worker only) | Exact FFmpeg source archive, build script, and configuration |
 
 ```bash
@@ -35,13 +37,35 @@ docker run --rm --entrypoint sh \
   -c 'cat /licenses/OS-PACKAGES-NOTICE'
 ```
 
-`OS-PACKAGES-NOTICE` is generated from the final image's apk database. It records upstream source locations but does not make a separate three-year source-supply offer from the SliceSeeker maintainers. The FFmpeg source is included directly because the custom binary is not an apk package. CycloneDX and SPDX SBOMs are published for every image.
+`OS-PACKAGES-NOTICE` is generated from the final image's apk database. It records each package's source origin and exact aports build commit. For an official release it also links directly to two durable GitHub Release assets:
 
-The OCI `MIT` label describes SliceSeeker's own code. Bundled dependencies retain their respective licenses as documented under `/licenses`.
+- `sliceseeker-vX.Y.Z-corresponding-source.tar.zst`
+- `sliceseeker-vX.Y.Z-source-manifest.json`
+
+The combined archive contains checksum-verified upstream source, the matching Alpine `APKBUILD` directory (including patches and scripts), and the worker's custom FFmpeg source/build materials. The manifest maps each immutable image digest and architecture to exact installed packages and paths in the archive. CycloneDX and SPDX SBOMs and per-image notice archives are published in the same release.
+
+This is direct online source distribution, not a written offer to provide source later. Release assets are retained while their mapped images remain available and, conservatively, for at least three years after the images' last distribution. Do not delete or replace a source asset independently of its images.
+
+The images deliberately omit `org.opencontainers.image.licenses`: OCI defines that annotation for the contained software, and the complete images contain more than SliceSeeker's MIT-licensed application. The repository and SliceSeeker npm package metadata remain MIT.
+
+## Publishing a release
+
+Pushing an exact `vX.Y.Z` Git tag is the supported public image-release path. The tag must match the version in `package.json`. CI then:
+
+1. checks npm licenses and builds all final images;
+2. collects and checksum-verifies exact GPL/LGPL source before any registry push;
+3. pushes immutable SHA, version, and `latest` image tags;
+4. records the registry digests and generates both SBOM formats;
+5. creates one combined corresponding-source archive and digest manifest; and
+6. creates a GitHub Release containing all source, SBOM, and notice assets.
+
+If source cannot be fetched, matched to its aports commit, or checksum-verified, the image job fails before publishing that image. A manual workflow run performs the build and complete compliance packaging as a dry run but does not push images or create a release.
 
 ## Dependency policy
 
 Production npm trees are gated against an allowlist before any image is built. Strong copyleft — GPL, AGPL, SSPL — is deliberately absent from that allowlist, so a stray GPL npm dependency fails the build even though the base image already contains GPL software. The two categories are kept separate on purpose.
+
+LGPL npm packages are also excluded from the image allowlist. SliceSeeker has source collection for Alpine packages and its custom FFmpeg build, but not for arbitrary npm native prebuilds; a future LGPL npm dependency therefore requires explicit source-handling work instead of silently passing CI. MPL-2.0 remains allowed for the admin UI's file-level-copyleft build tooling.
 
 ```bash
 pnpm licenses:check                      # all five images
@@ -50,6 +74,14 @@ pnpm licenses:check --filter worker...   # one image
 
 Packages whose upstream `package.json` omits a license field are waived individually by name, never by allowing `Unknown` globally.
 
+The current `combine-errors@3.0.3` waiver is backed by a retained copy of the upstream MIT statement under `/licenses/evidence`, included in every image.
+
 ## Third-party services
 
 The Compose examples reference Postgres with pgvector, Valkey, tusd, and RustFS. You pull those images from their own registries. SliceSeeker does not redistribute them and makes no claim about their licenses.
+
+## Reports and hosted-service scope
+
+SliceSeeker is distributed as self-hosted software and does not operate a hosted upload or public-content service. Project-level Terms of Service and Privacy Policy pages therefore do not describe an actual SliceSeeker service. Operators who expose a hosted service or accept third-party content must supply terms, privacy disclosures, and content-rights procedures appropriate to their deployment and jurisdiction.
+
+Report licensing, copyright, and security concerns through the repository's public issue tracker, as described in the repository's `SECURITY.md`.

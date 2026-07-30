@@ -1,0 +1,25 @@
+License evidence for combine-errors 3.0.3
+Reviewed: 2026-07-30
+
+Package:
+  name: combine-errors
+  version: 3.0.3
+  registry: https://registry.npmjs.org/combine-errors/3.0.3
+  repository: https://github.com/MatthewMueller/combine-errors
+
+Reason this evidence is retained:
+  The published package.json for 3.0.3 has no license field, so package
+  inventory tools report its SPDX license as Unknown. The upstream README
+  contains the following license statement:
+
+    ## License
+
+    MIT
+
+Reviewed upstream files:
+  https://raw.githubusercontent.com/MatthewMueller/combine-errors/master/Readme.md
+  https://raw.githubusercontent.com/MatthewMueller/combine-errors/master/package.json
+
+This evidence supports the exact-name waiver in
+scripts/check-allowed-licenses.mjs. It is not a blanket waiver for packages
+with missing license metadata.

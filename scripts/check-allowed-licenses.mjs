@@ -33,12 +33,9 @@ const ALLOWED_LICENSES = new Set([
   "CC-BY-4.0",
   "OFL-1.1",
   "Unlicense",
-  // Weak / file-level copyleft. Strong copyleft (GPL/AGPL/SSPL/…) is not listed.
-  // MPL-2.0: lightningcss (vite / tailwind). LGPL kept for native prebuilds.
-  "LGPL-3.0-or-later",
-  "LGPL-3.0",
-  "LGPL-2.1-or-later",
-  "LGPL-2.1",
+  // File-level copyleft. Strong copyleft and LGPL native prebuilds are not
+  // listed because npm corresponding-source collection is not implemented.
+  // MPL-2.0 is used by lightningcss build tooling in the admin UI tree.
   "MPL-2.0",
 ]);
 

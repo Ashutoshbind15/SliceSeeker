@@ -1,6 +1,9 @@
 name: Container images
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -10,171 +13,336 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
-      id-token: write
-      attestations: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: indexer-api
-            dockerfile: server/Dockerfile
-            package_json: server/package.json
-            image_suffix: sliceseeker-indexer-api
-            pnpm_filter: server...
-          - name: indexer-worker
-            dockerfile: worker/Dockerfile
-            package_json: worker/package.json
-            image_suffix: sliceseeker-indexer-worker
-            pnpm_filter: worker...
-          - name: admin-ui
-            dockerfile: client/Dockerfile
-            package_json: client/package.json
-            image_suffix: sliceseeker-admin-ui
-            pnpm_filter: client...
-          - name: search-api
-            dockerfile: search/Dockerfile
-            package_json: search/package.json
-            image_suffix: sliceseeker-search-api
-            pnpm_filter: search...
-          - name: db-migrate
-            dockerfile: packages/db/Dockerfile
-            package_json: packages/db/package.json
-            image_suffix: sliceseeker-db-migrate
-            pnpm_filter: db...
-
+    env:
+      REGISTRY: ghcr.io/ashutoshbind15
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter "${{ matrix.pnpm_filter }}"
+        run: pnpm install --frozen-lockfile
 
-      - name: Check allowed production licenses
-        run: node scripts/check-allowed-licenses.mjs --filter "${{ matrix.pnpm_filter }}"
+      - name: Check all production dependency licenses
+        run: pnpm licenses:check
+
+      - name: Set release metadata
+        id: release
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          GENERATED_AT="$(git show -s --format=%cI "${GITHUB_SHA}")"
+          PUBLISH=false
+          SOURCE_ARCHIVE_URL=""
+          SOURCE_MANIFEST_URL=""
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            if [[ "${GITHUB_REF_NAME}" != "${TAG}" ]]; then
+              echo "::error::Release tag ${GITHUB_REF_NAME} does not match package version ${TAG}."
+              exit 1
+            fi
+            PUBLISH=true
+            RELEASE_BASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}"
+            SOURCE_ARCHIVE_URL="${RELEASE_BASE}/sliceseeker-${TAG}-corresponding-source.tar.zst"
+            SOURCE_MANIFEST_URL="${RELEASE_BASE}/sliceseeker-${TAG}-source-manifest.json"
+          fi
+
+          {
+            echo "version=${VERSION}"
+            echo "tag=${TAG}"
+            echo "generated_at=${GENERATED_AT}"
+            echo "publish=${PUBLISH}"
+            echo "source_archive_url=${SOURCE_ARCHIVE_URL}"
+            echo "source_manifest_url=${SOURCE_MANIFEST_URL}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Build every final image and fetch its exact GPL/LGPL source before any
+      # image is pushed. Keeping this in one job avoids moving large image tars
+      # between matrix jobs and gives the release an all-images compliance gate.
+      - name: Build images and collect corresponding source
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SOURCE_ARCHIVE_URL: ${{ steps.release.outputs.source_archive_url }}
+          SOURCE_MANIFEST_URL: ${{ steps.release.outputs.source_manifest_url }}
+        run: |
+          set -euo pipefail
+
+          COMPONENTS=(indexer-api indexer-worker admin-ui search-api db-migrate)
+          DOCKERFILES=(
+            server/Dockerfile
+            worker/Dockerfile
+            client/Dockerfile
+            search/Dockerfile
+            packages/db/Dockerfile
+          )
+          IMAGE_SUFFIXES=(
+            sliceseeker-indexer-api
+            sliceseeker-indexer-worker
+            sliceseeker-admin-ui
+            sliceseeker-search-api
+            sliceseeker-db-migrate
+          )
+
+          for i in "${!COMPONENTS[@]}"; do
+            component="${COMPONENTS[$i]}"
+            image="${REGISTRY}/${IMAGE_SUFFIXES[$i]}"
+            local_tag="${image}:compliance-${GITHUB_RUN_ID}-${component}"
+
+            docker build \
+              -f "${DOCKERFILES[$i]}" \
+              -t "${local_tag}" \
+              --build-arg "VERSION=${VERSION}" \
+              --build-arg "REVISION=${GITHUB_SHA}" \
+              --build-arg "SOURCE_ARCHIVE_URL=${SOURCE_ARCHIVE_URL}" \
+              --build-arg "SOURCE_MANIFEST_URL=${SOURCE_MANIFEST_URL}" \
+              --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              .
+
+            node scripts/collect-container-sources.mjs \
+              --component "${component}" \
+              --image "${local_tag}" \
+              --output compliance \
+              --merge
+          done
+
+      - name: Package verified source before publication
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          GENERATED_AT: ${{ steps.release.outputs.generated_at }}
+        run: |
+          node scripts/package-corresponding-source.mjs \
+            --input compliance \
+            --output release-assets \
+            --version "${VERSION}" \
+            --revision "${GITHUB_SHA}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --generated-at "${GENERATED_AT}"
+
+      # Publish the source archive first. If a later image push fails, source
+      # remains directly downloadable for every image that did reach GHCR.
+      - name: Publish source archive before images
+        if: steps.release.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          ARCHIVE="release-assets/sliceseeker-${TAG}-corresponding-source.tar.zst"
+
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json assets --jq '.assets[].name' \
+              | grep -Fxq "sliceseeker-${TAG}-source-manifest.json"; then
+              echo "::error::Release ${TAG} is already complete; refusing to republish it."
+              exit 1
+            fi
+            if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" \
+              --json assets --jq '.assets[].name' \
+              | grep -Fxq "$(basename "${ARCHIVE}")"; then
+              mkdir -p existing-release
+              gh release download "${TAG}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --pattern "$(basename "${ARCHIVE}")" \
+                --dir existing-release
+              cmp "${ARCHIVE}" "existing-release/$(basename "${ARCHIVE}")"
+            else
+              gh release upload "${TAG}" "${ARCHIVE}" \
+                --repo "${GITHUB_REPOSITORY}"
+            fi
+          else
+            gh release create "${TAG}" "${ARCHIVE}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --verify-tag \
+              --generate-notes \
+              --title "SliceSeeker ${TAG}"
+          fi
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        if: steps.release.outputs.publish == 'true'
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        id: build
+      - name: Push images and record immutable digests
+        if: steps.release.outputs.publish == 'true'
         env:
-          IMAGE: ghcr.io/ashutoshbind15/${{ matrix.image_suffix }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
 
-          SHORT_SHA="$(echo "${{ github.sha }}" | cut -c1-7)"
-          VERSION="$(node -p "require('./${{ matrix.package_json }}').version")"
-          REVISION="${{ github.sha }}"
-
-          TAGS=(
-            "${IMAGE}:sha-${SHORT_SHA}"
-            "${IMAGE}:${VERSION}"
-            "${IMAGE}:latest"
+          COMPONENTS=(indexer-api indexer-worker admin-ui search-api db-migrate)
+          IMAGE_SUFFIXES=(
+            sliceseeker-indexer-api
+            sliceseeker-indexer-worker
+            sliceseeker-admin-ui
+            sliceseeker-search-api
+            sliceseeker-db-migrate
           )
+          SHORT_SHA="${GITHUB_SHA:0:7}"
 
-          docker build \
-            -f "${{ matrix.dockerfile }}" \
-            -t "${TAGS[0]}" \
-            -t "${TAGS[1]}" \
-            -t "${TAGS[2]}" \
-            --build-arg "VERSION=${VERSION}" \
-            --build-arg "REVISION=${REVISION}" \
-            --label "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            .
+          for i in "${!COMPONENTS[@]}"; do
+            component="${COMPONENTS[$i]}"
+            image="${REGISTRY}/${IMAGE_SUFFIXES[$i]}"
+            local_tag="${image}:compliance-${GITHUB_RUN_ID}-${component}"
+            tags=(
+              "${image}:sha-${SHORT_SHA}"
+              "${image}:${VERSION}"
+              "${image}:latest"
+            )
 
-          for tag in "${TAGS[@]}"; do
-            docker push "$tag"
+            for tag in "${tags[@]}"; do
+              docker tag "${local_tag}" "${tag}"
+              docker push "${tag}"
+            done
+
+            digest="$(
+              docker image inspect \
+                --format='{{range .RepoDigests}}{{println .}}{{end}}' \
+                "${tags[0]}" \
+                | awk -F@ -v image="${image}" '$1 == image { print $2; exit }'
+            )"
+            if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "::error::Could not determine immutable digest for ${image}."
+              exit 1
+            fi
+
+            node scripts/collect-container-sources.mjs \
+              --component "${component}" \
+              --output compliance \
+              --finalize-digest "${image}@${digest}"
           done
 
-          DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${TAGS[0]}" | awk -F@ '{print $2}')"
-          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-          echo "local_tag=${TAGS[0]}" >> "$GITHUB_OUTPUT"
+      - name: Install Syft
+        uses: anchore/sbom-action/download-syft@v0
 
-      # The SBOM records exact Alpine package versions and native components.
-      # Keep it attached to every published image alongside the in-image source
-      # and notices.
-      - name: Generate CycloneDX SBOM (Syft)
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ steps.build.outputs.local_tag }}
-          format: cyclonedx-json
-          artifact-name: sliceseeker-${{ matrix.name }}.cdx.json
-          output-file: sliceseeker-${{ matrix.name }}.cdx.json
-          upload-artifact: true
-          upload-release-assets: false
-
-      - name: Generate SPDX SBOM (Syft)
-        uses: anchore/sbom-action@v0
-        with:
-          image: ${{ steps.build.outputs.local_tag }}
-          format: spdx-json
-          artifact-name: sliceseeker-${{ matrix.name }}.spdx.json
-          output-file: sliceseeker-${{ matrix.name }}.spdx.json
-          upload-artifact: true
-          upload-release-assets: false
-
-      - name: Extract in-image license notices
-        shell: bash
+      - name: Generate SBOMs and package notices
         run: |
           set -euo pipefail
-          IMAGE='${{ steps.build.outputs.local_tag }}'
-          CID="$(docker create "$IMAGE")"
-          mkdir -p "licenses-${{ matrix.name }}"
-          docker cp "${CID}:/licenses/." "licenses-${{ matrix.name }}/"
-          docker rm "${CID}"
-          ls -la "licenses-${{ matrix.name }}/"
-          test -f "licenses-${{ matrix.name }}/LICENSE"
-          test -f "licenses-${{ matrix.name }}/THIRD_PARTY_NOTICES"
-          test -f "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
-          test -f "licenses-${{ matrix.name }}/GPL-2.0.txt"
-          test -f "licenses-${{ matrix.name }}/GPL-3.0.txt"
-          grep -q "UPSTREAM SOURCE INFORMATION" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
 
-          if [[ '${{ matrix.name }}' == 'indexer-worker' ]]; then
-            test -f "licenses-${{ matrix.name }}/ffmpeg/ffmpeg-8.0.1.tar.xz"
-            test -f "licenses-${{ matrix.name }}/ffmpeg/BUILD-CONFIGURATION.txt"
-            test -f "licenses-${{ matrix.name }}/ffmpeg/build-ffmpeg-lgpl.sh"
-            grep -q "FFmpeg 8.0.1 (LGPL-2.1-or-later)" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
-            ! grep -qi "libdvdcss" "licenses-${{ matrix.name }}/OS-PACKAGES-NOTICE"
+          COMPONENTS=(indexer-api indexer-worker admin-ui search-api db-migrate)
+          IMAGE_SUFFIXES=(
+            sliceseeker-indexer-api
+            sliceseeker-indexer-worker
+            sliceseeker-admin-ui
+            sliceseeker-search-api
+            sliceseeker-db-migrate
+          )
 
-            docker run --rm --entrypoint ffmpeg "$IMAGE" -hide_banner -version \
-              | tee /tmp/ffmpeg-version.txt
-            grep -q -- "--disable-gpl" /tmp/ffmpeg-version.txt
-            ! grep -Eq -- "--enable-(gpl|nonfree|version3)" /tmp/ffmpeg-version.txt
+          for i in "${!COMPONENTS[@]}"; do
+            component="${COMPONENTS[$i]}"
+            image="${REGISTRY}/${IMAGE_SUFFIXES[$i]}:compliance-${GITHUB_RUN_ID}-${component}"
+            license_dir="compliance/notices/${component}"
 
-            apk_packages="$(docker run --rm --entrypoint apk "$IMAGE" info)"
-            ! grep -Eqi '^(ffmpeg|libdvd|x264|x265)' <<<"$apk_packages"
+            test -f "${license_dir}/LICENSE"
+            test -f "${license_dir}/THIRD_PARTY_NOTICES"
+            test -f "${license_dir}/OS-PACKAGES-NOTICE"
+            test -f "${license_dir}/GPL-2.0.txt"
+            test -f "${license_dir}/GPL-3.0.txt"
+            test -f "${license_dir}/evidence/combine-errors-3.0.3-MIT.txt"
+            grep -q "UPSTREAM REFERENCE INFORMATION" \
+              "${license_dir}/OS-PACKAGES-NOTICE"
+            if [[ "${component}" == "admin-ui" ]]; then
+              test -f "${license_dir}/Apache-2.0.txt"
+            else
+              test -f "${license_dir}/runtime/NOTICE"
+              test -f "${license_dir}/runtime/nodejs/LICENSE"
+              test -f "${license_dir}/runtime/npm/LICENSE"
+              test -f "${license_dir}/runtime/yarn/LICENSE"
+              test -f "${license_dir}/runtime/corepack/LICENSE"
+              test -f "${license_dir}/runtime/pnpm/LICENSE"
+            fi
+
+            syft "${image}" \
+              -o "cyclonedx-json=release-assets/sliceseeker-${component}.cdx.json"
+            syft "${image}" \
+              -o "spdx-json=release-assets/sliceseeker-${component}.spdx.json"
+            tar -czf "release-assets/sliceseeker-${component}-licenses.tar.gz" \
+              -C "${license_dir}" .
+          done
+
+          worker_licenses="compliance/notices/indexer-worker"
+          worker_image="${REGISTRY}/sliceseeker-indexer-worker:compliance-${GITHUB_RUN_ID}-indexer-worker"
+          test -f "${worker_licenses}/ffmpeg/ffmpeg-8.0.1.tar.xz"
+          test -f "${worker_licenses}/ffmpeg/BUILD-CONFIGURATION.txt"
+          test -f "${worker_licenses}/ffmpeg/build-ffmpeg-lgpl.sh"
+          grep -q "FFmpeg 8.0.1 (LGPL-2.1-or-later)" \
+            "${worker_licenses}/OS-PACKAGES-NOTICE"
+          ! grep -qi "libdvdcss" "${worker_licenses}/OS-PACKAGES-NOTICE"
+
+          docker run --rm --entrypoint ffmpeg "${worker_image}" \
+            -hide_banner -version | tee /tmp/ffmpeg-version.txt
+          grep -q -- "--disable-gpl" /tmp/ffmpeg-version.txt
+          ! grep -Eq -- "--enable-(gpl|nonfree|version3)" \
+            /tmp/ffmpeg-version.txt
+
+          apk_packages="$(docker run --rm --entrypoint apk "${worker_image}" info)"
+          ! grep -Eqi '^(ffmpeg|libdvd|x264|x265)' <<<"${apk_packages}"
+
+      - name: Finalize digest-to-source manifest
+        if: steps.release.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          GENERATED_AT: ${{ steps.release.outputs.generated_at }}
+        run: |
+          node scripts/package-corresponding-source.mjs \
+            --input compliance \
+            --output release-assets \
+            --version "${VERSION}" \
+            --revision "${GITHUB_SHA}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --generated-at "${GENERATED_AT}" \
+            --require-digests \
+            --manifest-only
+
+      - name: Upload complete compliance bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: sliceseeker-container-compliance
+          path: release-assets/
+          retention-days: 90
+
+      - name: Publish manifest, SBOMs, and notices
+        if: steps.release.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mapfile -t ASSETS < <(
+            find release-assets -maxdepth 1 -type f \
+              ! -name "sliceseeker-${TAG}-corresponding-source.tar.zst" \
+              -print | sort
+          )
+          if [[ "${#ASSETS[@]}" -ne 16 ]]; then
+            echo "::error::Expected one manifest, ten SBOMs, and five notice archives; found ${#ASSETS[@]}."
+            exit 1
           fi
 
-      - name: Upload license notices
-        uses: actions/upload-artifact@v4
-        with:
-          name: sliceseeker-${{ matrix.name }}-licenses
-          path: licenses-${{ matrix.name }}/
+          # An existing manifest means this release completed previously. Do
+          # not replace durable compliance metadata on a normal rerun.
+          if gh release view "${TAG}" --repo "${GITHUB_REPOSITORY}" \
+            --json assets --jq '.assets[].name' \
+            | grep -Fxq "sliceseeker-${TAG}-source-manifest.json"; then
+            echo "::error::Release ${TAG} already has final compliance assets; refusing to replace them."
+            exit 1
+          fi
 
-      - name: Attest CycloneDX SBOM
-        if: steps.build.outputs.digest != ''
-        uses: actions/attest-sbom@v2
-        with:
-          subject-name: ${{ steps.build.outputs.image }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          sbom-path: sliceseeker-${{ matrix.name }}.cdx.json
-          push-to-registry: false
+          gh release upload "${TAG}" "${ASSETS[@]}" \
+            --repo "${GITHUB_REPOSITORY}"

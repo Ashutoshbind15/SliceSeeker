@@ -124,7 +124,10 @@ Output: `packages/search-client/dist/`.
 
 SliceSeeker's source code is [MIT](LICENSE). Published images also contain their
 base OS and other third-party software, so each image includes notices under
-`/licenses` and has CycloneDX and SPDX SBOMs.
+`/licenses` and has CycloneDX and SPDX SBOMs. Each tagged GitHub Release also
+publishes one checksum-verified corresponding-source archive and a manifest
+mapping immutable image digests to exact Alpine package source and build
+recipes.
 
 The worker ships a pinned **LGPL-2.1-or-later** FFmpeg build for MP4, MOV, WebM,
 and AVI processing. It is built without GPL, nonfree, version3, network, DVD,

@@ -161,6 +161,8 @@ function buildHeader(component, inventory) {
     "OS packages and other bundled native components are NOT covered here. They",
     "are listed in /licenses/OS-PACKAGES-NOTICE and in the container SBOM.",
     "Source-location information is shipped under /licenses.",
+    "Evidence for individually reviewed package-metadata gaps is retained under",
+    "/licenses/evidence.",
     "",
   ];
 
