@@ -2,7 +2,7 @@
 
 Self-hostable **internal** tool for semantic video search: upload media, index it in the background, then query by natural language. Other backends call Phase 2 (`search-api` / `search-client`) to seek slices; operators use the admin UI. Postgres stores vectors; object storage holds the source files.
 
-License: [MIT](LICENSE) for SliceSeeker's own code; container notices and release assets are listed under [Licensing](#licensing). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
+License: [MIT](LICENSE) for SliceSeeker's own code; container notices and release assets are listed under [Licensing](#licensing). No built-in auth — network isolation is the security model. See [Deploy](https://sliceseeker.ashutoshbind.com/docs/deploy).
 
 > **Media leaves your network.** Indexing sends video segments, audio, frames,
 > transcript text, and search queries through a third-party AI gateway. The
@@ -34,12 +34,22 @@ pnpm dev:all
 
 - **Self-contained**: all dependencies as containers ([`deploy/self-contained/`](deploy/self-contained/))
 - **External**: your Postgres, Valkey, and S3 URLs ([`deploy/external/`](deploy/external/))
-- **Images**: [build or pull the five app images](docs/content/docs/deploy/images.mdx) (`v0.1.0` / GHCR)
+- **Images**: [build or pull the five app images](https://sliceseeker.ashutoshbind.com/docs/deploy/images) (`v0.1.0` / GHCR)
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 
 Supported uploads are **MP4, MOV, WebM, and AVI**. The API enforces the same
 allowlist as the admin UI before tusd stores a file.
+
+## Documentation
+
+Docs: [https://sliceseeker.ashutoshbind.com/](https://sliceseeker.ashutoshbind.com/)
+
+Source lives in [`docs/`](./docs). To run locally:
+
+```bash
+pnpm --filter docs dev
+```
 
 ---
 
@@ -127,11 +137,11 @@ SliceSeeker's source code is [MIT](LICENSE). Published images also contain their
 base OS and other third-party software. Notices live under `/licenses` in each
 image; matching GitHub Releases attach SBOMs, notice archives, and corresponding
 source. The worker's FFmpeg materials are under `/licenses/ffmpeg`. Details:
-[Licensing](docs/content/docs/licensing.mdx).
+[Licensing](https://sliceseeker.ashutoshbind.com/docs/licensing).
 
 ## Data flow
 
 Indexing sends media and text through a third-party AI gateway using your own
 API key. If you cannot send that material to a third-party processor,
 SliceSeeker in its current form is not suitable for it. See
-[Data handling](docs/content/docs/data-handling.mdx) for the exact flow.
+[Data handling](https://sliceseeker.ashutoshbind.com/docs/data-handling) for the exact flow.

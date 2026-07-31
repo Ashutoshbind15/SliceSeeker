@@ -2,6 +2,8 @@
 
 Fumadocs site for **SliceSeeker**.
 
+Published at [https://sliceseeker.ashutoshbind.com/](https://sliceseeker.ashutoshbind.com/).
+
 ```bash
 pnpm --filter docs dev
 ```
