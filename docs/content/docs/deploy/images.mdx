@@ -69,7 +69,7 @@ That produces `sliceseeker/*:latest` (and `sliceseeker/db-push:latest`) matching
 
 ## Pull a release (GHCR)
 
-After a `vX.Y.Z` Git tag is pushed, CI publishes the five images to GHCR and attaches corresponding-source, SBOMs, and notice archives to the GitHub Release. See [Licensing](/docs/licensing#publishing-a-release).
+Versioned images are on GHCR. Matching GitHub Releases attach corresponding source, SBOMs, and notice archives — see [Licensing](/docs/licensing).
 
 Pin versioned images in your `.env` (self-contained or external):
 
@@ -100,11 +100,3 @@ docker compose \
 ```
 
 GHCR packages may be private until the repository owner marks them public. If pulls fail with `denied`, authenticate (`docker login ghcr.io`) or wait until the packages are public.
-
-## Tag a release
-
-1. Set root `package.json` `"version"` to the release (for example `0.1.0`).
-2. Commit on the branch you intend to ship.
-3. Create and push an annotated tag that matches that version: `git tag -a v0.1.0 -m "SliceSeeker v0.1.0" && git push origin v0.1.0`.
-
-CI refuses tags that do not match `package.json`. A manual workflow dispatch builds and packages compliance assets as a dry run but does not push images.

@@ -2,7 +2,7 @@
 
 Self-hostable **internal** tool for semantic video search: upload media, index it in the background, then query by natural language. Other backends call Phase 2 (`search-api` / `search-client`) to seek slices; operators use the admin UI. Postgres stores vectors; object storage holds the source files.
 
-License: [MIT](LICENSE) — but the published container images are not MIT-only, see [Licensing](#licensing). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
+License: [MIT](LICENSE) for SliceSeeker's own code; container notices and release assets are listed under [Licensing](#licensing). No built-in auth — network isolation is the security model. See [docs/deploy](docs/content/docs/deploy/index.mdx).
 
 > **Media leaves your network.** Indexing sends video segments, audio, frames,
 > transcript text, and search queries through a third-party AI gateway. The
@@ -124,27 +124,10 @@ Output: `packages/search-client/dist/`.
 ## Licensing
 
 SliceSeeker's source code is [MIT](LICENSE). Published images also contain their
-base OS and other third-party software, so each image includes notices under
-`/licenses` and has CycloneDX and SPDX SBOMs. Each tagged GitHub Release also
-publishes one checksum-verified corresponding-source archive and a manifest
-mapping immutable image digests to exact Alpine package source and build
-recipes.
-
-The worker ships a pinned **LGPL-2.1-or-later** FFmpeg build for MP4, MOV, WebM,
-and AVI processing. It is built without GPL, nonfree, version3, network, DVD,
-x264, or x265 components. The exact FFmpeg source archive and build
-configuration are included at `/licenses/ffmpeg`.
-
-Production npm trees are gated against a license allowlist. Strong copyleft
-(GPL/AGPL/SSPL) is not accepted for application dependencies.
-
-```bash
-pnpm licenses:check                      # all five images
-pnpm licenses:check --filter worker...   # one image
-```
-
-See the [licensing documentation](docs/content/docs/licensing.mdx) if you
-redistribute the images.
+base OS and other third-party software. Notices live under `/licenses` in each
+image; matching GitHub Releases attach SBOMs, notice archives, and corresponding
+source. The worker's FFmpeg materials are under `/licenses/ffmpeg`. Details:
+[Licensing](docs/content/docs/licensing.mdx).
 
 ## Data flow
 
