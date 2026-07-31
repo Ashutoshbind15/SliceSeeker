@@ -24,13 +24,16 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  readlinkSync,
+  realpathSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
-import { basename, dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 
 process.on("uncaughtException", (error) => {
   console.error(error instanceof Error ? error.message : error);
@@ -167,6 +170,7 @@ try {
       }
       mergeTree(source, archiveRoot);
     }
+    assertRelativeSourceSymlinks(archiveRoot);
 
     writeJson(join(archiveRoot, "source-manifest.json"), internalManifest);
     writeFileSync(
@@ -233,18 +237,62 @@ function mergeTree(source, destination) {
       mergeTree(from, to);
       continue;
     }
-    if (!entry.isFile() && !entry.isSymbolicLink()) {
+    const fromIsSymlink =
+      entry.isSymbolicLink() || lstatSync(from).isSymbolicLink();
+    if (!entry.isFile() && !fromIsSymlink) {
       fail(`Unsupported source artifact type: ${from}`);
     }
     if (existsSync(to)) {
-      if (entry.isSymbolicLink() || sha256File(from) !== sha256File(to)) {
+      if (fromIsSymlink || sha256File(from) !== sha256File(to)) {
         fail(`Conflicting corresponding-source files: ${from} and ${to}`);
       }
       continue;
     }
     mkdirSync(dirname(to), { recursive: true });
-    cpSync(from, to, { dereference: false });
+    // Node's cpSync rewrites relative symlinks to absolute source paths even
+    // with dereference:false. Preserve the link text for portable archives.
+    if (fromIsSymlink) symlinkSync(readlinkSync(from), to);
+    else cpSync(from, to, { dereference: false });
   }
+}
+
+/** Fail closed if aports recipe symlinks are absolute or broken. */
+function assertRelativeSourceSymlinks(root) {
+  const rootReal = realpathSync(root);
+  for (const path of findSymlinks(root)) {
+    const target = readlinkSync(path);
+    if (target.startsWith("/") || /^[A-Za-z]:[\\/]/.test(target)) {
+      fail(
+        `Corresponding-source symlink must be relative: ${relative(root, path)} -> ${target}`,
+      );
+    }
+    let resolved;
+    try {
+      resolved = realpathSync(resolve(dirname(path), target));
+    } catch {
+      fail(
+        `Corresponding-source symlink is broken: ${relative(root, path)} -> ${target}`,
+      );
+    }
+    const prefix = rootReal.endsWith(sep) ? rootReal : `${rootReal}${sep}`;
+    if (resolved !== rootReal && !resolved.startsWith(prefix)) {
+      fail(
+        `Corresponding-source symlink escapes the archive root: ${relative(root, path)} -> ${target}`,
+      );
+    }
+  }
+}
+
+function findSymlinks(root) {
+  const found = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) found.push(...findSymlinks(path));
+    else if (entry.isSymbolicLink() || lstatSync(path).isSymbolicLink()) {
+      found.push(path);
+    }
+  }
+  return found;
 }
 
 function createArchive(parent, directory, target) {
