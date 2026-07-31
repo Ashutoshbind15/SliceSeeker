@@ -51,6 +51,6 @@ docker compose -f deploy/external/docker-compose.phase1.yml --env-file deploy/ex
 docker compose -f deploy/external/docker-compose.phase2.yml --env-file deploy/external/.env up -d
 ```
 
-Compose files live under [`deploy/`](https://github.com/Ashutoshbind15/demo-search-ai/tree/main/deploy) in the repository. See [Operations](/docs/operations) for Valkey `noeviction`, pool sizing, and readiness.
+Compose files live under [`deploy/`](https://github.com/Ashutoshbind15/SliceSeeker/tree/main/deploy) in the repository. See [Operations](/docs/operations) for Valkey `noeviction`, pool sizing, and readiness.
 
 Third-party images in these examples (Postgres/pgvector, Valkey, tusd, RustFS) are pinned to explicit tags and pulled from their own registries. SliceSeeker does not redistribute them.

@@ -113,6 +113,15 @@ jobs:
               --label "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
               .
 
+            license_label="$(
+              docker image inspect --format='{{json .Config.Labels}}' "${local_tag}" \
+                | jq -r '."org.opencontainers.image.licenses" // empty'
+            )"
+            if [[ -n "${license_label}" ]]; then
+              echo "::error::${component} has a misleading image-level license label: ${license_label}"
+              exit 1
+            fi
+
             node scripts/collect-container-sources.mjs \
               --component "${component}" \
               --image "${local_tag}" \

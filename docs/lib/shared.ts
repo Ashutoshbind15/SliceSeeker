@@ -5,6 +5,6 @@ export const docsContentRoute = '/llms.mdx/docs';
 
 export const gitConfig = {
   user: 'Ashutoshbind15',
-  repo: 'demo-search-ai',
+  repo: 'SliceSeeker',
   branch: 'main',
 };

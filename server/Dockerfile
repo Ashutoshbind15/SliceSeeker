@@ -38,9 +38,9 @@ ARG SOURCE_ARCHIVE_URL
 ARG SOURCE_MANIFEST_URL
 LABEL org.opencontainers.image.title="SliceSeeker Indexer API" \
   org.opencontainers.image.description="SliceSeeker Phase 1 indexing API and admin backend" \
-  org.opencontainers.image.source="https://github.com/Ashutoshbind15/demo-search-ai" \
-  org.opencontainers.image.url="https://github.com/Ashutoshbind15/demo-search-ai" \
-  org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/demo-search-ai" \
+  org.opencontainers.image.source="https://github.com/Ashutoshbind15/SliceSeeker" \
+  org.opencontainers.image.url="https://github.com/Ashutoshbind15/SliceSeeker" \
+  org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/SliceSeeker" \
   org.opencontainers.image.vendor="SliceSeeker" \
   org.opencontainers.image.version="${VERSION}" \
   org.opencontainers.image.revision="${REVISION}" \

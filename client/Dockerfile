@@ -34,15 +34,18 @@ ARG VERSION=1.0.0
 ARG REVISION=unknown
 ARG SOURCE_ARCHIVE_URL
 ARG SOURCE_MANIFEST_URL
+# Override Caddy's inherited Apache-2.0 label: the assembled image contains
+# components under multiple licenses documented in /licenses and its SBOM.
 LABEL org.opencontainers.image.title="SliceSeeker Admin UI" \
   org.opencontainers.image.description="SliceSeeker operator console (static SPA served by Caddy)" \
-  org.opencontainers.image.source="https://github.com/Ashutoshbind15/demo-search-ai" \
-  org.opencontainers.image.url="https://github.com/Ashutoshbind15/demo-search-ai" \
-  org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/demo-search-ai" \
+  org.opencontainers.image.source="https://github.com/Ashutoshbind15/SliceSeeker" \
+  org.opencontainers.image.url="https://github.com/Ashutoshbind15/SliceSeeker" \
+  org.opencontainers.image.documentation="https://github.com/Ashutoshbind15/SliceSeeker" \
   org.opencontainers.image.vendor="SliceSeeker" \
   org.opencontainers.image.version="${VERSION}" \
   org.opencontainers.image.revision="${REVISION}" \
-  org.opencontainers.image.base.name="docker.io/library/caddy:2.11.4-alpine"
+  org.opencontainers.image.base.name="docker.io/library/caddy:2.11.4-alpine" \
+  org.opencontainers.image.licenses=""
 
 WORKDIR /app
 
