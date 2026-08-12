@@ -17,6 +17,7 @@ Notices for software included in each image are under `/licenses`:
 | `GPL-*.txt`, `LGPL-*.txt` | Copyleft license texts used by bundled components |
 | `runtime/` (Node images) | Bundled license files for Node.js, npm, Yarn, Corepack, and pnpm |
 | `Apache-2.0.txt` (admin UI) | License text for the Caddy web server inherited from its base image |
+| `caddy/` (admin UI) | Caddy license, linked Go-module notices and texts, and MPL Covered Software source |
 | `ffmpeg/` (worker only) | Exact FFmpeg source archive, build script, and configuration |
 
 The worker ships a pinned FFmpeg build under LGPL-2.1-or-later for MP4, MOV, WebM, and AVI processing. SliceSeeker invokes `ffmpeg` and `ffprobe` as separate programs; its application code remains MIT licensed.

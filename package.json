@@ -1,6 +1,6 @@
 {
   "name": "sliceseeker",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hostable internal semantic video search",
   "main": "index.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "db:studio": "pnpm --filter db db:studio",
     "licenses:check": "node scripts/check-allowed-licenses.mjs",
     "licenses:notices": "node scripts/generate-third-party-notices.mjs",
+    "licenses:caddy:self-test": "sh scripts/collect-caddy-go-licenses.sh --self-test",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -40,6 +40,9 @@ jobs:
       - name: Check all production dependency licenses
         run: pnpm licenses:check
 
+      - name: Self-test Caddy Go license collector
+        run: pnpm licenses:caddy:self-test
+
       - name: Set release metadata
         id: release
         run: |
@@ -269,6 +272,49 @@ jobs:
               "${license_dir}/OS-PACKAGES-NOTICE"
             if [[ "${component}" == "admin-ui" ]]; then
               test -f "${license_dir}/Apache-2.0.txt"
+              test -f "${license_dir}/caddy/LICENSE"
+              test -f "${license_dir}/caddy/NOTICE"
+              test -f "${license_dir}/caddy/MODULES.csv"
+              test -d "${license_dir}/caddy/modules"
+              test -f "${license_dir}/caddy/mpl-source/MANIFEST.tsv"
+              module_count="$(wc -l <"${license_dir}/caddy/MODULES.csv" | tr -d ' ')"
+              if [[ "${module_count}" -lt 50 ]]; then
+                echo "Expected dozens of Caddy Go modules, found ${module_count}" >&2
+                exit 1
+              fi
+              license_files="$(
+                find "${license_dir}/caddy/modules" -type f | wc -l | tr -d ' '
+              )"
+              if [[ "${license_files}" -lt 50 ]]; then
+                echo "Expected dozens of Caddy module license files, found ${license_files}" >&2
+                exit 1
+              fi
+              if awk -F, '$3 ~ /^(AGPL|LGPL|GPL)/ { print; bad=1 } END { exit bad ? 0 : 1 }' \
+                "${license_dir}/caddy/MODULES.csv"; then
+                echo "Caddy Go MODULES.csv contains GPL-family licenses" >&2
+                exit 1
+              fi
+              if awk -F, '$3 == "MPL-2.0" { found=1 } END { exit found ? 0 : 1 }' \
+                "${license_dir}/caddy/MODULES.csv"; then
+                mpl_archives="$(
+                  find "${license_dir}/caddy/mpl-source" -type f -name '*.tar.gz' \
+                    | wc -l | tr -d ' '
+                )"
+                if [[ "${mpl_archives}" -lt 1 ]]; then
+                  echo "MPL-2.0 modules present but source archives are missing" >&2
+                  exit 1
+                fi
+              fi
+              grep -q "Caddy web server 2.11.4" \
+                "${license_dir}/OS-PACKAGES-NOTICE"
+              grep -q "/licenses/caddy/LICENSE" \
+                "${license_dir}/OS-PACKAGES-NOTICE"
+              grep -q "/licenses/caddy/NOTICE" \
+                "${license_dir}/OS-PACKAGES-NOTICE"
+              grep -q "/licenses/caddy/mpl-source/" \
+                "${license_dir}/OS-PACKAGES-NOTICE"
+              grep -q "Caddy Go module notices" \
+                "${license_dir}/OS-PACKAGES-NOTICE"
             else
               test -f "${license_dir}/runtime/NOTICE"
               test -f "${license_dir}/runtime/nodejs/LICENSE"

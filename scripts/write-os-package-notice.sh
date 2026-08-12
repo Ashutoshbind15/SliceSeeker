@@ -64,6 +64,12 @@ fi
     cat /licenses/runtime/NOTICE
     echo
   fi
+  if [ -f /licenses/caddy/NOTICE ]; then
+    echo "Bundled Caddy / Go module notices:"
+    echo
+    cat /licenses/caddy/NOTICE
+    echo
+  fi
   printf '%s\n\n' "========================================================================"
 } >"$OUT"
 
