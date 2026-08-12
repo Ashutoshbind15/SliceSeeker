@@ -34,7 +34,7 @@ pnpm dev:all
 
 - **Self-contained**: all dependencies as containers ([`deploy/self-contained/`](deploy/self-contained/))
 - **External**: your Postgres, Valkey, and S3 URLs ([`deploy/external/`](deploy/external/))
-- **Images**: [build or pull the five app images](https://sliceseeker.ashutoshbind.com/docs/deploy/images) (`v0.1.0` / GHCR)
+- **Images**: [build or pull the five app images](https://sliceseeker.ashutoshbind.com/docs/deploy/images) (`v0.1.1` / GHCR)
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 

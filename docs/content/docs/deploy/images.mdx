@@ -13,14 +13,14 @@ SliceSeeker ships **five** application images. Third-party infra (Postgres/pgvec
 | Search API | `search-api` | `sliceseeker/search-api` | `ghcr.io/ashutoshbind15/sliceseeker-search-api` |
 | Schema push | `db-push` | `sliceseeker/db-push` | `ghcr.io/ashutoshbind15/sliceseeker-db-migrate` |
 
-Release tags on GHCR match the root `package.json` version (for example `0.1.0`). Each release also publishes `:latest` and `:sha-<short>` tags. Prefer the version tag in production.
+Release tags on GHCR match the root `package.json` version (for example `0.1.1`). Each release also publishes `:latest` and `:sha-<short>` tags. Prefer the version tag in production.
 
 ## Build from source
 
 From the repository root (Docker BuildKit recommended):
 
 ```bash
-VERSION=0.1.0
+VERSION=0.1.1
 REVISION="$(git rev-parse HEAD)"
 
 docker build -f server/Dockerfile \
@@ -74,11 +74,11 @@ Versioned images are on GHCR. Matching GitHub Releases attach corresponding sour
 Pin versioned images in your `.env` (self-contained or external):
 
 ```bash
-INDEXER_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-api:0.1.0
-INDEXER_WORKER_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-worker:0.1.0
-ADMIN_UI_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-admin-ui:0.1.0
-SEARCH_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-search-api:0.1.0
-DB_PUSH_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-db-migrate:0.1.0
+INDEXER_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-api:0.1.1
+INDEXER_WORKER_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-indexer-worker:0.1.1
+ADMIN_UI_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-admin-ui:0.1.1
+SEARCH_API_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-search-api:0.1.1
+DB_PUSH_IMAGE=ghcr.io/ashutoshbind15/sliceseeker-db-migrate:0.1.1
 ```
 
 Then pull and start without rebuilding:
