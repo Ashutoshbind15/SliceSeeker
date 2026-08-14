@@ -281,7 +281,7 @@ const FileCosts = () => {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/10 hover:bg-muted/10 border-b-border/50">
-                    <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">File</TableHead>
+                    <TableHead className="min-w-64 w-full px-6 py-4 font-medium text-muted-foreground">File</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Length</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Cost</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Per min</TableHead>
@@ -292,7 +292,7 @@ const FileCosts = () => {
                 <TableBody>
                   {files.map((file) => (
                     <TableRow key={file.fileId} className="transition-colors hover:bg-muted/20">
-                      <TableCell className="max-w-0 px-6 py-4 font-medium">
+                      <TableCell className="min-w-64 max-w-0 px-6 py-4 font-medium">
                         <span className="block truncate" title={file.filename}>
                           {file.filename}
                         </span>

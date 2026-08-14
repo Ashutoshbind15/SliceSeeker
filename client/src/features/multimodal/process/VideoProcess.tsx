@@ -423,11 +423,11 @@ const VideoProcess = () => {
 
       {uploads.length > 0 ? (
         <div className="min-w-0 space-y-4">
-          <div className="min-w-0 rounded-2xl border bg-card shadow-sm">
+          <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/30 hover:bg-muted/30 border-b-border/50">
-                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
+                  <TableHead className="min-w-64 w-full px-6 py-4 font-medium text-muted-foreground">
                     File
                   </TableHead>
                   <TableHead className="px-6 py-4 font-medium text-muted-foreground">
@@ -450,14 +450,14 @@ const VideoProcess = () => {
                     key={upload.id}
                     className="transition-colors hover:bg-muted/20"
                   >
-                    <TableCell className="max-w-0 px-6 py-4 align-middle">
+                    <TableCell className="min-w-64 max-w-0 px-6 py-4 align-middle">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                           <FileVideo className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div
-                            className="font-medium truncate"
+                            className="truncate font-medium"
                             title={upload.filename}
                           >
                             {upload.filename}

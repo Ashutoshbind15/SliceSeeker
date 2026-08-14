@@ -8,7 +8,7 @@ const Layout = () => {
     <TooltipProvider>
       <SidebarProvider className="!h-svh min-h-0">
         <AppSidebar />
-        <SidebarInset className="min-h-0 overflow-hidden">
+        <SidebarInset className="min-h-0 min-w-0 overflow-hidden">
           <Outlet />
         </SidebarInset>
       </SidebarProvider>

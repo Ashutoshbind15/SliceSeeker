@@ -293,11 +293,11 @@ const Files = () => {
 
       {draftFiles.length > 0 ? (
         <div className="min-w-0 space-y-4">
-          <div className="min-w-0 rounded-2xl border bg-card shadow-sm">
+          <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm">
             <Table>
               <TableHeader>
                 <TableRow className="border-b-border/50 bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">
+                  <TableHead className="min-w-64 w-full px-6 py-4 font-medium text-muted-foreground">
                     File Details
                   </TableHead>
                   <TableHead className="px-6 py-4 font-medium text-muted-foreground">
@@ -322,7 +322,7 @@ const Files = () => {
                         dirty ? "bg-accent/5" : ""
                       }`}
                     >
-                      <TableCell className="max-w-0 px-6 py-4 align-middle">
+                      <TableCell className="min-w-64 max-w-0 px-6 py-4 align-middle">
                         <div className="flex items-center gap-3">
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <FileVideo className="h-5 w-5" />

@@ -21,7 +21,7 @@ export function Header({
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex min-h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background/80 px-4 py-2 backdrop-blur-sm md:px-6",
+        "sticky top-0 z-20 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border bg-background/80 px-4 py-2 backdrop-blur-sm md:px-6",
         className,
       )}
       {...rest}
@@ -35,7 +35,7 @@ export function Header({
           {help}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {action}
         <ModeToggle />
       </div>
