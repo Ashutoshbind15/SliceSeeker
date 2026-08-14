@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod/v3";
 import { CollectionPicker } from "@/components/CollectionPicker";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   InlineLoadingSkeleton,
   QueryEmptyState,
@@ -148,18 +150,17 @@ const FrameSearch = () => {
     hasSearched && searchQuery.isError ? searchQuery.error.message : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <div className="space-y-3 text-center pt-8 pb-4">
-        <h1 className="text-4xl font-heading font-semibold tracking-tight flex items-center justify-center gap-3">
-          <Images className="h-9 w-9 text-primary" />
-          Frame search
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Search still-frame image embeddings with a text query, then jump the
-          source video to the matching timestamp.
-        </p>
-      </div>
-
+    <PageShell
+      title="Frame search"
+      help={
+        <PageHelp title="About frame search">
+          <p>
+            Search still-frame image embeddings with a text query, then jump the
+            source video to the matching timestamp.
+          </p>
+        </PageHelp>
+      }
+    >
       <Card className="border-primary/20 shadow-sm bg-card/50 backdrop-blur-sm">
         <CardContent className="p-6">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -433,7 +434,7 @@ const FrameSearch = () => {
           </div>
         ) : null}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

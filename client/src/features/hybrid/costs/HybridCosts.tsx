@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   QueryEmptyState,
   QueryErrorAlert,
@@ -20,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useHybridCostsQuery } from "@/query";
-import { DollarSign, Hash, Layers, Grid3x3 } from "lucide-react";
+import { DollarSign, Hash, Grid3x3 } from "lucide-react";
 
 const formatUsd = (amount: number) =>
   new Intl.NumberFormat("en-US", {
@@ -75,21 +77,18 @@ const HybridCosts = () => {
     totals.videoRequests + totals.speechEmbedRequests + totals.visionRequests;
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
-            <Layers className="h-8 w-8 text-primary" />
-            Hybrid indexing costs
-          </h1>
-          <p className="text-muted-foreground max-w-2xl">
+    <PageShell
+      title="Hybrid indexing costs"
+      help={
+        <PageHelp title="About hybrid costs">
+          <p>
             Per-modality spend on the shared segment grid — video embed, speech
-            ASR & embed, and vision embed — kept separate from the other
+            ASR and embed, and vision embed — kept separate from the other
             pipelines.
           </p>
-        </div>
-      </div>
-
+        </PageHelp>
+      }
+    >
       {costsQuery.isError ? (
         <QueryErrorAlert
           message={costsQuery.error.message}
@@ -267,7 +266,7 @@ const HybridCosts = () => {
           </Card>
         </div>
       ) : null}
-    </div>
+    </PageShell>
   );
 };
 

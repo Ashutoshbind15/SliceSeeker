@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod/v3";
 import { CollectionPicker } from "@/components/CollectionPicker";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   InlineLoadingSkeleton,
   QueryEmptyState,
@@ -160,18 +162,17 @@ const TranscriptSearch = () => {
     hasSearched && searchQuery.isError ? searchQuery.error.message : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <div className="space-y-3 text-center pt-8 pb-4">
-        <h1 className="text-4xl font-heading font-semibold tracking-tight flex items-center justify-center gap-3">
-          <Mic className="h-9 w-9 text-primary" />
-          Speech search
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Search spoken content across Whisper transcript segments and jump to
-          the matching moment in the source video.
-        </p>
-      </div>
-
+    <PageShell
+      title="Speech search"
+      help={
+        <PageHelp title="About speech search">
+          <p>
+            Search spoken content across Whisper transcript segments and jump to
+            the matching moment in the source video.
+          </p>
+        </PageHelp>
+      }
+    >
       <Card className="border-primary/20 shadow-sm bg-card/50 backdrop-blur-sm">
         <CardContent className="p-6">
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -444,7 +445,7 @@ const TranscriptSearch = () => {
           </div>
         ) : null}
       </div>
-    </div>
+    </PageShell>
   );
 };
 

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import { ListPagination } from "@/components/ListPagination";
 import {
   CollectionPicker,
@@ -47,14 +49,7 @@ import {
   useDeleteUploadMutation,
   useUploadsQuery,
 } from "@/query";
-import {
-  FolderOpen,
-  HardDrive,
-  Clock,
-  FileVideo,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { HardDrive, Clock, FileVideo, Trash2, Upload } from "lucide-react";
 
 const formatBytes = (bytes: number | null) => {
   if (!bytes) {
@@ -204,19 +199,18 @@ const Files = () => {
     : "/files/upload";
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-5xl flex-col gap-8">
-      <div className="flex flex-col gap-6 border-b border-border/50 pt-8 pb-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="flex items-center gap-3 font-heading text-3xl font-semibold tracking-tight">
-            <FolderOpen className="h-8 w-8 text-primary" />
-            Library
-          </h1>
-          <p className="text-muted-foreground">
+    <PageShell
+      title="Library"
+      help={
+        <PageHelp title="About library">
+          <p>
             Browse a collection, reassign files, upload more, or delete for
             good.
           </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
+        </PageHelp>
+      }
+      action={
+        <div className="flex flex-wrap items-center gap-2">
           {dirtyFiles.length > 0 ? (
             <Badge
               variant="outline"
@@ -229,13 +223,12 @@ const Files = () => {
           <Button
             type="button"
             variant={dirtyFiles.length > 0 ? "default" : "secondary"}
-            className="rounded-full px-6"
             disabled={dirtyFiles.length === 0 || saving || deleting}
             onClick={() => void saveChanges()}
           >
             {saving ? "Saving…" : "Save changes"}
           </Button>
-          <Button type="button" variant="outline" className="rounded-full" asChild>
+          <Button type="button" variant="outline" asChild>
             <Link to={uploadPath}>
               <Upload />
               Upload
@@ -243,8 +236,8 @@ const Files = () => {
           </Button>
           <CreateCollection />
         </div>
-      </div>
-
+      }
+    >
       <div className="max-w-sm">
         <CollectionPicker
           selectedCollectionId={collectionId}
@@ -466,7 +459,7 @@ const Files = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageShell>
   );
 };
 

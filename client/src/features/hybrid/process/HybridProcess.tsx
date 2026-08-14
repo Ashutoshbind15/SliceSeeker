@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ListPagination } from "@/components/ListPagination";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   QueryEmptyState,
   QueryErrorAlert,
@@ -347,20 +349,18 @@ const HybridProcess = () => {
   const fetchError = uploadsQuery.isError ? uploadsQuery.error.message : null;
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
-            <Layers className="h-8 w-8 text-primary" />
-            Hybrid
-          </h1>
-          <p className="text-muted-foreground max-w-2xl">
+    <PageShell
+      title="Hybrid"
+      help={
+        <PageHelp title="About hybrid indexing">
+          <p>
             Segment once, then embed video, speech, and vision per clip into a
             shared hybrid index for fused search.
           </p>
-        </div>
-
-        {summary.total > 0 && (
+        </PageHelp>
+      }
+      action={
+        summary.total > 0 ? (
           <div className="flex flex-wrap items-center gap-4 text-sm font-medium">
             <span className="flex items-center gap-2">
               <span
@@ -379,9 +379,9 @@ const HybridProcess = () => {
               </span>
             )}
           </div>
-        )}
-      </div>
-
+        ) : null
+      }
+    >
       {fetchError ? (
         <QueryErrorAlert
           message={fetchError}
@@ -502,7 +502,7 @@ const HybridProcess = () => {
           ) : null}
         </div>
       ) : null}
-    </div>
+    </PageShell>
   );
 };
 

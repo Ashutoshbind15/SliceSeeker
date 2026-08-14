@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   QueryEmptyState,
   QueryErrorAlert,
@@ -29,7 +31,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useFileCostsQuery } from "@/query";
-import { DollarSign, Clock, Hash, Activity, LineChart } from "lucide-react";
+import { DollarSign, Clock, Hash, Activity } from "lucide-react";
 
 const formatDuration = (durationSec: number) => {
   const minutes = Math.floor(durationSec / 60);
@@ -101,19 +103,17 @@ const FileCosts = () => {
   }, [files]);
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
-            <LineChart className="h-8 w-8 text-primary" />
-            Usage & Costs
-          </h1>
-          <p className="text-muted-foreground max-w-2xl">
-            Track API usage, token consumption, and embedding costs across your workspace.
+    <PageShell
+      title="Usage & costs"
+      help={
+        <PageHelp title="About multimodal costs">
+          <p>
+            Embedding spend for this pipeline — tokens, requests, and cost by
+            file.
           </p>
-        </div>
-      </div>
-
+        </PageHelp>
+      }
+    >
       {costsQuery.isError ? (
         <QueryErrorAlert
           message={costsQuery.error.message}
@@ -325,7 +325,7 @@ const FileCosts = () => {
           </Card>
         </div>
       ) : null}
-    </div>
+    </PageShell>
   );
 };
 

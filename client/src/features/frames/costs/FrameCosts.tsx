@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import {
   QueryEmptyState,
   QueryErrorAlert,
@@ -54,20 +56,17 @@ const FrameCosts = () => {
   }, [files]);
 
   return (
-    <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 pt-8 pb-4 border-b border-border/50">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-heading font-semibold tracking-tight flex items-center gap-3">
-            <Images className="h-8 w-8 text-primary" />
-            Frame indexing costs
-          </h1>
-          <p className="text-muted-foreground max-w-2xl">
+    <PageShell
+      title="Frame indexing costs"
+      help={
+        <PageHelp title="About frame costs">
+          <p>
             Image-embedding spend for sampled video frames — separate from
             multimodal and speech indexing.
           </p>
-        </div>
-      </div>
-
+        </PageHelp>
+      }
+    >
       {costsQuery.isError ? (
         <QueryErrorAlert
           message={costsQuery.error.message}
@@ -210,7 +209,7 @@ const FrameCosts = () => {
           </Card>
         </div>
       ) : null}
-    </div>
+    </PageShell>
   );
 };
 

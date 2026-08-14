@@ -36,6 +36,8 @@ import {
 } from "@/lib/video-formats";
 import { CollectionPicker } from "@/components/CollectionPicker";
 import { CreateCollection } from "@/components/CreateCollection";
+import { PageHelp } from "@/components/layout/page-help";
+import { PageShell } from "@/components/layout/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -541,25 +543,24 @@ const VideoUpload = () => {
   }, [uppy]);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-      <div className="flex flex-col items-start justify-between gap-6 border-b border-border/50 pt-8 pb-4 sm:flex-row sm:items-center">
-        <div className="space-y-1">
-          <h1 className="flex items-center gap-3 font-heading text-3xl font-semibold tracking-tight">
-            <UploadCloud className="h-8 w-8 text-primary" />
-            Upload Video
-          </h1>
-          <p className="max-w-lg text-muted-foreground">
+    <PageShell
+      title="Upload"
+      help={
+        <PageHelp title="About uploads">
+          <p>
             Large files upload in chunks and resume automatically if your
             connection drops.
           </p>
-        </div>
+        </PageHelp>
+      }
+      action={
         <CreateCollection
           onCreated={(collection) => {
             setSelectedCollectionId(collection.id);
           }}
         />
-      </div>
-
+      }
+    >
       <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
         <div className="space-y-4 border-b border-border/50 bg-muted/20 px-6 py-5">
           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -579,7 +580,7 @@ const VideoUpload = () => {
 
         <UploadPanel uppy={uppy} />
       </div>
-    </div>
+    </PageShell>
   );
 };
 
