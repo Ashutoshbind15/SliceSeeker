@@ -219,7 +219,7 @@ const HybridCosts = () => {
 
           <CostFilesCard
             count={files.length}
-            description="Sorted by total spend. Mix is video / speech / vision. Hover speech for ASR vs embed."
+            description="Mix is video / speech / vision. Hover speech for ASR vs embed."
           >
             <Table containerClassName="overflow-visible">
               <TableHeader>

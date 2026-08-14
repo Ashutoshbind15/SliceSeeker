@@ -180,10 +180,7 @@ const TranscriptCosts = () => {
             ]}
           />
 
-          <CostFilesCard
-            count={files.length}
-            description="Sorted by total spend."
-          >
+          <CostFilesCard count={files.length}>
             <Table containerClassName="overflow-visible">
               <TableHeader>
                 <TableRow className={stickyCostHeaderClass}>
