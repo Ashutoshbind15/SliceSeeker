@@ -24,14 +24,12 @@ import {
 } from "@/components/ui/table";
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useFileCostsQuery } from "@/query";
-import { DollarSign, Clock, Hash, Activity } from "lucide-react";
+import { DollarSign, Clock, Gauge, Activity } from "lucide-react";
 
 const formatDuration = (durationSec: number) => {
   const minutes = Math.floor(durationSec / 60);
@@ -46,6 +44,17 @@ const formatUsd = (amount: number) =>
     minimumFractionDigits: amount < 0.01 ? 4 : 2,
     maximumFractionDigits: amount < 0.01 ? 4 : 2,
   }).format(amount);
+
+const formatUsdPerMin = (amount: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 4,
+  }).format(amount);
+
+const costPerMinute = (costUsd: number, durationSec: number) =>
+  durationSec > 0 ? costUsd / (durationSec / 60) : 0;
 
 const truncateFilename = (filename: string, maxLength = 18) => {
   if (filename.length <= maxLength) {
@@ -66,10 +75,6 @@ const chartConfig = {
     label: "Embedding cost",
     color: "var(--chart-1)",
   },
-  durationMin: {
-    label: "Video length (min)",
-    color: "var(--chart-2)",
-  },
 } satisfies ChartConfig;
 
 const FileCosts = () => {
@@ -82,10 +87,8 @@ const FileCosts = () => {
         label: truncateFilename(file.filename),
         filename: file.filename,
         cost: Number(file.totalCostUsd.toFixed(6)),
-        durationMin: Number((file.durationSec / 60).toFixed(2)),
         durationSec: file.durationSec,
-        tokens: file.totalTokens,
-        requests: file.embedRequestCount,
+        costPerMin: costPerMinute(file.totalCostUsd, file.durationSec),
       })),
     [files],
   );
@@ -101,6 +104,8 @@ const FileCosts = () => {
       { cost: 0, durationSec: 0, tokens: 0, requests: 0 },
     );
   }, [files]);
+
+  const ratePerMin = costPerMinute(totals.cost, totals.durationSec);
 
   return (
     <PageShell
@@ -166,12 +171,12 @@ const FileCosts = () => {
             <Card className="rounded-2xl border-border/50 shadow-sm bg-card/50 backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-2 font-medium">
-                  <Hash className="h-4 w-4 text-primary" /> Tokens processed
+                  <Gauge className="h-4 w-4 text-primary" /> Cost per minute
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-heading font-semibold text-foreground">
-                  {totals.tokens.toLocaleString()}
+                  {formatUsdPerMin(ratePerMin)}
                 </p>
               </CardContent>
             </Card>
@@ -192,9 +197,10 @@ const FileCosts = () => {
 
           <Card className="rounded-2xl border-border/50 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/20 border-b border-border/50 pb-4">
-              <CardTitle className="font-heading">Cost vs Video Length</CardTitle>
+              <CardTitle className="font-heading">Spend by file</CardTitle>
               <CardDescription>
-                Compare the embedding cost (USD) against the total video length (minutes) for each file.
+                Embedding cost per file. Length and cost per minute are in the
+                tooltip.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -209,19 +215,12 @@ const FileCosts = () => {
                       tickMargin={12}
                     />
                     <YAxis
-                      yAxisId="cost"
                       tickLine={false}
                       axisLine={false}
                       tickMargin={12}
-                      tickFormatter={(value: number) => `$${value}`}
-                    />
-                    <YAxis
-                      yAxisId="duration"
-                      orientation="right"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={12}
-                      tickFormatter={(value: number) => `${value}m`}
+                      tickFormatter={(value: number) =>
+                        value < 0.01 ? `$${value.toFixed(3)}` : `$${value.toFixed(2)}`
+                      }
                     />
                     <ChartTooltip
                       cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
@@ -231,9 +230,12 @@ const FileCosts = () => {
                           labelFormatter={(_label, payload) =>
                             <span className="font-medium text-foreground">{payload?.[0]?.payload?.filename ?? _label}</span>
                           }
-                          formatter={(value, name, item) => {
-                            if (name === "cost") {
-                              return (
+                          formatter={(value, _name, item) => {
+                            const durationSec = Number(item.payload.durationSec);
+                            const perMin = Number(item.payload.costPerMin);
+
+                            return (
+                              <div className="grid gap-1.5">
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-2 rounded-full bg-chart-1" />
                                   <span className="text-muted-foreground">Cost:</span>
@@ -241,38 +243,27 @@ const FileCosts = () => {
                                     {formatUsd(Number(value))}
                                   </span>
                                 </div>
-                              );
-                            }
-
-                            if (name === "durationMin") {
-                              return (
                                 <div className="flex items-center gap-2">
-                                  <div className="h-2 w-2 rounded-full bg-chart-2" />
                                   <span className="text-muted-foreground">Length:</span>
                                   <span className="font-mono font-medium text-foreground ml-auto">
-                                    {formatDuration(item.payload.durationSec)}
+                                    {formatDuration(durationSec)}
                                   </span>
                                 </div>
-                              );
-                            }
-
-                            return value;
+                                <div className="flex items-center gap-2">
+                                  <span className="text-muted-foreground">Per min:</span>
+                                  <span className="font-mono font-medium text-foreground ml-auto">
+                                    {formatUsdPerMin(perMin)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
                           }}
                         />
                       }
                     />
-                    <ChartLegend content={<ChartLegendContent className="pt-4" />} />
                     <Bar
-                      yAxisId="cost"
                       dataKey="cost"
                       fill="var(--color-cost)"
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={40}
-                    />
-                    <Bar
-                      yAxisId="duration"
-                      dataKey="durationMin"
-                      fill="var(--color-durationMin)"
                       radius={[4, 4, 0, 0]}
                       maxBarSize={40}
                     />
@@ -293,6 +284,7 @@ const FileCosts = () => {
                     <TableHead className="min-w-0 w-full px-6 py-4 font-medium text-muted-foreground">File</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Length</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Cost</TableHead>
+                    <TableHead className="px-6 py-4 font-medium text-muted-foreground">Per min</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground">Tokens</TableHead>
                     <TableHead className="px-6 py-4 font-medium text-muted-foreground text-right">Requests</TableHead>
                   </TableRow>
@@ -310,6 +302,9 @@ const FileCosts = () => {
                       </TableCell>
                       <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {formatUsd(file.totalCostUsd)}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
+                        {formatUsdPerMin(costPerMinute(file.totalCostUsd, file.durationSec))}
                       </TableCell>
                       <TableCell className="px-6 py-4 font-mono text-sm text-muted-foreground">
                         {file.totalTokens.toLocaleString()}
