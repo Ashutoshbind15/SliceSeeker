@@ -18,7 +18,7 @@ POST …/process { chunkDurationSec? }
 
 ## Chunk duration
 
-`chunkDurationSec` defaults to **15**. The start request accepts `5`, `10`, `15`, or `30`. Shorter chunks cost more embeds and catch finer timing; longer chunks (up to 30s) stay within Gemini Embedding 2’s 1 fps sampling band (max 32 frames per clip).
+`chunkDurationSec` defaults to **15**. The start request accepts `5`, `10`, `15`, or `30`. Shorter chunks produce more embed requests and finer timing; dollar cost still tracks wall-clock length. Gemini Embedding 2 samples **1 fps** for clips up to 32s (then caps at 32 frames), so 5–30s chunks stay in the linear band.
 
 ## Search
 

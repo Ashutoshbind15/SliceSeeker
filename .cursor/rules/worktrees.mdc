@@ -1,0 +1,16 @@
+---
+description: Cursor worktree isolation — ports, shared Docker, copied database
+alwaysApply: true
+---
+
+# Worktrees
+
+This repo's Cursor worktree setup lives in `.cursor/worktrees.json`. After `/worktree`, `/best-of-n`, or Agents Window isolation, that script copies env files, installs with a frozen lockfile, hashes the worktree path into collision-free ports, copies `demo_search` into a dedicated Postgres database on the **shared** Docker Postgres, and points Valkey at a logical DB.
+
+If `.cursor/worktree-env` exists, you are in an isolated checkout. Read it and use those URLs (`CLIENT_URL`, `API_URL`, `SEARCH_URL`). `pnpm dev:all` is safe here — do not bind 5173/3000/3001.
+
+Shared with main: Docker Compose project (Postgres, Valkey, RustFS, tusd on **:8080**). Isolated: app ports, `demo_search_wt_*`, Valkey DB index. Uploads use shared tusd. Worktree setup sets `TUSD_CORS_ALLOW_ORIGIN` (local `.env` only) and `TUSD_HOOK_FORWARD_LOCAL` / `VITE_TUSD_HOOK_FORWARD` so hooks can be forwarded from `:3000` into this API. Those flags stay off in production images. Restart the main indexer after the first worktree setup so it loads the flag.
+
+If setup did not run (no `.cursor/worktree-env`), run `.cursor/setup-worktree-unix.sh` with `ROOT_WORKTREE_PATH` set to the main checkout before `pnpm dev:all`.
+
+Before `/delete-worktree`, run `/teardown-worktree` (or `.cursor/teardown-worktree-unix.sh`) so the extra Postgres database is dropped. Cursor has no delete hook.

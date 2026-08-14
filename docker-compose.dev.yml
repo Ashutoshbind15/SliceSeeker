@@ -74,7 +74,9 @@ services:
         rc mb rustfs/uploads || true
     restart: "no"
 
-  # tusd: host networking so it can reach the API and object storage on localhost
+  # tusd: host networking so it can reach the API and object storage on localhost.
+  # CORS origin is TUSD_CORS_ALLOW_ORIGIN (local .env only; not baked into app images).
+  # Default is the main Vite port. Worktrees set a localhost-any-port regex via .env.
   tusd:
     image: tusproject/tusd:latest
     restart: unless-stopped
@@ -90,7 +92,8 @@ services:
       - tusd_tmp:/data
     command:
       - -verbose
-      - -cors-allow-origin=^http://(localhost|127\.0\.0\.1):5173$
+      - -port=${TUSD_PORT:-8080}
+      - -cors-allow-origin=${TUSD_CORS_ALLOW_ORIGIN:-^http://(localhost|127\.0\.0\.1):5173$$}
       - -s3-bucket=uploads
       - -s3-endpoint=http://127.0.0.1:9000
       - -s3-object-prefix=tus/

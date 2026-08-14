@@ -45,6 +45,17 @@ import { invalidateUploads } from "@/query";
 
 const MAX_FILES = 5;
 
+const tusdUploadMeta = (collectionId?: string | null) => {
+  const meta: Record<string, string> = {};
+  if (import.meta.env.VITE_TUSD_HOOK_FORWARD === "true") {
+    meta.hookTarget = `${endpoints.api}/api/tusd-hooks`;
+  }
+  if (collectionId) {
+    meta.collectionId = collectionId;
+  }
+  return meta;
+};
+
 type UploadFile = UppyFile<Meta, Record<string, never>>;
 type VideoUppy = Uppy<Meta, Record<string, never>>;
 
@@ -491,10 +502,7 @@ const VideoUpload = () => {
     });
 
     instance.on("file-added", (file) => {
-      const collectionId = selectedCollectionIdRef.current;
-      if (collectionId) {
-        instance.setFileMeta(file.id, { collectionId });
-      }
+      instance.setFileMeta(file.id, tusdUploadMeta(selectedCollectionIdRef.current));
     });
 
     instance.on("restriction-failed", (_file, error) => {
@@ -532,7 +540,7 @@ const VideoUpload = () => {
     }
 
     for (const file of uppy.getFiles()) {
-      uppy.setFileMeta(file.id, { collectionId: selectedCollectionId });
+      uppy.setFileMeta(file.id, tusdUploadMeta(selectedCollectionId));
     }
   }, [selectedCollectionId, uppy]);
 

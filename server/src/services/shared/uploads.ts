@@ -13,6 +13,58 @@ import {
 } from "db/access/shared/uploads.js";
 
 const getUploadStorageBucket = () => process.env.S3_BUCKET ?? "uploads";
+const HOOK_PATH = "/api/tusd-hooks";
+const listenPort = () => process.env.PORT ?? "3000";
+
+const localHookForwardEnabled = () => {
+  const value = process.env.TUSD_HOOK_FORWARD_LOCAL?.trim().toLowerCase();
+  return value === "true" || value === "1";
+};
+
+const parseLocalHookTarget = (value: string | undefined): URL | null => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:") {
+      return null;
+    }
+    if (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") {
+      return null;
+    }
+    if (url.pathname !== HOOK_PATH || url.search || url.hash) {
+      return null;
+    }
+    const port = Number(url.port || "80");
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      return null;
+    }
+    return url;
+  } catch {
+    return null;
+  }
+};
+
+const isSelfHookTarget = (url: URL) => url.port === listenPort();
+
+const forwardTusdHook = async (
+  target: URL,
+  hook: TusdHookRequest,
+): Promise<TusdHookResponse> => {
+  const response = await fetch(target, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(hook),
+  });
+  if (!response.ok) {
+    throw new Error(
+      `tusd hook forward to ${target.origin} failed: ${response.status}`,
+    );
+  }
+  return (await response.json()) as TusdHookResponse;
+};
 
 export type TusdHookResponse = {
   RejectUpload?: boolean;
@@ -38,6 +90,7 @@ const getRawUploadMetadata = (metadata: Record<string, string>) => ({
     metadataValue(metadata.filetype) ??
     metadataValue(metadata.type),
   collectionId: metadataValue(metadata.collectionId),
+  hookTarget: metadataValue(metadata.hookTarget),
 });
 
 const getUploadMetadata = (metadata: Record<string, string>) => {
@@ -76,6 +129,9 @@ const handlePreCreate = (hook: TusdHookRequest): TusdHookResponse => {
         filetype: validated.filetype,
         ...(raw.collectionId
           ? { collectionId: raw.collectionId }
+          : {}),
+        ...(localHookForwardEnabled() && raw.hookTarget
+          ? { hookTarget: raw.hookTarget }
           : {}),
       },
     },
@@ -156,6 +212,23 @@ const handlePostTerminate = async (hook: TusdHookRequest) => {
 export const handleTusdHook = async (
   hook: TusdHookRequest,
 ): Promise<TusdHookResponse> => {
+  const metadata = hook.Event.Upload.MetaData;
+  if (localHookForwardEnabled() && metadata.hookForwarded !== "1") {
+    const target = parseLocalHookTarget(metadata.hookTarget);
+    if (target && !isSelfHookTarget(target)) {
+      return forwardTusdHook(target, {
+        ...hook,
+        Event: {
+          ...hook.Event,
+          Upload: {
+            ...hook.Event.Upload,
+            MetaData: { ...metadata, hookForwarded: "1" },
+          },
+        },
+      });
+    }
+  }
+
   switch (hook.Type) {
     case "pre-create":
       return handlePreCreate(hook);
