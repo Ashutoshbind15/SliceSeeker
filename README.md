@@ -30,11 +30,13 @@ pnpm install
 pnpm dev:all
 ```
 
+Defaults: admin UI `:5173`, indexer-api `:3000`, search-api `:3001`, tusd `:8080`. Parallel git worktrees and env files: [`DEVELOPMENT.md`](DEVELOPMENT.md).
+
 **Production deploy** (see [`deploy/README.md`](deploy/README.md)):
 
 - **Self-contained**: all dependencies as containers ([`deploy/self-contained/`](deploy/self-contained/))
 - **External**: your Postgres, Valkey, and S3 URLs ([`deploy/external/`](deploy/external/))
-- **Images**: [build or pull the five app images](https://sliceseeker.ashutoshbind.com/docs/deploy/images) (`v0.1.1` / GHCR)
+- **Images**: [build or pull the five app images](https://sliceseeker.ashutoshbind.com/docs/deploy/images) (`v0.1.2` / GHCR)
 
 Phase 2 can run without Phase 1 on the same host. Point `DATABASE_URL` at the dataset Phase 1 wrote. Empty DB → search returns `[]`.
 

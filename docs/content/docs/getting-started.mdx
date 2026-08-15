@@ -22,13 +22,20 @@ pnpm dev:all
 
 That script builds shared packages, starts local infra (`docker-compose.dev.yml`), and runs the admin UI, indexer API, worker, and search API in parallel.
 
-Set `AI_GATEWAY_API_KEY` in the environment for the server and worker processes (and search-api, which embeds queries). Model IDs come from your env (see `.env.example`).
+| Process | Default |
+| --- | --- |
+| Admin UI | http://localhost:5173 |
+| indexer-api | http://localhost:3000 |
+| search-api | http://localhost:3001 |
+| tusd | http://localhost:8080/files/ |
+
+Copy each `*.env.example` to `.env` and set `AI_GATEWAY_API_KEY` for the server, worker, and search-api (search embeds queries). Model IDs come from your env. Parallel worktrees, Vite port overrides, and tusd hook forwarding: [Local development](/docs/development).
 
 End-to-end behavior is validated against the opinionated defaults: Gemini embeddings and Whisper for speech. If you swap in other models, check that model's docs for equivalent capabilities (video/image/text embed shapes, ASR output, size limits) and what the [AI Gateway](https://vercel.com/docs/ai-gateway) exposes for that provider.
 
 ## First search
 
-1. Open the **admin UI** (Vite client; typically proxied or on its own port in local mode).
+1. Open the **admin UI** (http://localhost:5173 on the primary checkout).
 2. **Upload** a short MP4, MOV, WebM, or AVI video (tus → object storage).
 3. Pick a path and start processing:
    - **Multimodal**: chunk + embed video segments
@@ -61,7 +68,7 @@ See [Search](/docs/search) for transcript, frame, and hybrid methods.
 
 Local `pnpm dev:all` is for development. For container deploys, use [Self-contained](/docs/deploy/self-contained) or [External](/docs/deploy/external).
 
-Docs are published at [https://sliceseeker.ashutoshbind.com/](https://sliceseeker.ashutoshbind.com/). To run the docs site locally:
+Docs are published at [https://sliceseeker.ashutoshbind.com/](https://sliceseeker.ashutoshbind.com/). To run the docs site locally (`:4000`):
 
 ```bash
 pnpm --filter docs dev

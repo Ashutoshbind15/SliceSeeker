@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "getting-started",
+    "development",
     "architecture",
     "modalities",
     "search",

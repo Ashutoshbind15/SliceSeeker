@@ -1,6 +1,6 @@
 {
   "name": "sliceseeker",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Self-hostable internal semantic video search",
   "main": "index.js",
   "scripts": {
@@ -8,6 +8,8 @@
     "build:packages": "pnpm --filter db --filter queue --filter search-client run build",
     "dev:all": "pnpm build:packages && pnpm infra && pnpm --filter client --filter search --filter server --filter worker --parallel run dev",
     "worker:dev": "pnpm --filter worker dev",
+    "worktree:isolate": "bash scripts/worktree/isolate.sh",
+    "worktree:teardown": "bash scripts/worktree/teardown.sh",
     "db:push": "pnpm --filter db db:push",
     "db:studio": "pnpm --filter db db:studio",
     "licenses:check": "node scripts/check-allowed-licenses.mjs",

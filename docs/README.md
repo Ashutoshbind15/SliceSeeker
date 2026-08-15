@@ -8,4 +8,4 @@ Published at [https://sliceseeker.ashutoshbind.com/](https://sliceseeker.ashutos
 pnpm --filter docs dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Content lives in `content/docs`.
+Open [http://localhost:4000](http://localhost:4000) (`next dev --port 4000` so it does not collide with indexer-api). Content lives in `content/docs`.
