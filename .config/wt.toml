@@ -1,0 +1,44 @@
+# Worktrunk project config
+#
+# Isolated: app ports, Postgres database, Valkey logical DB
+# Shared:   docker compose (db / valkey / rustfs / tusd on :8080)
+#
+# Ports from hash_port (10000–19999), stable per branch. First `wt switch --create`
+# will ask you to approve these hooks.
+#
+# node_modules is not copied. pnpm's content-addressable store is already shared
+# across worktrees; pre-start just links from it with --frozen-lockfile --prefer-offline.
+
+[pre-start]
+isolate = """
+ROOT_WORKTREE_PATH={{ primary_worktree_path }} \
+WORKTREE_BRANCH={{ branch }} \
+CLIENT_PORT={{ branch | hash_port }} \
+SERVER_PORT={{ ('api-' ~ branch) | hash_port }} \
+SEARCH_PORT={{ ('search-' ~ branch) | hash_port }} \
+DB_NAME=dswt_{{ branch | sanitize_db }} \
+bash scripts/worktree/isolate.sh
+"""
+
+[post-start]
+stack = "wt step tether -- pnpm --filter client --filter search --filter server --filter worker --parallel run dev"
+
+[pre-remove]
+teardown = "bash scripts/worktree/teardown.sh"
+
+[list]
+url = "http://localhost:{{ branch | hash_port }}"
+
+[aliases]
+dev = "wt step tether -- pnpm --filter client --filter search --filter server --filter worker --parallel run dev"
+urls = "printf 'client %s\\napi     %s\\nsearch  %s\\n' http://localhost:{{ branch | hash_port }} http://localhost:{{ ('api-' ~ branch) | hash_port }} http://localhost:{{ ('search-' ~ branch) | hash_port }}"
+open = "python3 -c 'import webbrowser; webbrowser.open(\"http://localhost:{{ branch | hash_port }}\")'"
+isolate = """
+ROOT_WORKTREE_PATH={{ primary_worktree_path }} \
+WORKTREE_BRANCH={{ branch }} \
+CLIENT_PORT={{ branch | hash_port }} \
+SERVER_PORT={{ ('api-' ~ branch) | hash_port }} \
+SEARCH_PORT={{ ('search-' ~ branch) | hash_port }} \
+DB_NAME=dswt_{{ branch | sanitize_db }} \
+bash scripts/worktree/isolate.sh
+"""

@@ -2,3 +2,4 @@ node_modules
 test-videos/
 .env
 .pnpm-store
+.worktree-env

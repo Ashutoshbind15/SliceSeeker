@@ -1,31 +1,41 @@
 #!/usr/bin/env bash
-# Drop the per-worktree Postgres database. Cursor has no delete-worktree hook,
-# so run this from the worktree (or pass its path) before /delete-worktree.
+# Drop the per-worktree Postgres database. Worktrunk runs this from `pre-remove`.
 set -euo pipefail
 
 log() { printf '[worktree-teardown] %s\n' "$*"; }
 
-WORKTREE="${1:-$PWD}"
-WORKTREE="$(cd "$WORKTREE" && pwd -P)"
-STATE="$WORKTREE/.cursor/worktree-env"
-
-if [[ ! -f "$STATE" ]]; then
-  log "no $STATE — this checkout was not isolated by setup-worktree-unix.sh"
-  exit 0
+if [[ ! -t 0 ]]; then
+  cat >/dev/null
 fi
 
-# shellcheck disable=SC1090
-set -a
-# Strip CRLF so a Windows-edited state file still sources.
-. <(sed 's/\r$//' "$STATE")
-set +a
+WORKTREE="${1:-$PWD}"
+WORKTREE="$(cd "$WORKTREE" && pwd -P)"
+
+STATE="$WORKTREE/.worktree-env"
+
+if [[ ! -f "$STATE" ]]; then
+  if [[ -n "${DATABASE_NAME:-}" ]]; then
+    log "no state file; using DATABASE_NAME from the environment"
+  else
+    log "no $STATE — this checkout was not isolated"
+    exit 0
+  fi
+else
+  # shellcheck disable=SC1090
+  set -a
+  # Strip CRLF so a Windows-edited state file still sources.
+  # shellcheck disable=SC1091
+  . <(sed 's/\r$//' "$STATE")
+  set +a
+fi
 
 if [[ -z "${DATABASE_NAME:-}" || -z "${COMPOSE_PROJECT_NAME:-}" ]]; then
-  log "ERROR: $STATE is missing DATABASE_NAME or COMPOSE_PROJECT_NAME"
+  log "ERROR: isolation state is missing DATABASE_NAME or COMPOSE_PROJECT_NAME"
   exit 1
 fi
 
-if [[ ! "$DATABASE_NAME" =~ ^demo_search_wt_[0-9]+$ ]]; then
+# Worktree DBs are dswt_*; also accept leftover demo_search_wt_* names.
+if [[ ! "$DATABASE_NAME" =~ ^dswt_[a-z0-9_]+$ && ! "$DATABASE_NAME" =~ ^demo_search_wt_[0-9]+$ ]]; then
   log "refusing to drop unexpected database name: $DATABASE_NAME"
   exit 1
 fi
