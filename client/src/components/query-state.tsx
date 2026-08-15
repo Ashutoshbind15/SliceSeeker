@@ -141,16 +141,30 @@ export const StatsGridSkeleton = ({ withChart = false }: { withChart?: boolean }
   </div>
 );
 
-export const SearchResultsSkeleton = () => (
+export const SearchResultsSkeleton = ({
+  columns = 1,
+}: {
+  columns?: 1 | 2;
+}) => (
   <div className="space-y-6">
     <Skeleton className="h-6 w-40" />
-    <div className="grid gap-6">
-      {Array.from({ length: 3 }).map((_, index) => (
+    <div className={columns === 2 ? "grid gap-6 sm:grid-cols-2" : "grid gap-6"}>
+      {Array.from({ length: columns === 2 ? 4 : 3 }).map((_, index) => (
         <div
           key={index}
-          className="flex flex-col gap-6 rounded-2xl border bg-card p-5 sm:flex-row"
+          className={
+            columns === 2
+              ? "flex flex-col gap-4 rounded-2xl border bg-card p-5"
+              : "flex flex-col gap-6 rounded-2xl border bg-card p-5 sm:flex-row"
+          }
         >
-          <Skeleton className="aspect-video w-full rounded-xl sm:w-64" />
+          <Skeleton
+            className={
+              columns === 2
+                ? "aspect-video w-full rounded-xl"
+                : "aspect-video w-full rounded-xl sm:w-64"
+            }
+          />
           <div className="flex flex-1 flex-col gap-3 py-1">
             <Skeleton className="h-5 w-24 rounded-full" />
             <Skeleton className="h-6 w-3/4" />

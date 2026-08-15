@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
@@ -81,7 +82,7 @@ const SeekVideo = ({ src, timestampSec }: SeekVideoProps) => {
     <div className="relative group overflow-hidden rounded-xl bg-black">
       <video
         ref={videoRef}
-        className="aspect-video w-full sm:w-64 object-cover opacity-90 transition-opacity group-hover:opacity-100"
+        className="aspect-video w-full object-cover opacity-90 transition-opacity group-hover:opacity-100"
         controls
         preload="metadata"
         src={`${src}#t=${timestampSec}`}
@@ -369,7 +370,7 @@ const FrameSearch = () => {
         ) : null}
 
         {searchQuery.isFetching && hasSearched && results.length === 0 ? (
-          <SearchResultsSkeleton />
+          <SearchResultsSkeleton columns={2} />
         ) : null}
 
         {results.length > 0 ? (
@@ -380,19 +381,20 @@ const FrameSearch = () => {
                 {results.length === 1 ? "" : "s"}
               </h2>
             </div>
-            <ul className="grid gap-6">
+            <ul className="grid gap-6 sm:grid-cols-2">
               {results.map((result) => (
                 <li key={result.frameId}>
-                  <Card className="overflow-hidden transition-all hover:shadow-md border-border/50 hover:border-primary/30 group">
-                    <CardContent className="flex flex-col gap-6 p-5 sm:flex-row items-start">
-                      <div className="shrink-0 w-full sm:w-auto">
-                        <SeekVideo
-                          src={result.playbackUrl}
-                          timestampSec={result.timestampSec}
-                        />
-                      </div>
-                      <div className="flex min-w-0 flex-1 flex-col gap-3 py-1">
-                        <div className="flex flex-wrap items-center gap-2">
+                  <Card className="h-full overflow-hidden transition-all hover:shadow-md border-border/50 hover:border-primary/30 group">
+                    <CardContent className="flex flex-col gap-4 p-5">
+                      <SeekVideo
+                        src={result.playbackUrl}
+                        timestampSec={result.timestampSec}
+                      />
+                      <div className="flex min-w-0 items-center justify-between gap-3">
+                        <h3 className="min-w-0 truncate text-lg font-heading font-medium leading-tight group-hover:text-primary transition-colors">
+                          {result.filename}
+                        </h3>
+                        <div className="flex shrink-0 items-center gap-2">
                           <Badge
                             variant="secondary"
                             className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -400,24 +402,18 @@ const FrameSearch = () => {
                             {formatScore(result.score)} match
                           </Badge>
                           <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <PlayCircle className="h-3.5 w-3.5" />{" "}
+                            <PlayCircle className="h-3.5 w-3.5" />
                             {formatTime(result.timestampSec)}
                           </span>
                         </div>
-                        <h3 className="text-lg font-heading font-medium leading-tight group-hover:text-primary transition-colors">
-                          {result.filename}
-                        </h3>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground bg-muted/50 w-fit px-3 py-1.5 rounded-lg">
-                          <span className="font-medium text-foreground">
-                            {formatTime(result.timestampSec)}
-                          </span>
-                          <span className="mx-1 text-muted-foreground/30">
-                            |
-                          </span>
-                          <span>
-                            sampled every {result.frameIntervalSec}s
-                          </span>
-                        </div>
+                      </div>
+                      <Separator />
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">
+                          {formatTime(result.timestampSec)}
+                        </span>
+                        <span className="text-muted-foreground/30">|</span>
+                        <span>sampled every {result.frameIntervalSec}s</span>
                       </div>
                     </CardContent>
                   </Card>
