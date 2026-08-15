@@ -39,7 +39,6 @@ export type SearchHybridResult = {
   text: string | null;
   visionTimestampSec: number | null;
   playbackUrl: string;
-  thumbnailUrl: string | null;
 };
 
 type SourceObject = {
@@ -87,12 +86,6 @@ export const searchHybrid = async (
           bucket: row.sourceStorageBucket,
           key: row.sourceStorageKey!,
         });
-        const thumbnailUrl = row.visionStoreKey
-          ? await getObjectUrl({
-              bucket: row.sourceStorageBucket,
-              key: row.visionStoreKey,
-            })
-          : null;
 
         return {
           segmentId: row.segmentId,
@@ -109,7 +102,6 @@ export const searchHybrid = async (
           text: row.text,
           visionTimestampSec: row.visionTimestampSec,
           playbackUrl,
-          thumbnailUrl,
         };
       }),
   );

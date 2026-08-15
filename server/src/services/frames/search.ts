@@ -22,7 +22,6 @@ export type SearchFrameResult = {
   timestampSec: number;
   frameIntervalSec: number;
   score: number;
-  thumbnailUrl: string;
   playbackUrl: string;
 };
 
@@ -72,10 +71,6 @@ export const searchFrames = async (
       timestampSec: row.timestampSec,
       frameIntervalSec: row.frameIntervalSec,
       score: row.score,
-      thumbnailObject: {
-        bucket: row.sourceStorageBucket,
-        key: row.storeKey,
-      },
       sourceObject: {
         bucket: row.sourceStorageBucket,
         key: row.sourceStorageKey!,
@@ -91,7 +86,6 @@ export const searchFrames = async (
       timestampSec: frame.timestampSec,
       frameIntervalSec: frame.frameIntervalSec,
       score: frame.score,
-      thumbnailUrl: await getObjectUrl(frame.thumbnailObject),
       playbackUrl: await getObjectUrl(frame.sourceObject),
     })),
   );

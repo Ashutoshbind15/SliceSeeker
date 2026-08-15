@@ -35,7 +35,6 @@ export type HybridSearchResult = {
   text: string | null;
   visionTimestampSec: number | null;
   playbackUrl: string;
-  thumbnailUrl: string | null;
 };
 
 type SearchResponse = {

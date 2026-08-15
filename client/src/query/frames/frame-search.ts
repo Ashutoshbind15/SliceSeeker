@@ -15,7 +15,6 @@ export type FrameSearchResult = {
   timestampSec: number;
   frameIntervalSec: number;
   score: number;
-  thumbnailUrl: string;
   playbackUrl: string;
 };
 

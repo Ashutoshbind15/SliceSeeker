@@ -385,14 +385,7 @@ const FrameSearch = () => {
                 <li key={result.frameId}>
                   <Card className="overflow-hidden transition-all hover:shadow-md border-border/50 hover:border-primary/30 group">
                     <CardContent className="flex flex-col gap-6 p-5 sm:flex-row items-start">
-                      <div className="shrink-0 w-full sm:w-auto space-y-3">
-                        <div className="overflow-hidden rounded-xl bg-muted">
-                          <img
-                            src={result.thumbnailUrl}
-                            alt={`Frame at ${formatTime(result.timestampSec)}`}
-                            className="aspect-video w-full sm:w-64 object-cover"
-                          />
-                        </div>
+                      <div className="shrink-0 w-full sm:w-auto">
                         <SeekVideo
                           src={result.playbackUrl}
                           timestampSec={result.timestampSec}
