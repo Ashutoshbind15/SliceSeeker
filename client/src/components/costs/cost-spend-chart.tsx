@@ -15,7 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { formatUsd } from "@/lib/format-usd";
+import { useFormatUsd } from "@/components/costs/cost-granularity";
 
 export type CostChartSeries = {
   key: string;
@@ -55,6 +55,7 @@ export const CostSpendChart = ({
   data: CostChartRow[];
   series: CostChartSeries[];
 }) => {
+  const formatCost = useFormatUsd();
   const stacked = series.length > 1;
   const chartConfig = Object.fromEntries(
     series.map((item) => [
@@ -87,9 +88,7 @@ export const CostSpendChart = ({
               tickLine={false}
               axisLine={false}
               tickMargin={12}
-              tickFormatter={(value: number) =>
-                value === 0 ? "$0" : formatUsd(value)
-              }
+              tickFormatter={(value: number) => formatCost(value)}
             />
             <ChartTooltip
               cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
@@ -107,7 +106,7 @@ export const CostSpendChart = ({
                         {chartConfig[String(name)]?.label ?? name}
                       </span>
                       <span className="ml-auto font-mono font-medium text-foreground tabular-nums">
-                        {formatUsd(Number(value))}
+                        {formatCost(Number(value))}
                       </span>
                     </div>
                   )}

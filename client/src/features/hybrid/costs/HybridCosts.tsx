@@ -13,6 +13,7 @@ import {
   SortableHead,
   formatShare,
   stickyCostHeaderClass,
+  useFormatUsd,
   useSortedRows,
 } from "@/components/costs";
 import {
@@ -29,7 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatUsd } from "@/lib/format-usd";
 import { useHybridCostsQuery, type HybridCostSummary } from "@/query";
 import { DollarSign } from "lucide-react";
 
@@ -60,6 +60,7 @@ const HybridCosts = () => {
   const costsQuery = useHybridCostsQuery();
   const files = costsQuery.data ?? [];
   const { rows, sort, toggle } = useSortedRows(files, accessors, "total");
+  const formatCost = useFormatUsd();
 
   const totals = useMemo(() => {
     return files.reduce(
@@ -107,7 +108,7 @@ const HybridCosts = () => {
       key: "speech" as const,
       label: "Speech",
       amount: speechCost,
-      detail: `ASR ${formatUsd(totals.speechAsrCost)} · embed ${formatUsd(totals.speechEmbedCost)}`,
+      detail: `ASR ${formatCost(totals.speechAsrCost)} · embed ${formatCost(totals.speechEmbedCost)}`,
     },
     {
       key: "vision" as const,
@@ -289,7 +290,7 @@ const HybridCosts = () => {
                       <TableCell className="px-6 py-4 text-sm text-muted-foreground">
                         <CostValue
                           amount={speech}
-                          hint={`ASR ${formatUsd(file.speechAsrCostUsd)} · embed ${formatUsd(file.speechEmbedCostUsd)}`}
+                          hint={`ASR ${formatCost(file.speechAsrCostUsd)} · embed ${formatCost(file.speechEmbedCostUsd)}`}
                         />
                       </TableCell>
                       <TableCell className="px-6 py-4 text-sm text-muted-foreground">

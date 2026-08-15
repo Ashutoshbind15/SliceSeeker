@@ -4,7 +4,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { formatUsd, wouldRoundToZero } from "@/lib/format-usd";
+import { useCostGranularity } from "@/components/costs/cost-granularity";
+import { formatUsd, formatUsdExact, wouldRoundToZero } from "@/lib/format-usd";
 import { cn } from "@/lib/utils";
 
 type CostValueProps = {
@@ -14,26 +15,22 @@ type CostValueProps = {
 };
 
 export const CostValue = ({ amount, hint, className }: CostValueProps) => {
-  const hiddenAtCents = wouldRoundToZero(amount);
+  const digits = useCostGranularity();
+  const roundedAway = wouldRoundToZero(amount, digits);
   const tooltip = hint
     ? hint
-    : hiddenAtCents
-      ? `Below $0.0001 — ${formatUsd(amount)}`
+    : roundedAway
+      ? formatUsdExact(amount)
       : null;
 
   const figure = (
     <span
       className={cn(
-        "inline-flex items-baseline gap-1.5 font-mono tabular-nums",
+        "inline-flex items-baseline font-mono tabular-nums",
         className,
       )}
     >
-      <span>{formatUsd(amount)}</span>
-      {hiddenAtCents ? (
-        <span className="font-sans text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          sub-cent
-        </span>
-      ) : null}
+      {formatUsd(amount, digits)}
     </span>
   );
 

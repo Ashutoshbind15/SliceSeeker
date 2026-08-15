@@ -1,4 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { useLocation } from "react-router";
+import { CostGranularitySwitcher } from "@/components/costs/cost-granularity";
 import { ModeToggle } from "@/components/mode-toggle";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,8 @@ export function Header({
   className,
   ...rest
 }: HeaderProps) {
+  const showCostGranularity = useLocation().pathname.endsWith("/costs");
+
   return (
     <header
       className={cn(
@@ -37,6 +41,7 @@ export function Header({
       </div>
       <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
         {action}
+        {showCostGranularity ? <CostGranularitySwitcher /> : null}
         <ModeToggle />
       </div>
     </header>

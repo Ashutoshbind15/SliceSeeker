@@ -1,4 +1,10 @@
 export { CostFilesCard, SortableHead, stickyCostHeaderClass, useSortedRows } from "./cost-files-table";
+export {
+  CostGranularityProvider,
+  CostGranularitySwitcher,
+  useCostGranularity,
+  useFormatUsd,
+} from "./cost-granularity";
 export { CostKpiCard } from "./cost-kpi-card";
 export { CostSpendChart, toChartLabel } from "./cost-spend-chart";
 export type { CostChartRow, CostChartSeries } from "./cost-spend-chart";

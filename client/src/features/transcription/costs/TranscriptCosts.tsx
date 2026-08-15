@@ -14,6 +14,7 @@ import {
   SortableHead,
   stickyCostHeaderClass,
   toChartLabel,
+  useFormatUsd,
   useSortedRows,
 } from "@/components/costs";
 import {
@@ -24,7 +25,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDuration } from "@/lib/format-duration";
-import { formatUsd } from "@/lib/format-usd";
 import {
   useTranscriptionCostsQuery,
   type TranscriptionCostSummary,
@@ -48,6 +48,7 @@ const TranscriptCosts = () => {
   const costsQuery = useTranscriptionCostsQuery();
   const files = costsQuery.data ?? [];
   const { rows, sort, toggle } = useSortedRows(files, accessors, "total");
+  const formatCost = useFormatUsd();
 
   const totals = useMemo(() => {
     return files.reduce(
@@ -132,14 +133,14 @@ const TranscriptCosts = () => {
                       className="size-2 shrink-0 rounded-[2px]"
                       style={{ backgroundColor: mixColors.asr }}
                     />
-                    ASR {formatUsd(totals.asrCost)}
+                    ASR {formatCost(totals.asrCost)}
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span
                       className="size-2 shrink-0 rounded-[2px]"
                       style={{ backgroundColor: mixColors.embed }}
                     />
-                    Embed {formatUsd(totals.embedCost)}
+                    Embed {formatCost(totals.embedCost)}
                   </span>
                 </span>
               }
