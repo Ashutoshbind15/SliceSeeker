@@ -22,15 +22,17 @@ export const CostKpiCard = ({
   hint,
   extra,
 }: CostKpiCardProps) => (
-  <Card className="rounded-2xl border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
+  <Card className="h-full overflow-visible border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
     <CardHeader className="pb-2">
       <CardDescription className="flex items-center gap-2 font-medium">
         {icon}
         {label}
       </CardDescription>
     </CardHeader>
-    <CardContent className={extra ? "space-y-3" : undefined}>
-      <div className="text-3xl font-heading font-semibold text-foreground">
+    <CardContent
+      className={cn("min-w-0", extra ? "space-y-3" : undefined)}
+    >
+      <div className="min-w-0 text-3xl font-heading font-semibold break-all text-foreground [overflow-wrap:anywhere]">
         {children}
       </div>
       {extra}

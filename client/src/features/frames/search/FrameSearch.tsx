@@ -94,7 +94,7 @@ const SeekVideo = ({ src, timestampSec }: SeekVideoProps) => {
 const FrameSearch = () => {
   const [submittedSearch, setSubmittedSearch] =
     useState<SearchFramesInput | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
@@ -162,9 +162,7 @@ const FrameSearch = () => {
         </PageHelp>
       }
     >
-      <Card className="border-primary/20 shadow-sm bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-6">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Controller
               name="query"
               control={form.control}
@@ -176,7 +174,7 @@ const FrameSearch = () => {
                     id="frame-search-query"
                     type="text"
                     autoComplete="off"
-                    className="pl-12 pr-36 h-14 text-lg rounded-2xl bg-background border-primary/20 focus-visible:ring-primary/30 shadow-inner"
+                    className="pl-12 pr-36 h-14 text-lg rounded-md bg-background border-primary/20 focus-visible:ring-primary/30 shadow-inner"
                     placeholder="e.g. red car parked outside a store..."
                     aria-invalid={fieldState.invalid}
                   />
@@ -193,7 +191,7 @@ const FrameSearch = () => {
                     <Button
                       type="submit"
                       size="sm"
-                      className="h-10 rounded-xl px-6 font-medium"
+                      className="h-10 rounded-md px-6 font-medium"
                       disabled={searching || !queryValue.trim()}
                     >
                       {searching ? "Searching…" : "Search"}
@@ -319,9 +317,7 @@ const FrameSearch = () => {
                 />
               </div>
             )}
-          </form>
-        </CardContent>
-      </Card>
+      </form>
 
       <div className="min-h-[200px]">
         {uploadsQuery.isPending && searchableUploads.length === 0 ? (

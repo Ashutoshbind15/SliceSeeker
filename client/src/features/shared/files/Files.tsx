@@ -281,7 +281,7 @@ const Files = () => {
           }
           className="rounded-3xl border bg-muted/30"
           action={
-            <Button type="button" className="rounded-full" asChild>
+            <Button type="button" className="rounded-md" asChild>
               <Link to={uploadPath}>
                 <Upload />
                 Go to upload

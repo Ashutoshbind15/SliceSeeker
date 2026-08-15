@@ -26,7 +26,7 @@ export const CostValue = ({ amount, hint, className }: CostValueProps) => {
   const figure = (
     <span
       className={cn(
-        "inline-flex items-baseline font-mono tabular-nums",
+        "inline max-w-full font-mono tabular-nums break-all [overflow-wrap:anywhere]",
         className,
       )}
     >
@@ -43,7 +43,7 @@ export const CostValue = ({ amount, hint, className }: CostValueProps) => {
       <TooltipTrigger asChild>
         <span
           tabIndex={0}
-          className="inline-flex cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="inline max-w-full cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           {figure}
         </span>

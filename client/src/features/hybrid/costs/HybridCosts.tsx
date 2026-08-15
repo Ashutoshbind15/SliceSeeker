@@ -154,15 +154,15 @@ const HybridCosts = () => {
 
       {files.length > 0 ? (
         <div className="min-w-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,1fr)]">
-            <Card className="rounded-2xl border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
+          <div className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(16rem,1fr)]">
+            <Card className="h-full overflow-visible border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="font-medium">
                   Total spend
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                <p className="text-3xl font-heading font-semibold text-foreground">
+                <p className="min-w-0 text-3xl font-heading font-semibold break-all text-foreground [overflow-wrap:anywhere]">
                   <CostValue amount={totals.cost} />
                 </p>
                 <MixBar slices={totalMix} className="h-2.5" />
@@ -186,7 +186,7 @@ const HybridCosts = () => {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
+            <Card className="h-full overflow-visible border-border/50 bg-card/50 shadow-sm backdrop-blur-sm">
               <CardHeader className="pb-2">
                 <CardDescription className="font-medium">
                   By modality

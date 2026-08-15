@@ -419,7 +419,7 @@ const UploadPanel = ({ uppy }: { uppy: VideoUppy }) => {
           <Button
             type="button"
             variant="outline"
-            className="rounded-full px-5"
+            className="rounded-md px-5"
             disabled={isUploading || isPaused}
             onClick={() => uppy.cancelAll()}
           >
@@ -431,7 +431,7 @@ const UploadPanel = ({ uppy }: { uppy: VideoUppy }) => {
           <Button
             type="button"
             variant="secondary"
-            className="rounded-full px-5"
+            className="rounded-md px-5"
             onClick={() => uppy.resumeAll()}
           >
             <Play className="size-4" />
@@ -443,7 +443,7 @@ const UploadPanel = ({ uppy }: { uppy: VideoUppy }) => {
           <Button
             type="button"
             variant="secondary"
-            className="rounded-full px-5"
+            className="rounded-md px-5"
             onClick={() => uppy.pauseAll()}
           >
             <Pause className="size-4" />
@@ -454,7 +454,7 @@ const UploadPanel = ({ uppy }: { uppy: VideoUppy }) => {
         {!isUploading && !isPaused ? (
           <Button
             type="button"
-            className="rounded-full px-6"
+            className="rounded-md px-6"
             disabled={!hasPending}
             onClick={() => void uppy.upload()}
           >

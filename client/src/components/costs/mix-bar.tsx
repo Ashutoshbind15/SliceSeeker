@@ -35,7 +35,7 @@ export const MixBar = ({
   if (total <= 0 || visible.length === 0) {
     return (
       <div
-        className={cn("h-2 w-full rounded-full bg-muted", className)}
+        className={cn("h-2 w-full rounded-sm bg-muted", className)}
         aria-hidden
       />
     );
@@ -44,7 +44,7 @@ export const MixBar = ({
   return (
     <div
       className={cn(
-        "flex h-2 w-full overflow-hidden rounded-full bg-muted",
+        "flex h-2 w-full overflow-hidden rounded-sm bg-muted",
         className,
       )}
       aria-hidden

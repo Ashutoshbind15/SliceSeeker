@@ -108,7 +108,7 @@ const FileCosts = () => {
 
       {files.length > 0 ? (
         <div className="min-w-0 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <CostKpiCard
               icon={<DollarSign className="h-4 w-4 text-primary" />}
               label="Total spend"

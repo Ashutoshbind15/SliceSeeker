@@ -106,7 +106,7 @@ const SegmentVideo = ({ src, startSec, endSec }: SegmentVideoProps) => {
 const TranscriptSearch = () => {
   const [submittedSearch, setSubmittedSearch] =
     useState<SearchTranscriptsInput | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
@@ -174,9 +174,7 @@ const TranscriptSearch = () => {
         </PageHelp>
       }
     >
-      <Card className="border-primary/20 shadow-sm bg-card/50 backdrop-blur-sm">
-        <CardContent className="p-6">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <Controller
               name="query"
               control={form.control}
@@ -188,7 +186,7 @@ const TranscriptSearch = () => {
                     id="transcript-search-query"
                     type="text"
                     autoComplete="off"
-                    className="pl-12 pr-36 h-14 text-lg rounded-2xl bg-background border-primary/20 focus-visible:ring-primary/30 shadow-inner"
+                    className="pl-12 pr-36 h-14 text-lg rounded-md bg-background border-primary/20 focus-visible:ring-primary/30 shadow-inner"
                     placeholder="e.g. how do we deploy the indexer..."
                     aria-invalid={fieldState.invalid}
                   />
@@ -205,7 +203,7 @@ const TranscriptSearch = () => {
                     <Button
                       type="submit"
                       size="sm"
-                      className="h-10 rounded-xl px-6 font-medium"
+                      className="h-10 rounded-md px-6 font-medium"
                       disabled={searching || !queryValue.trim()}
                     >
                       {searching ? "Searching…" : "Search"}
@@ -331,9 +329,7 @@ const TranscriptSearch = () => {
                 />
               </div>
             )}
-          </form>
-        </CardContent>
-      </Card>
+      </form>
 
       <div className="min-h-[200px]">
         {uploadsQuery.isPending && searchableUploads.length === 0 ? (
